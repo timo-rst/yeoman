@@ -22,14 +22,25 @@ public struct MenuBarItemsView: View {
                     
                     Spacer()
                     
-                    Button(action: {
-                        scanner.scanAll()
-                    }) {
-                        HStack(spacing: 6) {
-                            Image(systemName: "arrow.clockwise")
-                                .rotationEffect(.degrees(scanner.isScanning ? 360 : 0))
-                                .animation(scanner.isScanning ? Animation.linear(duration: 1).repeatForever(autoreverses: false) : .default, value: scanner.isScanning)
-                            Text("Neu scannen")
+                    HStack(spacing: 8) {
+                        Button(action: {
+                            scanner.openSystemControlCenterSettings()
+                        }) {
+                            HStack(spacing: 4) {
+                                Image(systemName: "gearshape")
+                                Text("macOS Kontrollzentrum...")
+                            }
+                        }
+                        
+                        Button(action: {
+                            scanner.scanAll()
+                        }) {
+                            HStack(spacing: 6) {
+                                Image(systemName: "arrow.clockwise")
+                                    .rotationEffect(.degrees(scanner.isScanning ? 360 : 0))
+                                    .animation(scanner.isScanning ? Animation.linear(duration: 1).repeatForever(autoreverses: false) : .default, value: scanner.isScanning)
+                                Text("Neu scannen")
+                            }
                         }
                     }
                 }

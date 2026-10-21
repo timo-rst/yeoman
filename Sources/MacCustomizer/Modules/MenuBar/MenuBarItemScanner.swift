@@ -90,12 +90,18 @@ public final class MenuBarItemScanner: ObservableObject {
         
         for def in systemItemsDefinition {
             let val = prefs[def.id] as? Int
-            // In ControlCenter prefs, 18 or 12 or 1 usually indicates visible in menu bar, 8 or 0 indicates hidden
+            // In ControlCenter prefs, 18 or 2 indicates visible in menu bar, 8 indicates hidden
             let isVisible: Bool
             if def.id == "BatteryShowPercentage" {
-                isVisible = (val == 1)
+                if let boolVal = prefs[def.id] as? Bool {
+                    isVisible = boolVal
+                } else if let intVal = val {
+                    isVisible = (intVal == 1)
+                } else {
+                    isVisible = def.defaultVisible
+                }
             } else if let intVal = val {
-                isVisible = (intVal == 18 || intVal == 12 || intVal == 2)
+                isVisible = (intVal == 18 || intVal == 2)
             } else {
                 isVisible = def.defaultVisible
             }
@@ -262,24 +268,28 @@ public final class MenuBarItemScanner: ObservableObject {
     }
     
     @Published public var hasPendingSystemReload: Bool = false
+    private var reloadWorkItem: DispatchWorkItem?
     
     // MARK: - Helpers
     
     private func setSystemItemVisibility(key: String, enable: Bool) {
-        let value: Int
         if key == "BatteryShowPercentage" {
-            value = enable ? 1 : 0
-        } else if key == "Battery" {
-            value = enable ? 12 : 8
+            let p1 = Process()
+            p1.executableURL = URL(fileURLWithPath: "/usr/bin/defaults")
+            p1.arguments = ["-currentHost", "write", controlCenterDomain, key, "-bool", enable ? "true" : "false"]
+            try? p1.run()
+            p1.waitUntilExit()
         } else {
-            value = enable ? 18 : 8
+            // In macOS ControlCenter:
+            // 18 = Visible in Menu Bar & Control Center
+            // 8  = Hidden from Menu Bar (Control Center only)
+            let value = enable ? 18 : 8
+            let process = Process()
+            process.executableURL = URL(fileURLWithPath: "/usr/bin/defaults")
+            process.arguments = ["-currentHost", "write", controlCenterDomain, key, "-int", "\(value)"]
+            try? process.run()
+            process.waitUntilExit()
         }
-        
-        let process = Process()
-        process.executableURL = URL(fileURLWithPath: "/usr/bin/defaults")
-        process.arguments = ["-currentHost", "write", controlCenterDomain, key, "-int", "\(value)"]
-        try? process.run()
-        process.waitUntilExit()
         
         // Post distributed notifications to ControlCenter quietly
         DistributedNotificationCenter.default().postNotificationName(
@@ -295,12 +305,31 @@ public final class MenuBarItemScanner: ObservableObject {
             deliverImmediately: true
         )
         
+        scheduleSystemReload()
+    }
+    
+    public func scheduleSystemReload() {
         self.hasPendingSystemReload = true
+        reloadWorkItem?.cancel()
+        let work = DispatchWorkItem { [weak self] in
+            self?.applySystemChanges()
+        }
+        reloadWorkItem = work
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.2, execute: work)
     }
     
     public func applySystemChanges() {
+        reloadWorkItem?.cancel()
         MenuBarSpacingManager.shared.restartControlCenter()
         self.hasPendingSystemReload = false
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
+            self?.scanAll()
+        }
+    }
+    
+    public func openSystemControlCenterSettings() {
+        let url = URL(string: "x-apple.systempreferences:com.apple.ControlCenter-Settings.extension")!
+        NSWorkspace.shared.open(url)
     }
     
     private func launchApp(bundleId: String, path: String?) {
