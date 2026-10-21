@@ -69,6 +69,7 @@ public struct SettingsView: View {
 struct GeneralSettingsView: View {
     @AppStorage("launchAtLogin") private var launchAtLogin = false
     @AppStorage("showDockIcon") private var showDockIcon = true
+    @AppStorage("showMainStatusItem") private var showMainStatusItem = true
     
     var body: some View {
         ScrollView {
@@ -85,10 +86,11 @@ struct GeneralSettingsView: View {
                 Divider()
                 
                 VStack(alignment: .leading, spacing: 14) {
-                    Text("Start & Verhalten")
+                    Text("Start & Darstellung")
                         .font(.headline)
                     
                     Toggle("Beim Mac-Start automatisch öffnen (Launch at Login)", isOn: $launchAtLogin)
+                    
                     Toggle("Dock-Symbol anzeigen", isOn: Binding(
                         get: { showDockIcon },
                         set: {
@@ -96,12 +98,20 @@ struct GeneralSettingsView: View {
                             NSApp.setActivationPolicy($0 ? .regular : .accessory)
                         }
                     ))
+                    
+                    Toggle("Haupt-Icon (MacCustomizer Launcher) in der Menüleiste anzeigen", isOn: Binding(
+                        get: { showMainStatusItem },
+                        set: {
+                            showMainStatusItem = $0
+                            StatusItemController.shared.showsMainStatusItem = $0
+                        }
+                    ))
                 }
                 .padding()
                 .background(RoundedRectangle(cornerRadius: 12).fill(Color(nsColor: .controlBackgroundColor)))
                 
                 VStack(alignment: .leading, spacing: 14) {
-                    Text("Aktive Module")
+                    Text("Aktive Module & Menüleisten-Symbole")
                         .font(.headline)
                     
                     ModuleToggleRow(
@@ -111,6 +121,10 @@ struct GeneralSettingsView: View {
                         isOn: Binding(
                             get: { ModuleManager.shared.menuBarModule.isEnabled },
                             set: { ModuleManager.shared.toggleModule(id: ModuleManager.shared.menuBarModule.id, enabled: $0) }
+                        ),
+                        showsDedicatedIcon: Binding(
+                            get: { ModuleManager.shared.menuBarModule.showsDedicatedStatusItem },
+                            set: { ModuleManager.shared.menuBarModule.showsDedicatedStatusItem = $0 }
                         )
                     )
                     
@@ -123,6 +137,10 @@ struct GeneralSettingsView: View {
                         isOn: Binding(
                             get: { ModuleManager.shared.clipboardModule.isEnabled },
                             set: { ModuleManager.shared.toggleModule(id: ModuleManager.shared.clipboardModule.id, enabled: $0) }
+                        ),
+                        showsDedicatedIcon: Binding(
+                            get: { ModuleManager.shared.clipboardModule.showsDedicatedStatusItem },
+                            set: { ModuleManager.shared.clipboardModule.showsDedicatedStatusItem = $0 }
                         )
                     )
                     
@@ -135,6 +153,10 @@ struct GeneralSettingsView: View {
                         isOn: Binding(
                             get: { ModuleManager.shared.systemStatsModule.isEnabled },
                             set: { ModuleManager.shared.toggleModule(id: ModuleManager.shared.systemStatsModule.id, enabled: $0) }
+                        ),
+                        showsDedicatedIcon: Binding(
+                            get: { ModuleManager.shared.systemStatsModule.showsDedicatedStatusItem },
+                            set: { ModuleManager.shared.systemStatsModule.showsDedicatedStatusItem = $0 }
                         )
                     )
                 }
@@ -151,26 +173,45 @@ struct ModuleToggleRow: View {
     let subtitle: String
     let icon: String
     @Binding var isOn: Bool
+    var showsDedicatedIcon: Binding<Bool>? = nil
     
     var body: some View {
-        HStack(spacing: 12) {
-            Image(systemName: icon)
-                .font(.title2)
-                .foregroundColor(.accentColor)
-                .frame(width: 28)
-            
-            VStack(alignment: .leading, spacing: 2) {
-                Text(title)
-                    .fontWeight(.medium)
-                Text(subtitle)
-                    .font(.caption)
-                    .foregroundColor(.secondary)
+        VStack(spacing: 8) {
+            HStack(spacing: 12) {
+                Image(systemName: icon)
+                    .font(.title2)
+                    .foregroundColor(.accentColor)
+                    .frame(width: 28)
+                
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(title)
+                        .fontWeight(.medium)
+                    Text(subtitle)
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+                
+                Spacer()
+                
+                Toggle("", isOn: $isOn)
+                    .toggleStyle(.switch)
             }
             
-            Spacer()
-            
-            Toggle("", isOn: $isOn)
-                .toggleStyle(.switch)
+            if isOn, let dedicatedBinding = showsDedicatedIcon {
+                HStack {
+                    Spacer().frame(width: 40)
+                    Image(systemName: "menubar.arrow.up.rectangle")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                    Text("Eigenes Symbol in der Menüleiste:")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                    Spacer()
+                    Toggle("", isOn: dedicatedBinding)
+                        .toggleStyle(.switch)
+                        .scaleEffect(0.85)
+                }
+            }
         }
     }
 }
@@ -178,7 +219,7 @@ struct ModuleToggleRow: View {
 struct AboutView: View {
     var body: some View {
         VStack(spacing: 16) {
-            Image(systemName: "slider.horizontal.2.square.on.square")
+            Image(systemName: "slider.horizontal.3")
                 .font(.system(size: 64))
                 .foregroundColor(.accentColor)
             
@@ -186,7 +227,7 @@ struct AboutView: View {
                 .font(.title)
                 .fontWeight(.bold)
             
-            Text("Version 0.1.0 (Developer Preview)")
+            Text("Version 0.2.0")
                 .font(.subheadline)
                 .foregroundColor(.secondary)
             
@@ -202,7 +243,7 @@ struct AboutView: View {
                 Text("Entwickelt für macOS mit Swift & SwiftUI")
                     .font(.caption)
                     .foregroundColor(.secondary)
-                Text("Multi-Monitor & Notch optimiert")
+                Text("Modulares Icon- und Menüleistensystem")
                     .font(.caption2)
                     .foregroundColor(.secondary.opacity(0.8))
             }

@@ -1,10 +1,13 @@
 import SwiftUI
 
 public struct MenuBarSettingsView: View {
+    @ObservedObject var module: MenuBarModule
     @ObservedObject var spacingManager = MenuBarSpacingManager.shared
     @ObservedObject var displayManager = DisplayManager.shared
     
-    public init() {}
+    public init(module: MenuBarModule) {
+        self.module = module
+    }
     
     public var body: some View {
         ScrollView {
@@ -20,6 +23,21 @@ public struct MenuBarSettingsView: View {
                 }
                 
                 Divider()
+                
+                // Menüleisten-Option
+                VStack(alignment: .leading, spacing: 14) {
+                    Text("Menüleisten-Integration")
+                        .font(.headline)
+                    
+                    Toggle("Eigenes Icon in der Menüleiste anzeigen (Schnell-Umschalter für Abstände)", isOn: $module.showsDedicatedStatusItem)
+                        .font(.subheadline)
+                    
+                    Text("Zeigt ein separates Symbol in der Menüleiste an, über das du die Abstands-Presets per Klick wechseln kannst.")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+                .padding()
+                .background(RoundedRectangle(cornerRadius: 12).fill(Color(nsColor: .controlBackgroundColor)))
                 
                 // Spacing Presets
                 VStack(alignment: .leading, spacing: 12) {

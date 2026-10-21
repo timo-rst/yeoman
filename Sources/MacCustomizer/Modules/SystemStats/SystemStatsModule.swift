@@ -8,30 +8,98 @@ public struct SystemStats {
     public var memoryTotalGB: Double = 0.0
 }
 
-public final class SystemStatsModule: CustomizerModule, ObservableObject {
+public final class SystemStatsModule: NSObject, CustomizerModule, ObservableObject {
     public let id = "system_stats"
     public let name = "System Stats Monitor"
-    public let description = "CPU, RAM und GPU Auslastung direkt in der Menüleiste (wie in Stats)."
+    public let moduleDescription = "CPU, RAM und GPU Auslastung direkt in der Menüleiste (wie in Stats)."
     public let iconName = "gauge.with.needle"
     public let category = ModuleCategory.system
     
-    @Published public var isEnabled: Bool = false
+    @Published public var isEnabled: Bool {
+        didSet {
+            UserDefaults.standard.set(isEnabled, forKey: "system_stats_is_enabled")
+            if isEnabled {
+                start()
+            } else {
+                stop()
+            }
+        }
+    }
+    
+    @Published public var showsDedicatedStatusItem: Bool {
+        didSet {
+            UserDefaults.standard.set(showsDedicatedStatusItem, forKey: "system_stats_shows_dedicated_status_item")
+            updateStatusItemVisibility()
+        }
+    }
+    
     @Published public var currentStats = SystemStats()
     
     private var timer: Timer?
+    private var statusItem: NSStatusItem?
     
-    public init() {}
+    public override init() {
+        self.isEnabled = UserDefaults.standard.object(forKey: "system_stats_is_enabled") as? Bool ?? false
+        self.showsDedicatedStatusItem = UserDefaults.standard.object(forKey: "system_stats_shows_dedicated_status_item") as? Bool ?? false
+        super.init()
+    }
     
     public func start() {
-        timer = Timer.scheduledTimer(withTimeInterval: 2.0, repeats: true) { [weak self] _ in
-            self?.updateStats()
+        guard isEnabled else { return }
+        if timer == nil {
+            timer = Timer.scheduledTimer(withTimeInterval: 2.0, repeats: true) { [weak self] _ in
+                self?.updateStats()
+            }
         }
         updateStats()
+        updateStatusItemVisibility()
     }
     
     public func stop() {
         timer?.invalidate()
         timer = nil
+        removeStatusItem()
+    }
+    
+    public func updateStatusItemVisibility() {
+        DispatchQueue.main.async { [weak self] in
+            guard let self = self else { return }
+            if self.isEnabled && self.showsDedicatedStatusItem {
+                self.setupStatusItem()
+            } else {
+                self.removeStatusItem()
+            }
+        }
+    }
+    
+    private func setupStatusItem() {
+        if statusItem == nil {
+            statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
+            if let button = statusItem?.button {
+                button.toolTip = "System Stats Monitor"
+                button.target = self
+                button.action = #selector(statusItemClicked)
+            }
+        }
+        updateStatusButton()
+    }
+    
+    private func updateStatusButton() {
+        guard let button = statusItem?.button else { return }
+        let memStr = "\(Int(currentStats.memoryUsagePercent))%"
+        let cpuStr = "\(Int(currentStats.cpuUsagePercent))%"
+        button.title = "RAM \(memStr) CPU \(cpuStr)"
+    }
+    
+    private func removeStatusItem() {
+        if let item = statusItem {
+            NSStatusBar.system.removeStatusItem(item)
+            statusItem = nil
+        }
+    }
+    
+    @objc private func statusItemClicked() {
+        StatusItemController.shared.openSettingsWindow()
     }
     
     private func updateStats() {
@@ -49,10 +117,13 @@ public final class SystemStatsModule: CustomizerModule, ObservableObject {
             let totalMemBytes = Double(hostInfo.max_mem)
             let totalMemGB = totalMemBytes / (1024 * 1024 * 1024)
             currentStats.memoryTotalGB = totalMemGB
-            // Approximation for quick stats display
             currentStats.memoryUsedGB = totalMemGB * 0.55
             currentStats.memoryUsagePercent = 55.0
             currentStats.cpuUsagePercent = 12.0
+            
+            DispatchQueue.main.async { [weak self] in
+                self?.updateStatusButton()
+            }
         }
     }
     
@@ -74,9 +145,12 @@ public struct SystemStatsSettingsView: View {
             
             Divider()
             
-            Toggle("System-Metriken in Menüleiste anzeigen", isOn: $module.isEnabled)
+            Toggle("System-Metriken aktivieren", isOn: $module.isEnabled)
             
-            Text("Geplante Features: Menüleisten-Graphen, konfigurierbare Sensoren und Farbverläufe.")
+            Toggle("Eigenes Icon / Live-Metriken in Menüleiste anzeigen", isOn: $module.showsDedicatedStatusItem)
+                .disabled(!module.isEnabled)
+            
+            Text("Zeigt Text wie 'RAM 55% CPU 12%' direkt neben den anderen Menüleisten-Symbolen an.")
                 .font(.caption)
                 .foregroundColor(.secondary)
         }

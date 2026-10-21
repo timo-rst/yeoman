@@ -1,10 +1,13 @@
 import SwiftUI
 
 public struct ClipboardSettingsView: View {
+    @ObservedObject var module: ClipboardModule
     @ObservedObject var store = ClipboardHistoryStore.shared
     @ObservedObject var monitor = ClipboardMonitor.shared
     
-    public init() {}
+    public init(module: ClipboardModule) {
+        self.module = module
+    }
     
     public var body: some View {
         ScrollView {
@@ -19,6 +22,21 @@ public struct ClipboardSettingsView: View {
                 }
                 
                 Divider()
+                
+                // Menüleisten-Option
+                VStack(alignment: .leading, spacing: 14) {
+                    Text("Menüleisten-Integration")
+                        .font(.headline)
+                    
+                    Toggle("Eigenes Icon in der Menüleiste anzeigen (wie Clippy / Maccy)", isOn: $module.showsDedicatedStatusItem)
+                        .font(.subheadline)
+                    
+                    Text("Zeigt ein separates Zwischenablagen-Symbol in der Menüleiste an. Ein Klick darauf öffnet direkt das Popup mit Verlauf und Suchfeld.")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+                .padding()
+                .background(RoundedRectangle(cornerRadius: 12).fill(Color(nsColor: .controlBackgroundColor)))
                 
                 VStack(alignment: .leading, spacing: 14) {
                     Text("Überwachung & Sicherheit")

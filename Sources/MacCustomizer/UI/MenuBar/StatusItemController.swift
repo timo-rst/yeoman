@@ -12,7 +12,17 @@ public final class StatusItemController: NSObject, NSMenuDelegate {
         super.init()
     }
     
+    public var showsMainStatusItem: Bool {
+        get { UserDefaults.standard.object(forKey: "showMainStatusItem") as? Bool ?? true }
+        set {
+            UserDefaults.standard.set(newValue, forKey: "showMainStatusItem")
+            updateStatusItemVisibility()
+        }
+    }
+    
     public func setup() {
+        guard showsMainStatusItem else { return }
+        guard statusItem == nil else { return }
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         
         if let button = statusItem?.button {
@@ -23,6 +33,19 @@ public final class StatusItemController: NSObject, NSMenuDelegate {
         }
         
         updateMenu()
+    }
+    
+    public func updateStatusItemVisibility() {
+        if showsMainStatusItem {
+            if statusItem == nil {
+                setup()
+            }
+        } else {
+            if let item = statusItem {
+                NSStatusBar.system.removeStatusItem(item)
+                statusItem = nil
+            }
+        }
     }
     
     public func updateMenu() {

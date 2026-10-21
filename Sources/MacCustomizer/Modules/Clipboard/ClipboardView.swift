@@ -5,8 +5,11 @@ public struct ClipboardView: View {
     @ObservedObject var store = ClipboardHistoryStore.shared
     @State private var hoveredId: UUID?
     @State private var copiedId: UUID?
+    public var onCopy: (() -> Void)?
     
-    public init() {}
+    public init(onCopy: (() -> Void)? = nil) {
+        self.onCopy = onCopy
+    }
     
     public var body: some View {
         VStack(spacing: 0) {
@@ -69,6 +72,9 @@ public struct ClipboardView: View {
                                 onSelect: {
                                     ClipboardMonitor.shared.copyToClipboard(item.content)
                                     copiedId = item.id
+                                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
+                                        onCopy?()
+                                    }
                                     DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
                                         if copiedId == item.id {
                                             copiedId = nil
