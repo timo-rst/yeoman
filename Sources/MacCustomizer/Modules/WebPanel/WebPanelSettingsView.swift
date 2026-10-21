@@ -743,29 +743,8 @@ struct WebWidgetEditorSheet: View {
                     VStack(alignment: .leading, spacing: 16) {
                         // 1. Name & Ziel-Webseite (URL)
                         VStack(alignment: .leading, spacing: 14) {
-                            HStack {
-                                Text("1. Name & Ziel-Webseite (URL)")
-                                    .font(.headline)
-                                
-                                Spacer()
-                                
-                                Button(action: {
-                                    withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
-                                        isLogoSettingsExpanded.toggle()
-                                    }
-                                }) {
-                                    HStack(spacing: 5) {
-                                        Image(systemName: isLogoSettingsExpanded ? "chevron.up" : "photo.badge.checkmark")
-                                            .font(.system(size: 11))
-                                        Text(isLogoSettingsExpanded ? "Icon-Optionen schließen" : "Icon / Logo wählen")
-                                            .font(.caption2)
-                                            .fontWeight(.medium)
-                                    }
-                                }
-                                .buttonStyle(.bordered)
-                                .controlSize(.small)
-                                .help("Menüleisten-Symbol & Logo-Einstellungen ein-/ausblenden")
-                            }
+                            Text("1. Name & Ziel-Webseite (URL)")
+                                .font(.headline)
                             
                             // Name Row
                             VStack(alignment: .leading, spacing: 5) {
@@ -774,36 +753,29 @@ struct WebWidgetEditorSheet: View {
                                     .foregroundColor(.secondary)
                                 
                                 HStack(spacing: 10) {
-                                    // Live Icon Preview Badge (Klickbar als Shortcut)
-                                    Button(action: {
-                                        withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
-                                            isLogoSettingsExpanded.toggle()
-                                        }
-                                    }) {
-                                        ZStack {
-                                            RoundedRectangle(cornerRadius: 8)
-                                                .fill(Color(nsColor: .controlBackgroundColor))
-                                                .frame(width: 34, height: 34)
-                                                .overlay(
-                                                    RoundedRectangle(cornerRadius: 8)
-                                                        .stroke(isLogoSettingsExpanded ? Color.accentColor : Color.primary.opacity(0.15), lineWidth: isLogoSettingsExpanded ? 2 : 1)
-                                                )
-                                            
-                                            if useFavicon, let favicon = faviconManager.previewIcon(for: url, widgetId: originalId, selectedFaviconURL: selectedFaviconURL, removeWhite: removeWhiteBackground) {
-                                                Image(nsImage: favicon)
-                                                    .resizable()
-                                                    .aspectRatio(contentMode: .fit)
-                                                    .frame(width: 22, height: 22)
-                                                    .clipShape(RoundedRectangle(cornerRadius: 3.5))
-                                            } else {
-                                                Image(systemName: iconName)
-                                                    .font(.system(size: 17))
-                                                    .foregroundColor(.accentColor)
-                                            }
+                                    // Live Icon Preview Badge
+                                    ZStack {
+                                        RoundedRectangle(cornerRadius: 8)
+                                            .fill(Color(nsColor: .controlBackgroundColor))
+                                            .frame(width: 34, height: 34)
+                                            .overlay(
+                                                RoundedRectangle(cornerRadius: 8)
+                                                    .stroke(Color.primary.opacity(0.15), lineWidth: 1)
+                                            )
+                                        
+                                        if useFavicon, let favicon = faviconManager.previewIcon(for: url, widgetId: originalId, selectedFaviconURL: selectedFaviconURL, removeWhite: removeWhiteBackground) {
+                                            Image(nsImage: favicon)
+                                                .resizable()
+                                                .aspectRatio(contentMode: .fit)
+                                                .frame(width: 22, height: 22)
+                                                .clipShape(RoundedRectangle(cornerRadius: 3.5))
+                                        } else {
+                                            Image(systemName: iconName)
+                                                .font(.system(size: 17))
+                                                .foregroundColor(.accentColor)
                                         }
                                     }
-                                    .buttonStyle(.plain)
-                                    .help("Klicken, um Icon & Logo-Optionen zu öffnen")
+                                    .help("Aktuelles Icon / Logo")
                                     
                                     TextField("z. B. Proton Kalender, Gemini, Notizen...", text: $title)
                                         .textFieldStyle(.roundedBorder)
