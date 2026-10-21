@@ -2,63 +2,103 @@ import SwiftUI
 
 public struct MenuBarStatsWidgetView: View {
     @ObservedObject var provider = SystemMetricsProvider.shared
+    @ObservedObject var module = ModuleManager.shared.systemStatsModule
     
     public init() {}
     
     public var body: some View {
-        HStack(spacing: 5) {
-            // GPU Pill
-            MetricPill(title: "GPU", value: "\(Int(provider.gpuUsagePercent))%", color: .green) {
-                MiniSparkline(data: provider.gpuHistory, color: .green)
-                    .frame(width: 20, height: 11)
+        HStack(spacing: 8) {
+            // CPU
+            if module.showCPU {
+                MetricItemView(
+                    label: "CPU",
+                    value: "\(Int(provider.cpuUsagePercent))%",
+                    color: .blue,
+                    showLabel: module.showLabels,
+                    showPercentage: module.showPercentage,
+                    showGraph: module.showGraphs,
+                    useBackground: module.useSubtleBackground
+                ) {
+                    MiniSparkline(data: provider.cpuHistory, color: .blue)
+                        .frame(width: 22, height: 12)
+                }
             }
             
-            // RAM Pill
-            MetricPill(title: "RAM", value: "\(Int(provider.memoryUsagePercent))%", color: .purple) {
-                MiniBarGauge(percent: provider.memoryUsagePercent, color: .purple)
-                    .frame(width: 20, height: 9)
+            // RAM
+            if module.showRAM {
+                MetricItemView(
+                    label: "RAM",
+                    value: "\(Int(provider.memoryUsagePercent))%",
+                    color: .purple,
+                    showLabel: module.showLabels,
+                    showPercentage: module.showPercentage,
+                    showGraph: module.showGraphs,
+                    useBackground: module.useSubtleBackground
+                ) {
+                    MiniBarGauge(percent: provider.memoryUsagePercent, color: .purple)
+                        .frame(width: 20, height: 10)
+                }
             }
             
-            // CPU Pill
-            MetricPill(title: "CPU", value: "\(Int(provider.cpuUsagePercent))%", color: .blue) {
-                MiniSparkline(data: provider.cpuHistory, color: .blue)
-                    .frame(width: 20, height: 11)
+            // GPU
+            if module.showGPU {
+                MetricItemView(
+                    label: "GPU",
+                    value: "\(Int(provider.gpuUsagePercent))%",
+                    color: .green,
+                    showLabel: module.showLabels,
+                    showPercentage: module.showPercentage,
+                    showGraph: module.showGraphs,
+                    useBackground: module.useSubtleBackground
+                ) {
+                    MiniSparkline(data: provider.gpuHistory, color: .green)
+                        .frame(width: 22, height: 12)
+                }
             }
         }
-        .padding(.horizontal, 3)
-        .padding(.vertical, 2)
+        .padding(.horizontal, 4)
         .frame(height: 22)
     }
 }
 
-struct MetricPill<Content: View>: View {
-    let title: String
+struct MetricItemView<Content: View>: View {
+    let label: String
     let value: String
     let color: Color
+    let showLabel: Bool
+    let showPercentage: Bool
+    let showGraph: Bool
+    let useBackground: Bool
     @ViewBuilder let content: () -> Content
     
     var body: some View {
-        HStack(spacing: 4) {
-            VStack(alignment: .leading, spacing: -1) {
-                Text(title)
-                    .font(.system(size: 6.5, weight: .heavy))
+        HStack(spacing: 3) {
+            if showLabel {
+                Text(label)
+                    .font(.system(size: 9, weight: .bold))
                     .foregroundColor(color)
+            }
+            
+            if showPercentage {
                 Text(value)
-                    .font(.system(size: 7.5, weight: .bold))
+                    .font(.system(size: 9, weight: .semibold))
                     .monospacedDigit()
                     .foregroundColor(.primary)
             }
-            content()
+            
+            if showGraph {
+                content()
+            }
         }
-        .padding(.horizontal, 4)
-        .padding(.vertical, 2)
+        .padding(.horizontal, useBackground ? 5 : 2)
+        .padding(.vertical, useBackground ? 2 : 0)
         .background(
-            RoundedRectangle(cornerRadius: 5)
-                .fill(Color(nsColor: .controlBackgroundColor).opacity(0.92))
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 5)
-                .stroke(Color.primary.opacity(0.2), lineWidth: 0.6)
+            Group {
+                if useBackground {
+                    RoundedRectangle(cornerRadius: 4)
+                        .fill(Color.primary.opacity(0.1))
+                }
+            }
         )
     }
 }
@@ -73,7 +113,7 @@ struct MiniSparkline: View {
             let h = geo.size.height
             if data.count > 1 {
                 ZStack {
-                    // Shaded gradient under curve for high contrast
+                    // Subtle transparent gradient under line
                     Path { path in
                         let step = w / CGFloat(data.count - 1)
                         path.move(to: CGPoint(x: 0, y: h))
@@ -86,9 +126,9 @@ struct MiniSparkline: View {
                         path.addLine(to: CGPoint(x: w, y: h))
                         path.closeSubpath()
                     }
-                    .fill(LinearGradient(colors: [color.opacity(0.45), color.opacity(0.08)], startPoint: .top, endPoint: .bottom))
+                    .fill(LinearGradient(colors: [color.opacity(0.4), color.opacity(0.04)], startPoint: .top, endPoint: .bottom))
                     
-                    // Main line stroke
+                    // Crisp stroke
                     Path { path in
                         let step = w / CGFloat(data.count - 1)
                         let firstY = h - (CGFloat(min(100.0, max(0.0, data[0])) / 100.0) * h)
@@ -98,15 +138,11 @@ struct MiniSparkline: View {
                             path.addLine(to: CGPoint(x: CGFloat(i) * step, y: y))
                         }
                     }
-                    .stroke(color, style: StrokeStyle(lineWidth: 1.3, lineCap: .round, lineJoin: .round))
+                    .stroke(color, style: StrokeStyle(lineWidth: 1.4, lineCap: .round, lineJoin: .round))
                 }
-                .background(
-                    RoundedRectangle(cornerRadius: 2)
-                        .fill(Color.primary.opacity(0.05))
-                )
                 .overlay(
                     RoundedRectangle(cornerRadius: 2)
-                        .stroke(Color.primary.opacity(0.18), lineWidth: 0.5)
+                        .stroke(Color.primary.opacity(0.2), lineWidth: 0.5)
                 )
             }
         }
@@ -119,18 +155,13 @@ struct MiniBarGauge: View {
     
     var body: some View {
         GeometryReader { geo in
-            let fillW = max(3.0, geo.size.width * CGFloat(min(100.0, max(0.0, percent)) / 100.0))
+            let fillW = max(2.0, geo.size.width * CGFloat(min(100.0, max(0.0, percent)) / 100.0))
             ZStack(alignment: .leading) {
-                // Background track
                 RoundedRectangle(cornerRadius: 2)
-                    .fill(Color.primary.opacity(0.12))
+                    .stroke(Color.primary.opacity(0.25), lineWidth: 0.5)
                 
-                RoundedRectangle(cornerRadius: 2)
-                    .stroke(Color.primary.opacity(0.18), lineWidth: 0.5)
-                
-                // Value Fill
                 RoundedRectangle(cornerRadius: 1.5)
-                    .fill(LinearGradient(colors: [color.opacity(0.75), color], startPoint: .leading, endPoint: .trailing))
+                    .fill(LinearGradient(colors: [color.opacity(0.7), color], startPoint: .leading, endPoint: .trailing))
                     .frame(width: fillW, height: max(2, geo.size.height - 2))
                     .padding(.leading, 1)
             }

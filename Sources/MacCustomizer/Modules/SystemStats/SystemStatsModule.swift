@@ -26,13 +26,43 @@ public final class SystemStatsModule: NSObject, CustomizerModule, ObservableObje
         }
     }
     
+    @Published public var showCPU: Bool {
+        didSet { UserDefaults.standard.set(showCPU, forKey: "stats_show_cpu") }
+    }
+    @Published public var showRAM: Bool {
+        didSet { UserDefaults.standard.set(showRAM, forKey: "stats_show_ram") }
+    }
+    @Published public var showGPU: Bool {
+        didSet { UserDefaults.standard.set(showGPU, forKey: "stats_show_gpu") }
+    }
+    @Published public var showLabels: Bool {
+        didSet { UserDefaults.standard.set(showLabels, forKey: "stats_show_labels") }
+    }
+    @Published public var showPercentage: Bool {
+        didSet { UserDefaults.standard.set(showPercentage, forKey: "stats_show_percentage") }
+    }
+    @Published public var showGraphs: Bool {
+        didSet { UserDefaults.standard.set(showGraphs, forKey: "stats_show_graphs") }
+    }
+    @Published public var useSubtleBackground: Bool {
+        didSet { UserDefaults.standard.set(useSubtleBackground, forKey: "stats_use_subtle_background") }
+    }
+    
     private var statusItem: NSStatusItem?
     private var popover: NSPopover?
     
     public override init() {
         self.isEnabled = UserDefaults.standard.object(forKey: "system_stats_is_enabled") as? Bool ?? true
-        // Default to true so the widget is immediately visible
         self.showsDedicatedStatusItem = UserDefaults.standard.object(forKey: "system_stats_shows_dedicated_status_item") as? Bool ?? true
+        
+        self.showCPU = UserDefaults.standard.object(forKey: "stats_show_cpu") as? Bool ?? true
+        self.showRAM = UserDefaults.standard.object(forKey: "stats_show_ram") as? Bool ?? true
+        self.showGPU = UserDefaults.standard.object(forKey: "stats_show_gpu") as? Bool ?? true
+        self.showLabels = UserDefaults.standard.object(forKey: "stats_show_labels") as? Bool ?? true
+        self.showPercentage = UserDefaults.standard.object(forKey: "stats_show_percentage") as? Bool ?? false
+        self.showGraphs = UserDefaults.standard.object(forKey: "stats_show_graphs") as? Bool ?? true
+        self.useSubtleBackground = UserDefaults.standard.object(forKey: "stats_use_subtle_background") as? Bool ?? false
+        
         super.init()
     }
     
@@ -186,9 +216,56 @@ public struct SystemStatsSettingsView: View {
                     Toggle("Mini-Graphen & Metriken in Menüleiste anzeigen", isOn: $module.showsDedicatedStatusItem)
                         .font(.subheadline)
                     
-                    Text("Rendert kompakte Live-Graphen für GPU, RAM und CPU nebeneinander direkt in der Menüleiste. Klick darauf öffnet den Mini Task-Manager.")
+                    Text("Rendert kompakte Live-Metriken für CPU, RAM und GPU direkt in der Menüleiste. Klick darauf öffnet den Mini Task-Manager.")
                         .font(.caption)
                         .foregroundColor(.secondary)
+                }
+                .padding()
+                .background(RoundedRectangle(cornerRadius: 12).fill(Color(nsColor: .controlBackgroundColor)))
+                
+                // Menüleisten-Anzeige Konfiguration
+                VStack(alignment: .leading, spacing: 14) {
+                    Text("Menüleisten-Anzeige konfigurieren")
+                        .font(.headline)
+                    
+                    // Live Vorschau
+                    HStack {
+                        Text("Live-Vorschau:")
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                        Spacer()
+                        MenuBarStatsWidgetView()
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 4)
+                            .background(RoundedRectangle(cornerRadius: 6).fill(Color(nsColor: .windowBackgroundColor)))
+                    }
+                    .padding(10)
+                    .background(RoundedRectangle(cornerRadius: 8).fill(Color(nsColor: .controlBackgroundColor)))
+                    
+                    Divider()
+                    
+                    Text("Aktive Messwerte in der Menüleiste:")
+                        .font(.subheadline)
+                        .fontWeight(.medium)
+                    
+                    HStack(spacing: 24) {
+                        Toggle("CPU", isOn: $module.showCPU)
+                        Toggle("RAM (Speicher)", isOn: $module.showRAM)
+                        Toggle("GPU (Grafik)", isOn: $module.showGPU)
+                    }
+                    
+                    Divider()
+                    
+                    Text("Darstellungs-Optionen:")
+                        .font(.subheadline)
+                        .fontWeight(.medium)
+                    
+                    VStack(alignment: .leading, spacing: 10) {
+                        Toggle("Text-Bezeichnung anzeigen (z.B. „CPU“, „RAM“, „GPU“)", isOn: $module.showLabels)
+                        Toggle("Prozentwert als Text anzeigen (z.B. „10%“, „61%“)", isOn: $module.showPercentage)
+                        Toggle("Mini-Graphen & Balken anzeigen", isOn: $module.showGraphs)
+                        Toggle("Dezenter Kapsel-Hintergrund (Pill)", isOn: $module.useSubtleBackground)
+                    }
                 }
                 .padding()
                 .background(RoundedRectangle(cornerRadius: 12).fill(Color(nsColor: .controlBackgroundColor)))
