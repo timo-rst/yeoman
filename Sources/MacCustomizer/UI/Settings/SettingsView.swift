@@ -3,6 +3,7 @@ import SwiftUI
 public enum SettingsTab: String, CaseIterable, Identifiable {
     case general = "Allgemein"
     case menuBar = "Menüleiste"
+    case webPanel = "Web-Widget (MenuBarX)"
     case clipboard = "Zwischenablage (Clippy)"
     case systemStats = "System-Stats & Tasks"
     case about = "Über MacCustomizer"
@@ -13,6 +14,7 @@ public enum SettingsTab: String, CaseIterable, Identifiable {
         switch self {
         case .general: return "gearshape"
         case .menuBar: return "menubar.rectangle"
+        case .webPanel: return "calendar"
         case .clipboard: return "doc.on.clipboard"
         case .systemStats: return "gauge.with.needle"
         case .about: return "info.circle"
@@ -38,6 +40,8 @@ public struct SettingsView: View {
                     
                     if tab == .menuBar && moduleManager.menuBarModule.isEnabled {
                         Circle().fill(Color.green).frame(width: 6, height: 6)
+                    } else if tab == .webPanel && moduleManager.webPanelModule.isEnabled {
+                        Circle().fill(Color.green).frame(width: 6, height: 6)
                     } else if tab == .clipboard && moduleManager.clipboardModule.isEnabled {
                         Circle().fill(Color.green).frame(width: 6, height: 6)
                     } else if tab == .systemStats && moduleManager.systemStatsModule.isEnabled {
@@ -54,6 +58,8 @@ public struct SettingsView: View {
                 GeneralSettingsView()
             case .menuBar:
                 moduleManager.menuBarModule.settingsView()
+            case .webPanel:
+                moduleManager.webPanelModule.settingsView()
             case .clipboard:
                 moduleManager.clipboardModule.settingsView()
             case .systemStats:
@@ -125,6 +131,22 @@ struct GeneralSettingsView: View {
                         showsDedicatedIcon: Binding(
                             get: { ModuleManager.shared.menuBarModule.showsDedicatedStatusItem },
                             set: { ModuleManager.shared.menuBarModule.showsDedicatedStatusItem = $0 }
+                        )
+                    )
+                    
+                    Divider()
+                    
+                    ModuleToggleRow(
+                        title: "Web-Widget (MenuBarX)",
+                        subtitle: "Eingebettete Web-App (z.B. Proton Calendar, Notion, ChatGPT)",
+                        icon: "calendar",
+                        isOn: Binding(
+                            get: { ModuleManager.shared.webPanelModule.isEnabled },
+                            set: { ModuleManager.shared.toggleModule(id: ModuleManager.shared.webPanelModule.id, enabled: $0) }
+                        ),
+                        showsDedicatedIcon: Binding(
+                            get: { ModuleManager.shared.webPanelModule.showsDedicatedStatusItem },
+                            set: { ModuleManager.shared.webPanelModule.showsDedicatedStatusItem = $0 }
                         )
                     )
                     

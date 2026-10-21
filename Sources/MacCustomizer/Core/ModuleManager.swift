@@ -7,6 +7,7 @@ public final class ModuleManager: ObservableObject {
     @Published public private(set) var modules: [any CustomizerModule] = []
     
     public let menuBarModule = MenuBarModule()
+    public let webPanelModule = WebPanelModule()
     public let clipboardModule = ClipboardModule()
     public let systemStatsModule = SystemStatsModule()
     
@@ -17,6 +18,7 @@ public final class ModuleManager: ObservableObject {
     private func registerModules() {
         self.modules = [
             menuBarModule,
+            webPanelModule,
             clipboardModule,
             systemStatsModule
         ]
