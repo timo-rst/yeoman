@@ -1,17 +1,10 @@
 import SwiftUI
 import AppKit
 
-public struct SystemStats {
-    public var cpuUsagePercent: Double = 0.0
-    public var memoryUsagePercent: Double = 0.0
-    public var memoryUsedGB: Double = 0.0
-    public var memoryTotalGB: Double = 0.0
-}
-
 public final class SystemStatsModule: NSObject, CustomizerModule, ObservableObject {
     public let id = "system_stats"
-    public let name = "System Stats Monitor"
-    public let moduleDescription = "CPU, RAM und GPU Auslastung direkt in der Menüleiste (wie in Stats)."
+    public let name = "Mini Task-Manager & System-Stats"
+    public let moduleDescription = "CPU-, RAM- und GPU-Metriken in der Menüleiste mit Mini Task-Manager zum Abschießen von Prozessen."
     public let iconName = "gauge.with.needle"
     public let category = ModuleCategory.system
     
@@ -33,31 +26,24 @@ public final class SystemStatsModule: NSObject, CustomizerModule, ObservableObje
         }
     }
     
-    @Published public var currentStats = SystemStats()
-    
-    private var timer: Timer?
     private var statusItem: NSStatusItem?
+    private var popover: NSPopover?
     
     public override init() {
-        self.isEnabled = UserDefaults.standard.object(forKey: "system_stats_is_enabled") as? Bool ?? false
-        self.showsDedicatedStatusItem = UserDefaults.standard.object(forKey: "system_stats_shows_dedicated_status_item") as? Bool ?? false
+        self.isEnabled = UserDefaults.standard.object(forKey: "system_stats_is_enabled") as? Bool ?? true
+        // Default to true so the widget is immediately visible
+        self.showsDedicatedStatusItem = UserDefaults.standard.object(forKey: "system_stats_shows_dedicated_status_item") as? Bool ?? true
         super.init()
     }
     
     public func start() {
         guard isEnabled else { return }
-        if timer == nil {
-            timer = Timer.scheduledTimer(withTimeInterval: 2.0, repeats: true) { [weak self] _ in
-                self?.updateStats()
-            }
-        }
-        updateStats()
+        SystemMetricsProvider.shared.startPolling()
         updateStatusItemVisibility()
     }
     
     public func stop() {
-        timer?.invalidate()
-        timer = nil
+        SystemMetricsProvider.shared.stopPolling()
         removeStatusItem()
     }
     
@@ -73,22 +59,28 @@ public final class SystemStatsModule: NSObject, CustomizerModule, ObservableObje
     }
     
     private func setupStatusItem() {
-        if statusItem == nil {
-            statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
-            if let button = statusItem?.button {
-                button.toolTip = "System Stats Monitor"
-                button.target = self
-                button.action = #selector(statusItemClicked)
-            }
+        guard statusItem == nil else { return }
+        
+        let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
+        if let button = item.button {
+            button.target = self
+            button.action = #selector(statusItemClicked(_:))
+            button.sendAction(on: [.leftMouseUp, .rightMouseUp])
+            button.toolTip = "System Monitor & Mini Task-Manager (Klick zum Öffnen)"
+            
+            let widgetView = MenuBarStatsWidgetView().allowsHitTesting(false)
+            let hostingView = NSHostingView(rootView: widgetView)
+            hostingView.translatesAutoresizingMaskIntoConstraints = false
+            button.addSubview(hostingView)
+            
+            NSLayoutConstraint.activate([
+                hostingView.leadingAnchor.constraint(equalTo: button.leadingAnchor),
+                hostingView.trailingAnchor.constraint(equalTo: button.trailingAnchor),
+                hostingView.topAnchor.constraint(equalTo: button.topAnchor),
+                hostingView.bottomAnchor.constraint(equalTo: button.bottomAnchor)
+            ])
         }
-        updateStatusButton()
-    }
-    
-    private func updateStatusButton() {
-        guard let button = statusItem?.button else { return }
-        let memStr = "\(Int(currentStats.memoryUsagePercent))%"
-        let cpuStr = "\(Int(currentStats.cpuUsagePercent))%"
-        button.title = "RAM \(memStr) CPU \(cpuStr)"
+        self.statusItem = item
     }
     
     private func removeStatusItem() {
@@ -96,35 +88,71 @@ public final class SystemStatsModule: NSObject, CustomizerModule, ObservableObje
             NSStatusBar.system.removeStatusItem(item)
             statusItem = nil
         }
+        if let popover = popover, popover.isShown {
+            popover.performClose(nil)
+        }
     }
     
-    @objc private func statusItemClicked() {
+    @objc private func statusItemClicked(_ sender: NSStatusBarButton) {
+        let event = NSApp.currentEvent
+        if event?.type == .rightMouseUp {
+            showContextMenu(for: sender)
+        } else {
+            togglePopover(sender)
+        }
+    }
+    
+    private func togglePopover(_ sender: NSStatusBarButton) {
+        if popover == nil {
+            let p = NSPopover()
+            p.contentSize = NSSize(width: 440, height: 490)
+            p.behavior = .transient
+            p.animates = true
+            p.contentViewController = NSHostingController(rootView: TaskManagerPopoverView())
+            self.popover = p
+        }
+        
+        guard let p = popover else { return }
+        if p.isShown {
+            p.performClose(sender)
+        } else {
+            SystemMetricsProvider.shared.refreshMetrics()
+            SystemMetricsProvider.shared.refreshProcessList()
+            p.show(relativeTo: sender.bounds, of: sender, preferredEdge: .minY)
+            p.contentViewController?.view.window?.makeKey()
+            NSApp.activate(ignoringOtherApps: true)
+        }
+    }
+    
+    private func showContextMenu(for sender: NSStatusBarButton) {
+        let menu = NSMenu()
+        menu.addItem(NSMenuItem(title: "Mini Task-Manager öffnen", action: #selector(openPopoverAction), keyEquivalent: ""))
+        menu.addItem(NSMenuItem(title: "macOS Aktivitätsanzeige öffnen", action: #selector(openActivityMonitorAction), keyEquivalent: ""))
+        menu.addItem(NSMenuItem.separator())
+        menu.addItem(NSMenuItem(title: "Einstellungen...", action: #selector(openSettingsAction), keyEquivalent: ","))
+        
+        for item in menu.items {
+            item.target = self
+        }
+        
+        statusItem?.menu = menu
+        sender.performClick(nil)
+        statusItem?.menu = nil
+    }
+    
+    @objc private func openPopoverAction() {
+        if let button = statusItem?.button {
+            togglePopover(button)
+        }
+    }
+    
+    @objc private func openActivityMonitorAction() {
+        let url = URL(fileURLWithPath: "/System/Applications/Utilities/Activity Monitor.app")
+        NSWorkspace.shared.openApplication(at: url, configuration: NSWorkspace.OpenConfiguration(), completionHandler: nil)
+    }
+    
+    @objc private func openSettingsAction() {
         StatusItemController.shared.openSettingsWindow()
-    }
-    
-    private func updateStats() {
-        var size = mach_msg_type_number_t(MemoryLayout<host_basic_info_data_t>.size / MemoryLayout<integer_t>.size)
-        var hostInfo = host_basic_info()
-        let hostPort = mach_host_self()
-        
-        let result = withUnsafeMutablePointer(to: &hostInfo) {
-            $0.withMemoryRebound(to: integer_t.self, capacity: Int(size)) {
-                host_info(hostPort, HOST_BASIC_INFO, $0, &size)
-            }
-        }
-        
-        if result == KERN_SUCCESS {
-            let totalMemBytes = Double(hostInfo.max_mem)
-            let totalMemGB = totalMemBytes / (1024 * 1024 * 1024)
-            currentStats.memoryTotalGB = totalMemGB
-            currentStats.memoryUsedGB = totalMemGB * 0.55
-            currentStats.memoryUsagePercent = 55.0
-            currentStats.cpuUsagePercent = 12.0
-            
-            DispatchQueue.main.async { [weak self] in
-                self?.updateStatusButton()
-            }
-        }
     }
     
     public func settingsView() -> AnyView {
@@ -134,26 +162,97 @@ public final class SystemStatsModule: NSObject, CustomizerModule, ObservableObje
 
 public struct SystemStatsSettingsView: View {
     @ObservedObject var module: SystemStatsModule
+    @ObservedObject var provider = SystemMetricsProvider.shared
     
     public var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            Text("System Monitor")
+        ScrollView {
+            VStack(alignment: .leading, spacing: 20) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("System Monitor & Mini Task-Manager")
+                        .font(.title2)
+                        .fontWeight(.bold)
+                    Text("Kompakte GPU-, RAM- und CPU-Graphen in der Menüleiste (wie in Stats) mit integriertem Mini Task-Manager (wie bei Windows) zum sofortigen Beenden und Abschießen hängender Prozesse.")
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                }
+                
+                Divider()
+                
+                // Menüleisten-Option
+                VStack(alignment: .leading, spacing: 14) {
+                    Text("Menüleisten-Widget")
+                        .font(.headline)
+                    
+                    Toggle("Mini-Graphen & Metriken in Menüleiste anzeigen", isOn: $module.showsDedicatedStatusItem)
+                        .font(.subheadline)
+                    
+                    Text("Rendert kompakte Live-Graphen für GPU, RAM und CPU nebeneinander direkt in der Menüleiste. Klick darauf öffnet den Mini Task-Manager.")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+                .padding()
+                .background(RoundedRectangle(cornerRadius: 12).fill(Color(nsColor: .controlBackgroundColor)))
+                
+                // Live Snapshot Preview
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("Aktuelle System-Auslastung")
+                        .font(.headline)
+                    
+                    HStack(spacing: 12) {
+                        MetricInfoBox(title: "CPU", value: "\(Int(provider.cpuUsagePercent))%", subtitle: "\(ProcessInfo.processInfo.processorCount) Cores", color: .blue)
+                        MetricInfoBox(title: "RAM", value: "\(Int(provider.memoryUsagePercent))%", subtitle: "\(String(format: "%.1f", provider.memoryUsedGB)) GB", color: .purple)
+                        MetricInfoBox(title: "GPU", value: "\(Int(provider.gpuUsagePercent))%", subtitle: "Metal Engine", color: .green)
+                    }
+                }
+                .padding()
+                .background(RoundedRectangle(cornerRadius: 12).fill(Color(nsColor: .controlBackgroundColor)))
+                
+                // Process Management Information
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("Prozess-Verwaltung (Task-Manager)")
+                        .font(.headline)
+                    
+                    Text("Aktuell laufen \(provider.processes.count) Prozesse auf deinem Mac. Über den Mini Task-Manager kannst du hungrige oder nicht reagierende Prozesse mit einem einzigen Klick per SIGKILL sofort beenden.")
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                    
+                    HStack {
+                        Button("Aktivitätsanzeige öffnen") {
+                            let url = URL(fileURLWithPath: "/System/Applications/Utilities/Activity Monitor.app")
+                            NSWorkspace.shared.openApplication(at: url, configuration: NSWorkspace.OpenConfiguration(), completionHandler: nil)
+                        }
+                    }
+                }
+                .padding()
+                .background(RoundedRectangle(cornerRadius: 12).fill(Color(nsColor: .controlBackgroundColor)))
+            }
+            .padding(20)
+        }
+    }
+}
+
+struct MetricInfoBox: View {
+    let title: String
+    let value: String
+    let subtitle: String
+    let color: Color
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(title)
+                .font(.caption)
+                .fontWeight(.bold)
+                .foregroundColor(.secondary)
+            Text(value)
                 .font(.title2)
                 .fontWeight(.bold)
-            Text("Zeigt CPU-, RAM- und GPU-Metriken kompakt in der Menüleiste an.")
-                .foregroundColor(.secondary)
-            
-            Divider()
-            
-            Toggle("System-Metriken aktivieren", isOn: $module.isEnabled)
-            
-            Toggle("Eigenes Icon / Live-Metriken in Menüleiste anzeigen", isOn: $module.showsDedicatedStatusItem)
-                .disabled(!module.isEnabled)
-            
-            Text("Zeigt Text wie 'RAM 55% CPU 12%' direkt neben den anderen Menüleisten-Symbolen an.")
-                .font(.caption)
+                .foregroundColor(color)
+            Text(subtitle)
+                .font(.caption2)
                 .foregroundColor(.secondary)
         }
-        .padding(20)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(10)
+        .background(RoundedRectangle(cornerRadius: 8).fill(Color(nsColor: .windowBackgroundColor)))
     }
 }
