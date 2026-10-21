@@ -60,15 +60,33 @@ public final class ScrollReverserManager: ObservableObject {
         
         DispatchQueue.main.async {
             self.hasAccessibilityPermission = trusted
+            if trusted {
+                self.stopPermissionPolling()
+                if !self.isRunning && ModuleManager.shared.scrollReverserModule.isEnabled {
+                    self.start()
+                }
+            }
         }
         return trusted
     }
     
     public func openAccessibilitySettings() {
         checkAccessibility(prompt: true)
+        startPermissionPolling()
         if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility") {
             NSWorkspace.shared.open(url)
         }
+    }
+    
+    public func resetTCCPermission() {
+        let p = Process()
+        p.executableURL = URL(fileURLWithPath: "/usr/bin/tccutil")
+        p.arguments = ["reset", "Accessibility", "de.trst.MacCustomizer"]
+        try? p.run()
+        p.waitUntilExit()
+        
+        checkAccessibility(prompt: true)
+        openAccessibilitySettings()
     }
     
     // MARK: - Event Tap Lifecycle
@@ -138,20 +156,22 @@ public final class ScrollReverserManager: ObservableObject {
         }
     }
     
-    private func startPermissionPolling() {
+    public func startPermissionPolling() {
         permissionCheckTimer?.cancel()
-        permissionCheckTimer = Timer.publish(every: 1.5, on: .main, in: .common)
+        permissionCheckTimer = Timer.publish(every: 1.0, on: .main, in: .common)
             .autoconnect()
             .sink { [weak self] _ in
                 guard let self = self else { return }
                 if self.checkAccessibility(prompt: false) {
                     self.stopPermissionPolling()
-                    self.start()
+                    if ModuleManager.shared.scrollReverserModule.isEnabled {
+                        self.start()
+                    }
                 }
             }
     }
     
-    private func stopPermissionPolling() {
+    public func stopPermissionPolling() {
         permissionCheckTimer?.cancel()
         permissionCheckTimer = nil
     }

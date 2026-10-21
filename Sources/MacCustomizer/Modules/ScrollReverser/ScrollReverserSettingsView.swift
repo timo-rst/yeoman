@@ -32,26 +32,47 @@ public struct ScrollReverserSettingsView: View {
                 
                 // Accessibility Permission Banner (if missing)
                 if !manager.hasAccessibilityPermission {
-                    HStack(spacing: 14) {
-                        Image(systemName: "exclamationmark.triangle.fill")
-                            .font(.title2)
-                            .foregroundColor(.orange)
+                    VStack(alignment: .leading, spacing: 10) {
+                        HStack(spacing: 14) {
+                            Image(systemName: "exclamationmark.triangle.fill")
+                                .font(.title2)
+                                .foregroundColor(.orange)
+                            
+                            VStack(alignment: .leading, spacing: 3) {
+                                Text("Bedienungshilfen-Berechtigung erforderlich")
+                                    .fontWeight(.medium)
+                                Text("macOS erfordert die Erlaubnis für Bedienungshilfen, damit MacCustomizer Scrollrad-Events abfangen und umkehren darf.")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                            }
+                            
+                            Spacer()
+                            
+                            HStack(spacing: 8) {
+                                Button("Erneut prüfen") {
+                                    manager.checkAccessibility(prompt: false)
+                                }
+                                .buttonStyle(.bordered)
+                                .controlSize(.small)
+                                
+                                Button("In Systemeinstellungen öffnen") {
+                                    manager.openAccessibilitySettings()
+                                }
+                                .buttonStyle(.borderedProminent)
+                                .controlSize(.small)
+                            }
+                        }
                         
-                        VStack(alignment: .leading, spacing: 3) {
-                            Text("Bedienungshilfen-Berechtigung erforderlich")
-                                .fontWeight(.medium)
-                            Text("macOS erfordert die Erlaubnis für Bedienungshilfen, damit MacCustomizer Scrollrad-Events abfangen und umkehren darf.")
+                        Divider()
+                        
+                        HStack(alignment: .top, spacing: 6) {
+                            Image(systemName: "info.circle")
                                 .font(.caption)
                                 .foregroundColor(.secondary)
+                            Text("Hinweis: Falls MacCustomizer in den Systemeinstellungen bereits auf AN steht, bitte den Schalter dort einmal kurz **AUS und wieder AN** schalten (oder mit '-' entfernen und neu hinzufügen), damit macOS die Signatur des App-Updates übernimmt.")
+                                .font(.caption2)
+                                .foregroundColor(.secondary)
                         }
-                        
-                        Spacer()
-                        
-                        Button("In Systemeinstellungen öffnen") {
-                            manager.openAccessibilitySettings()
-                        }
-                        .buttonStyle(.borderedProminent)
-                        .controlSize(.small)
                     }
                     .padding(14)
                     .background(RoundedRectangle(cornerRadius: 12).fill(Color.orange.opacity(0.12)))
@@ -196,6 +217,20 @@ public struct ScrollReverserSettingsView: View {
                 .background(RoundedRectangle(cornerRadius: 12).fill(Color(nsColor: .controlBackgroundColor)))
             }
             .padding(20)
+        }
+        .onAppear {
+            manager.checkAccessibility(prompt: false)
+            if !manager.hasAccessibilityPermission {
+                manager.startPermissionPolling()
+            }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
+            manager.checkAccessibility(prompt: false)
+        }
+        .onDisappear {
+            if !manager.isRunning {
+                manager.stopPermissionPolling()
+            }
         }
     }
 }

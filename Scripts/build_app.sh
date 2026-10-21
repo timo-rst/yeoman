@@ -22,6 +22,10 @@ mkdir -p "$RESOURCES_DIR"
 cp "$BUILD_BIN" "$MACOS_DIR/$APP_NAME"
 chmod +x "$MACOS_DIR/$APP_NAME"
 
+if [ -f "Resources/AppIcon.icns" ]; then
+    cp "Resources/AppIcon.icns" "$RESOURCES_DIR/AppIcon.icns"
+fi
+
 cat <<EOF > "$CONTENTS_DIR/Info.plist"
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -39,6 +43,8 @@ cat <<EOF > "$CONTENTS_DIR/Info.plist"
     <string>0.1.0</string>
     <key>CFBundleVersion</key>
     <string>1</string>
+    <key>CFBundleIconFile</key>
+    <string>AppIcon</string>
     <key>LSMinimumSystemVersion</key>
     <string>14.0</string>
     <key>LSUIElement</key>
@@ -51,5 +57,8 @@ cat <<EOF > "$CONTENTS_DIR/Info.plist"
 </plist>
 EOF
 
-echo "==> Successfully created $APP_BUNDLE!"
+echo "==> Signing macOS App Bundle with stable designated requirement..."
+codesign -s - -f --deep -r='designated => identifier "de.trst.MacCustomizer"' "$APP_BUNDLE"
+
+echo "==> Successfully created and signed $APP_BUNDLE!"
 echo "You can launch it with: open $APP_BUNDLE"
