@@ -681,45 +681,57 @@ struct WebWidgetEditorSheet: View {
                     .padding(.horizontal, 16)
                     .padding(.top, 14)
                     
-                    // Device Frame Outline
-                    VStack(spacing: 0) {
-                        // Fake Titlebar
-                        HStack(spacing: 6) {
-                            Circle().fill(Color.red.opacity(0.8)).frame(width: 8, height: 8)
-                            Circle().fill(Color.yellow.opacity(0.8)).frame(width: 8, height: 8)
-                            Circle().fill(Color.green.opacity(0.8)).frame(width: 8, height: 8)
-                            Spacer()
-                            Text(title.isEmpty ? url : title)
-                                .font(.system(size: 10, weight: .medium))
-                                .foregroundColor(.secondary)
-                                .lineLimit(1)
-                            Spacer()
-                            Text(userAgentMode == .desktop ? "Desktop" : "Mobil")
-                                .font(.system(size: 8, weight: .bold))
-                                .padding(.horizontal, 4)
-                                .padding(.vertical, 1)
-                                .background(Capsule().fill(Color.accentColor.opacity(0.2)))
-                                .foregroundColor(.accentColor)
+                    // Live Preview with isolated layout bounds
+                    GeometryReader { geo in
+                        let scale = previewScale(containerWidth: geo.size.width, containerHeight: geo.size.height)
+                        let deviceW = max(1, effectiveWidth)
+                        let deviceH = max(1, effectiveHeight + 28)
+                        
+                        ZStack {
+                            // Device Frame Outline
+                            VStack(spacing: 0) {
+                                // Fake Titlebar
+                                HStack(spacing: 6) {
+                                    Circle().fill(Color.red.opacity(0.8)).frame(width: 8, height: 8)
+                                    Circle().fill(Color.yellow.opacity(0.8)).frame(width: 8, height: 8)
+                                    Circle().fill(Color.green.opacity(0.8)).frame(width: 8, height: 8)
+                                    Spacer()
+                                    Text(title.isEmpty ? url : title)
+                                        .font(.system(size: 10, weight: .medium))
+                                        .foregroundColor(.secondary)
+                                        .lineLimit(1)
+                                    Spacer()
+                                    Text(userAgentMode == .desktop ? "Desktop" : "Mobil")
+                                        .font(.system(size: 8, weight: .bold))
+                                        .padding(.horizontal, 4)
+                                        .padding(.vertical, 1)
+                                        .background(Capsule().fill(Color.accentColor.opacity(0.2)))
+                                        .foregroundColor(.accentColor)
+                                }
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 6)
+                                .background(Color(nsColor: .controlBackgroundColor))
+                                
+                                Divider()
+                                
+                                // Live WebView
+                                WebViewRepresentable(controller: previewController)
+                                    .frame(width: effectiveWidth, height: effectiveHeight)
+                            }
+                            .frame(width: deviceW, height: deviceH)
+                            .background(Color(nsColor: .windowBackgroundColor))
+                            .cornerRadius(10)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 10)
+                                    .stroke(Color.primary.opacity(0.15), lineWidth: 1)
+                            )
+                            .shadow(color: .black.opacity(0.2), radius: 8, y: 4)
+                            .scaleEffect(scale)
+                            .frame(width: deviceW * scale, height: deviceH * scale)
                         }
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 6)
-                        .background(Color(nsColor: .controlBackgroundColor))
-                        
-                        Divider()
-                        
-                        // Live WebView
-                        WebViewRepresentable(controller: previewController)
-                            .frame(width: effectiveWidth, height: effectiveHeight)
+                        .frame(width: geo.size.width, height: geo.size.height, alignment: .center)
                     }
-                    .background(Color(nsColor: .windowBackgroundColor))
-                    .cornerRadius(10)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 10)
-                            .stroke(Color.primary.opacity(0.15), lineWidth: 1)
-                    )
-                    .shadow(color: .black.opacity(0.2), radius: 8, y: 4)
-                    .scaleEffect(previewScale(containerWidth: 420, containerHeight: 460))
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .padding(.bottom, 12)
                 }
                 .background(Color(nsColor: .underPageBackgroundColor).opacity(0.5))
             }
@@ -755,7 +767,7 @@ struct WebWidgetEditorSheet: View {
             .padding(.vertical, 12)
             .background(Color(nsColor: .controlBackgroundColor))
         }
-        .frame(minWidth: 840, minHeight: 620)
+        .frame(minWidth: 880, idealWidth: 920, maxWidth: 1050, minHeight: 620, idealHeight: 660, maxHeight: 720)
         .onAppear {
             updateLivePreview()
             if useFavicon {
@@ -765,8 +777,13 @@ struct WebWidgetEditorSheet: View {
     }
     
     private func previewScale(containerWidth: CGFloat, containerHeight: CGFloat) -> CGFloat {
-        let scaleW = (containerWidth - 40) / max(1, effectiveWidth)
-        let scaleH = (containerHeight - 40) / max(1, effectiveHeight)
+        let padding: CGFloat = 36
+        let availW = max(50, containerWidth - padding)
+        let availH = max(50, containerHeight - padding)
+        let targetW = max(1, effectiveWidth)
+        let targetH = max(1, effectiveHeight + 28)
+        let scaleW = availW / targetW
+        let scaleH = availH / targetH
         return min(1.0, min(scaleW, scaleH))
     }
     
