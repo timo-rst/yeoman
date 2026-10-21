@@ -280,7 +280,11 @@ public final class MenuBarAppearanceManager: ObservableObject {
     public var isCurrentSpaceFullscreen: Bool {
         let cid = CGSMainConnectionID()
         let space = CGSGetActiveSpace(cid)
-        return CGSSpaceGetType(cid, space) == 4
+        let type = CGSSpaceGetType(cid, space)
+        // In macOS SkyLight/CGS:
+        // Type 0 or 4 = standard user desktop space
+        // Type 1 = native macOS fullscreen space (kCGSSpaceFullscreen)
+        return type == 1
     }
     
     public var isMenuBarHiddenBySystem: Bool {
@@ -320,6 +324,14 @@ public final class MenuBarAppearanceManager: ObservableObject {
         return true
     }
     
+    public func orderPanelToBack(_ panel: NSPanel) {
+        // orderFrontRegardless makes the backing surface active,
+        // then orderBack(nil) puts it at the lowest z-order within .statusBar (Layer 25),
+        // cleanly underneath all status items and application menus (Layer 26).
+        panel.orderFrontRegardless()
+        panel.orderBack(nil)
+    }
+    
     public func updateVisibilityForCurrentState() {
         let show = shouldShowOverlay
         for panel in overlayPanels {
@@ -327,7 +339,7 @@ public final class MenuBarAppearanceManager: ObservableObject {
                 if panel.alphaValue < 1.0 {
                     panel.animator().alphaValue = 1.0
                 }
-                panel.orderFrontRegardless()
+                orderPanelToBack(panel)
             } else {
                 if panel.alphaValue > 0.0 {
                     panel.animator().alphaValue = 0.0
@@ -354,6 +366,8 @@ public final class MenuBarAppearanceManager: ObservableObject {
             self.isEnabled = true
         } else if overlayPanels.isEmpty {
             updateOverlayPanels()
+        } else {
+            updateVisibilityForCurrentState()
         }
         if self.shape == .split {
             updateDynamicMetrics()
@@ -468,7 +482,7 @@ public final class MenuBarAppearanceManager: ObservableObject {
             let panel = createOverlayPanel(for: screen)
             if show {
                 panel.alphaValue = 1.0
-                panel.orderFrontRegardless()
+                orderPanelToBack(panel)
             } else {
                 panel.alphaValue = 0.0
             }
@@ -504,11 +518,10 @@ public final class MenuBarAppearanceManager: ObservableObject {
             defer: false
         )
         
-        // Layer 24 (.mainMenu): Positioned directly in front of WindowServer Menubar background (Layer 24),
-        // but strictly behind status items (Layer 25) and application menus (Layer 26).
-        // This ensures the custom styling acts as the actual background behind icons and text!
-        panel.level = .mainMenu
-        // Use .fullScreenNone so the overlay is automatically excluded by WindowServer from fullscreen spaces (e.g. video livestreams, games, presentation modes)
+        // Layer 25 (.statusBar): Elevated above WindowServer background (Layer 24),
+        // with orderPanelToBack ensuring it is placed underneath status icons (Layer 25)
+        // and app menus (Layer 26).
+        panel.level = .statusBar
         panel.collectionBehavior = [.fullScreenNone, .ignoresCycle, .moveToActiveSpace]
         panel.backgroundColor = .clear
         panel.isOpaque = false
