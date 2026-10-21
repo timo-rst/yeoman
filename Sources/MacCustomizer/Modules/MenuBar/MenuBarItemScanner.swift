@@ -4,7 +4,7 @@ import Combine
 public enum MenuBarItemType: String, CaseIterable, Codable {
     case all = "Alle"
     case system = "macOS System"
-    case thirdParty = "Drittanbieter-Apps"
+    case thirdParty = "Drittanbieter"
     case internalModule = "MacCustomizer"
 }
 
@@ -77,10 +77,10 @@ public final class MenuBarItemScanner: ObservableObject {
         
         let systemItemsDefinition: [(id: String, name: String, symbol: String, defaultVisible: Bool)] = [
             ("Sound", "Ton / Lautstärke", "speaker.wave.3.fill", true),
-            ("Bluetooth", "Bluetooth", "bluetooth", true),
+            ("Bluetooth", "Bluetooth", "NSBluetoothTemplate", true),
             ("Battery", "Batterie", "battery.100", true),
             ("BatteryShowPercentage", "Batterie Prozentanzeige", "percent", true),
-            ("AirDrop", "AirDrop", "airdrop", false),
+            ("AirDrop", "AirDrop", "dot.radiowaves.left.and.right", false),
             ("Display", "Bildschirmsynchronisierung", "display", false),
             ("StageManager", "Stage Manager", "rectangle.grid.1x2", false),
             ("NowPlaying", "Aktuelle Wiedergabe", "music.note", false),

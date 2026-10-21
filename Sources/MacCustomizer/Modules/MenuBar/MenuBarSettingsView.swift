@@ -47,6 +47,7 @@ public struct MenuBarSettingsView: View {
                     }
                 }
                 .pickerStyle(.segmented)
+                .frame(maxWidth: 360)
             }
             .padding(.horizontal, 20)
             .padding(.top, 16)
