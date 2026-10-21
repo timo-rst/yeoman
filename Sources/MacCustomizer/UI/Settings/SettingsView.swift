@@ -3,6 +3,7 @@ import SwiftUI
 public enum SettingsTab: String, CaseIterable, Identifiable {
     case general = "Allgemein"
     case menuBar = "Menüleiste"
+    case scrollReverser = "Scroll Reverser (Maus)"
     case webPanel = "Web-Widget (MenuBarX)"
     case clipboard = "Zwischenablage (Clippy)"
     case systemStats = "System-Stats & Tasks"
@@ -14,6 +15,7 @@ public enum SettingsTab: String, CaseIterable, Identifiable {
         switch self {
         case .general: return "gearshape"
         case .menuBar: return "menubar.rectangle"
+        case .scrollReverser: return "computermouse"
         case .webPanel: return "calendar"
         case .clipboard: return "doc.on.clipboard"
         case .systemStats: return "gauge.with.needle"
@@ -40,6 +42,8 @@ public struct SettingsView: View {
                     
                     if tab == .menuBar && moduleManager.menuBarModule.isEnabled {
                         Circle().fill(Color.green).frame(width: 6, height: 6)
+                    } else if tab == .scrollReverser && moduleManager.scrollReverserModule.isEnabled {
+                        Circle().fill(Color.green).frame(width: 6, height: 6)
                     } else if tab == .webPanel && moduleManager.webPanelModule.isEnabled {
                         Circle().fill(Color.green).frame(width: 6, height: 6)
                     } else if tab == .clipboard && moduleManager.clipboardModule.isEnabled {
@@ -58,6 +62,8 @@ public struct SettingsView: View {
                 GeneralSettingsView()
             case .menuBar:
                 moduleManager.menuBarModule.settingsView()
+            case .scrollReverser:
+                moduleManager.scrollReverserModule.settingsView()
             case .webPanel:
                 moduleManager.webPanelModule.settingsView()
             case .clipboard:

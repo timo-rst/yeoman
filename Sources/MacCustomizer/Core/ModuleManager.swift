@@ -10,6 +10,7 @@ public final class ModuleManager: ObservableObject {
     public let webPanelModule = WebPanelModule()
     public let clipboardModule = ClipboardModule()
     public let systemStatsModule = SystemStatsModule()
+    public let scrollReverserModule = ScrollReverserModule()
     
     public init() {
         registerModules()
@@ -20,7 +21,8 @@ public final class ModuleManager: ObservableObject {
             menuBarModule,
             webPanelModule,
             clipboardModule,
-            systemStatsModule
+            systemStatsModule,
+            scrollReverserModule
         ]
     }
     
@@ -53,6 +55,7 @@ public final class ModuleManager: ObservableObject {
         clipboardModule.updateStatusItemVisibility()
         menuBarModule.updateStatusItemVisibility()
         webPanelModule.updateStatusItemVisibility()
+        scrollReverserModule.updateStatusItemVisibility()
         StatusItemController.shared.updateStatusItemVisibility()
     }
 }

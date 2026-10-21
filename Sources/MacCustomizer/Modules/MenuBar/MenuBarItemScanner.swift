@@ -215,6 +215,16 @@ public final class MenuBarItemScanner: ObservableObject {
                 sfSymbol: "slider.horizontal.3",
                 isVisibleInMenuBar: StatusItemController.shared.showsMainStatusItem,
                 isRunning: true
+            ),
+            MenuBarAppItem(
+                id: "module_scrollreverser",
+                name: "Scroll Reverser (Maus & Trackpad)",
+                type: .internalModule,
+                bundleIdentifier: "de.trst.MacCustomizer.scrollreverser",
+                appPath: nil,
+                sfSymbol: "computermouse",
+                isVisibleInMenuBar: mm.scrollReverserModule.isEnabled && mm.scrollReverserModule.showsDedicatedStatusItem,
+                isRunning: mm.scrollReverserModule.isEnabled
             )
         ]
     }
@@ -257,6 +267,9 @@ public final class MenuBarItemScanner: ObservableObject {
                 items[idx].isVisibleInMenuBar = enable
             } else if id == "module_hub" {
                 StatusItemController.shared.showsMainStatusItem = enable
+                items[idx].isVisibleInMenuBar = enable
+            } else if id == "module_scrollreverser" {
+                mm.scrollReverserModule.showsDedicatedStatusItem = enable
                 items[idx].isVisibleInMenuBar = enable
             }
             
