@@ -76,9 +76,9 @@ public final class ModuleManager: ObservableObject {
             self.systemStatsModule.setupStatusItem()
             // Next: Scroll Reverser
             self.scrollReverserModule.setupStatusItem()
-            // Next: Clipboard (Clippy)
+            // Next: Clipboard
             self.clipboardModule.setupStatusItem()
-            // Next: Web Widgets (iframes)
+            // Next: Web Widgets
             self.webPanelModule.recreateStatusItems()
             // Next: Menu Bar spacing quick-picker (if enabled)
             self.menuBarModule.setupStatusItem()

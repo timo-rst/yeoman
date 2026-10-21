@@ -4,7 +4,7 @@ import AppKit
 public final class MenuBarModule: NSObject, CustomizerModule, ObservableObject {
     public let id = "menu_bar_optimizer"
     public let name = "Menüleisten-Optimizer"
-    public let moduleDescription = "Kompaktere Symbole (wie Ice), anpassbarer Abstand und Multi-Monitor-Unterstützung."
+    public let moduleDescription = "Symbole kompakter anordnen, Abstände anpassen und Monitore verwalten."
     public let iconName = "menubar.rectangle"
     public let category = ModuleCategory.menuBar
     
@@ -82,7 +82,7 @@ public final class MenuBarModule: NSObject, CustomizerModule, ObservableObject {
         ultra.target = self
         menu.addItem(ultra)
         
-        let compact = NSMenuItem(title: "Kompakt (8 pt - Ice)", action: #selector(setCompact), keyEquivalent: "")
+        let compact = NSMenuItem(title: "Kompakt (8 pt)", action: #selector(setCompact), keyEquivalent: "")
         compact.target = self
         menu.addItem(compact)
         
@@ -91,7 +91,7 @@ public final class MenuBarModule: NSObject, CustomizerModule, ObservableObject {
         menu.addItem(standard)
         
         menu.addItem(NSMenuItem.separator())
-        let restart = NSMenuItem(title: "ControlCenter neu starten", action: #selector(restartCC), keyEquivalent: "")
+        let restart = NSMenuItem(title: "Menüleiste aktualisieren", action: #selector(restartCC), keyEquivalent: "")
         restart.target = self
         menu.addItem(restart)
         

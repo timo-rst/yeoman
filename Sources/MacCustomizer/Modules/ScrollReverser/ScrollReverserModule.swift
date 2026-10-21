@@ -3,8 +3,8 @@ import AppKit
 
 public final class ScrollReverserModule: NSObject, CustomizerModule, ObservableObject {
     public let id = "scroll_reverser"
-    public let name = "Scroll Reverser (Maus & Trackpad)"
-    public let moduleDescription = "Trennt die Scrollrichtung von Maus und Trackpad: Natürliches Trackpad-Gefühl und klassisches Mausrad."
+    public let name = "Scroll-Richtung"
+    public let moduleDescription = "Trennt die Scrollrichtung von Maus und Trackpad für natürliches Scrollen auf beiden Geräten."
     public let iconName = "computermouse"
     public let category = ModuleCategory.system
     
@@ -69,15 +69,15 @@ public final class ScrollReverserModule: NSObject, CustomizerModule, ObservableO
         let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         
         if let button = item.button {
-            let img = NSImage(systemSymbolName: "computermouse", accessibilityDescription: "Scroll Reverser")
+            let img = NSImage(systemSymbolName: "computermouse", accessibilityDescription: "Scroll-Richtung")
             img?.isTemplate = true
             button.image = img
-            button.toolTip = "Scroll Reverser (Klick für Optionen)"
+            button.toolTip = "Scroll-Richtung (Klick für Optionen)"
         }
         
         let menu = NSMenu()
         
-        let titleItem = NSMenuItem(title: "Scroll Reverser", action: nil, keyEquivalent: "")
+        let titleItem = NSMenuItem(title: "Scroll-Richtung", action: nil, keyEquivalent: "")
         titleItem.isEnabled = false
         menu.addItem(titleItem)
         menu.addItem(NSMenuItem.separator())

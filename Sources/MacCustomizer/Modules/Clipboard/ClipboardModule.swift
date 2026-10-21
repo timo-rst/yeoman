@@ -3,7 +3,7 @@ import AppKit
 
 public final class ClipboardModule: NSObject, CustomizerModule, ObservableObject {
     public let id = "clipboard_manager"
-    public let name = "Clipboard Manager (Clippy)"
+    public let name = "Zwischenablage"
     public let moduleDescription = "Lückenloser Verlauf der Zwischenablage mit Schnellsuche, Favoriten und Passwortschutz."
     public let iconName = "doc.on.clipboard"
     public let category = ModuleCategory.clipboard
@@ -31,7 +31,7 @@ public final class ClipboardModule: NSObject, CustomizerModule, ObservableObject
     
     public override init() {
         self.isEnabled = UserDefaults.standard.object(forKey: "clipboard_is_enabled") as? Bool ?? true
-        // Default to true so Clippy has its own menu bar icon by default
+        // Default to true so Clipboard has its own menu bar icon by default
         self.showsDedicatedStatusItem = UserDefaults.standard.object(forKey: "clipboard_shows_dedicated_status_item") as? Bool ?? true
         super.init()
     }
@@ -74,7 +74,7 @@ public final class ClipboardModule: NSObject, CustomizerModule, ObservableObject
             let image = NSImage(systemSymbolName: "doc.on.clipboard", accessibilityDescription: "Zwischenablage")
             image?.isTemplate = true
             button.image = image
-            button.toolTip = "Zwischenablage Verlauf (Clippy)"
+            button.toolTip = "Zwischenablage-Verlauf (Klick zum Öffnen)"
             button.target = self
             button.action = #selector(statusItemClicked(_:))
             button.sendAction(on: [.leftMouseUp, .rightMouseUp])
@@ -125,7 +125,7 @@ public final class ClipboardModule: NSObject, CustomizerModule, ObservableObject
     
     private func showContextMenu(for sender: NSStatusBarButton) {
         let menu = NSMenu()
-        menu.addItem(NSMenuItem(title: "Clippy Zwischenablage", action: nil, keyEquivalent: ""))
+        menu.addItem(NSMenuItem(title: "Zwischenablage", action: nil, keyEquivalent: ""))
         menu.addItem(NSMenuItem.separator())
         menu.addItem(NSMenuItem(title: "Nicht angepinnte leeren", action: #selector(clearUnpinnedAction), keyEquivalent: ""))
         menu.addItem(NSMenuItem(title: "Alle leeren", action: #selector(clearAllAction), keyEquivalent: ""))

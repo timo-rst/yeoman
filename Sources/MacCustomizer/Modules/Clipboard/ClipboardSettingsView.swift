@@ -22,10 +22,10 @@ public struct ClipboardSettingsView: View {
             VStack(alignment: .leading, spacing: 12) {
                 HStack {
                     VStack(alignment: .leading, spacing: 3) {
-                        Text("Clipboard Manager (Clippy)")
+                        Text("Zwischenablage-Manager")
                             .font(.title2)
                             .fontWeight(.bold)
-                        Text("Verlauf kopierter Texte, Links, Snippets und Fotos mit Kategorien und Suchfunktion.")
+                        Text("Verlauf kopierter Texte, Links und Bilder mit Such- und Filterfunktion.")
                             .font(.subheadline)
                             .foregroundColor(.secondary)
                     }
@@ -72,10 +72,10 @@ public struct ClipboardSettingsView: View {
                             Text("Menüleisten-Integration")
                                 .font(.headline)
                             
-                            Toggle("Eigenes Icon in der Menüleiste anzeigen (wie Clippy / Maccy)", isOn: $module.showsDedicatedStatusItem)
+                            Toggle("Eigenes Symbol in der Menüleiste anzeigen", isOn: $module.showsDedicatedStatusItem)
                                 .font(.subheadline)
                             
-                            Text("Zeigt ein separates Zwischenablagen-Symbol in der Menüleiste an. Ein Klick darauf öffnet direkt das Popup mit Verlauf, Tabs (inkl. Fotos) und Suchfeld.")
+                            Text("Zeigt ein separates Zwischenablagen-Symbol in der Menüleiste an, um den Verlauf schnell per Klick zu öffnen.")
                                 .font(.caption)
                                 .foregroundColor(.secondary)
                         }
@@ -86,10 +86,10 @@ public struct ClipboardSettingsView: View {
                             Text("Überwachung & Sicherheit")
                                 .font(.headline)
                             
-                            Toggle("Passwort-Manager & Browser-Erweiterungen ignorieren", isOn: $monitor.ignorePasswordManagers)
+                            Toggle("Passwörter und sensible Daten nicht speichern", isOn: $monitor.ignorePasswordManagers)
                                 .font(.subheadline)
                             
-                            Text("Passwörter und sensible Daten aus Proton Pass (Browser-Extension & Web), Bitwarden, 1Password, KeePassXC, macOS Passwörter sowie temporäre Zwischenablagen werden automatisch erkannt und nicht im Verlauf gespeichert.")
+                            Text("Kopierte Passwörter aus Passwort-Managern und Browser-Erweiterungen werden automatisch erkannt und vom Verlauf ausgeschlossen.")
                                 .font(.caption)
                                 .foregroundColor(.secondary)
                             

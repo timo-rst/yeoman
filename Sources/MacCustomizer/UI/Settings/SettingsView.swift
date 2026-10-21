@@ -3,10 +3,10 @@ import SwiftUI
 public enum SettingsTab: String, CaseIterable, Identifiable {
     case general = "Allgemein"
     case menuBar = "Menüleiste"
-    case scrollReverser = "Scroll Reverser (Maus)"
-    case webPanel = "Web-Widget (MenuBarX)"
-    case clipboard = "Zwischenablage (Clippy)"
-    case systemStats = "System-Stats & Tasks"
+    case scrollReverser = "Scroll-Richtung"
+    case webPanel = "Web-Widgets"
+    case clipboard = "Zwischenablage"
+    case systemStats = "System-Monitor"
     case about = "Über MacCustomizer"
     
     public var id: String { rawValue }
@@ -16,7 +16,7 @@ public enum SettingsTab: String, CaseIterable, Identifiable {
         case .general: return "gearshape"
         case .menuBar: return "menubar.rectangle"
         case .scrollReverser: return "computermouse"
-        case .webPanel: return "calendar"
+        case .webPanel: return "globe"
         case .clipboard: return "doc.on.clipboard"
         case .systemStats: return "gauge.with.needle"
         case .about: return "info.circle"
@@ -152,8 +152,8 @@ struct GeneralSettingsView: View {
                     
                     // 2. Scroll Reverser
                     ModuleToggleRow(
-                        title: "Scroll Reverser (Maus & Trackpad)",
-                        subtitle: "Trennt die Scrollrichtung von Maus und Trackpad für natürliches Verhalten",
+                        title: "Scroll-Richtung (Maus)",
+                        subtitle: "Kehrt die Scrollrichtung der Maus um, während das Trackpad unverändert bleibt",
                         icon: "computermouse",
                         isOn: Binding(
                             get: { scrollReverser.isEnabled },
@@ -167,11 +167,11 @@ struct GeneralSettingsView: View {
                     
                     Divider()
                     
-                    // 3. Web-Widget (MenuBarX)
+                    // 3. Web-Widgets
                     ModuleToggleRow(
-                        title: "Web-Widget (MenuBarX)",
-                        subtitle: "Eingebettete Web-Apps (z.B. Proton Calendar, Notion, ChatGPT)",
-                        icon: "calendar",
+                        title: "Web-Widgets",
+                        subtitle: "Web-Apps (z.B. Kalender oder Notizen) direkt in der Menüleiste öffnen",
+                        icon: "globe",
                         isOn: Binding(
                             get: { webPanel.isEnabled },
                             set: { mm.toggleModule(id: webPanel.id, enabled: $0) }
@@ -216,10 +216,10 @@ struct GeneralSettingsView: View {
                     
                     Divider()
                     
-                    // 4. Clipboard Manager (Clippy)
+                    // 4. Clipboard Manager
                     ModuleToggleRow(
-                        title: "Clipboard Manager (Clippy)",
-                        subtitle: "Zwischenablage-Historie mit Suche und Filter",
+                        title: "Zwischenablage-Manager",
+                        subtitle: "Verlauf kopierter Texte, Links und Bilder mit Suchfunktion",
                         icon: "doc.on.clipboard",
                         isOn: Binding(
                             get: { clipboard.isEnabled },
@@ -235,8 +235,8 @@ struct GeneralSettingsView: View {
                     
                     // 5. System Stats Monitor
                     ModuleToggleRow(
-                        title: "System Stats Monitor",
-                        subtitle: "CPU-, GPU- und RAM-Graphen",
+                        title: "System-Monitor",
+                        subtitle: "Live-Auslastung von Prozessor, Arbeitsspeicher und Grafik",
                         icon: "gauge.with.needle",
                         isOn: Binding(
                             get: { stats.isEnabled },

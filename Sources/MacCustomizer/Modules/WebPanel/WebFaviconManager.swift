@@ -230,7 +230,7 @@ public final class WebFaviconManager: ObservableObject {
             return true
         }
         
-        // Preserve vivid colors like MenuBarX (isTemplate = false)
+        // Preserve vivid colors (isTemplate = false)
         newImage.isTemplate = false
         return newImage
     }

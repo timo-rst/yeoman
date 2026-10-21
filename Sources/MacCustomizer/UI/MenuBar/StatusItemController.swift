@@ -84,7 +84,7 @@ public final class StatusItemController: NSObject, NSMenuDelegate {
         ultraItem.state = currentSpacing == 4 ? .on : .off
         spacingSubmenu.addItem(ultraItem)
         
-        let compactItem = NSMenuItem(title: "Kompakt (8 pt - Ice)", action: #selector(setSpacingCompact), keyEquivalent: "")
+        let compactItem = NSMenuItem(title: "Kompakt (8 pt)", action: #selector(setSpacingCompact), keyEquivalent: "")
         compactItem.target = self
         compactItem.state = currentSpacing == 8 ? .on : .off
         spacingSubmenu.addItem(compactItem)
@@ -95,7 +95,7 @@ public final class StatusItemController: NSObject, NSMenuDelegate {
         spacingSubmenu.addItem(standardItem)
         
         spacingSubmenu.addItem(NSMenuItem.separator())
-        let restartItem = NSMenuItem(title: "ControlCenter neu starten", action: #selector(restartControlCenter), keyEquivalent: "")
+        let restartItem = NSMenuItem(title: "Menüleiste aktualisieren", action: #selector(restartControlCenter), keyEquivalent: "")
         restartItem.target = self
         spacingSubmenu.addItem(restartItem)
         

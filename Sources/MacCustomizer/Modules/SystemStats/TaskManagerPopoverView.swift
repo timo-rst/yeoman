@@ -55,7 +55,7 @@ public struct TaskManagerPopoverView: View {
                             .foregroundColor(.secondary)
                             .font(.system(size: 11))
                         
-                        TextField("Task suchen (Name oder PID)...", text: $provider.searchQuery)
+                        TextField("Prozess suchen...", text: $provider.searchQuery)
                             .textFieldStyle(.plain)
                             .font(.system(size: 12))
                             .focused($isSearchFocused)
@@ -105,7 +105,7 @@ public struct TaskManagerPopoverView: View {
                         )
                     }
                     .buttonStyle(.plain)
-                    .help("Nach Prozessen suchen (Name oder PID)")
+                    .help("Nach Prozessen suchen")
                     
                     // Full-width Sort Picker
                     Picker("", selection: $provider.sortMode) {
@@ -177,7 +177,7 @@ public struct TaskManagerPopoverView: View {
             
             // Footer
             HStack {
-                Text("\(provider.processes.count) Tasks • Klick auf ✕ schießt Prozess sofort ab")
+                Text("\(provider.processes.count) Prozesse • Klick auf ✕ beendet Prozess sofort")
                     .font(.caption2)
                     .foregroundColor(.secondary)
                 
@@ -358,7 +358,7 @@ struct TaskRowView: View {
                             )
                     }
                     .buttonStyle(.plain)
-                    .help("Prozess '\(item.name)' (PID \(item.pid)) sofort beenden")
+                    .help("Prozess '\(item.name)' sofort beenden")
                 }
             }
             .frame(width: 40, alignment: .trailing)

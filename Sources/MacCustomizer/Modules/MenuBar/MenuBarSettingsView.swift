@@ -1,8 +1,8 @@
 import SwiftUI
 
 public enum MenuBarSubTab: String, CaseIterable, Identifiable {
-    case items = "Icons & Sichtbarkeit"
-    case spacing = "Abstände (Ice)"
+    case items = "Symbole & Sichtbarkeit"
+    case spacing = "Symbol-Abstände"
     
     public var id: String { rawValue }
     
@@ -28,10 +28,10 @@ public struct MenuBarSettingsView: View {
             VStack(spacing: 12) {
                 HStack {
                     VStack(alignment: .leading, spacing: 2) {
-                        Text("Menüleisten-Optimizer (Ice-Modul)")
+                        Text("Menüleiste anpassen")
                             .font(.title2)
                             .fontWeight(.bold)
-                        Text("Verwalte Icons, Sichtbarkeit und Menüleisten-Abstände.")
+                        Text("Verwalte Symbole, Sichtbarkeit und Abstände.")
                             .font(.subheadline)
                             .foregroundColor(.secondary)
                     }
@@ -82,10 +82,10 @@ public struct MenuBarSpacingSectionView: View {
                     Text("Menüleisten-Integration")
                         .font(.headline)
                     
-                    Toggle("Eigenes Icon in der Menüleiste anzeigen (Schnell-Umschalter für Abstände)", isOn: $module.showsDedicatedStatusItem)
+                    Toggle("Eigenes Symbol in der Menüleiste anzeigen", isOn: $module.showsDedicatedStatusItem)
                         .font(.subheadline)
                     
-                    Text("Zeigt ein separates Symbol in der Menüleiste an, über das du die Abstands-Presets per Klick wechseln kannst.")
+                    Text("Ermöglicht das schnelle Wechseln der Abstands-Presets direkt über ein Menüleisten-Symbol.")
                         .font(.caption)
                         .foregroundColor(.secondary)
                 }
@@ -114,11 +114,11 @@ public struct MenuBarSpacingSectionView: View {
                             spacingManager.applyPreset(.ultraCompact)
                         }
                         
-                        PresetButton(title: "Kompakt (Ice)", subtitle: "8 pt", isSelected: spacingManager.currentSpacing == 8) {
+                        PresetButton(title: "Kompakt", subtitle: "8 pt", isSelected: spacingManager.currentSpacing == 8) {
                             spacingManager.applyPreset(.compact)
                         }
                         
-                        PresetButton(title: "Standard", subtitle: "16 pt (macOS)", isSelected: spacingManager.currentSpacing == 16) {
+                        PresetButton(title: "Standard", subtitle: "16 pt", isSelected: spacingManager.currentSpacing == 16) {
                             spacingManager.applyPreset(.standard)
                         }
                     }
@@ -133,7 +133,7 @@ public struct MenuBarSpacingSectionView: View {
                     
                     VStack(alignment: .leading, spacing: 6) {
                         HStack {
-                            Text("Symbol-Abstand (Spacing):")
+                            Text("Abstand zwischen Symbolen:")
                             Spacer()
                             Text("\(spacingManager.currentSpacing) pt")
                                 .monospacedDigit()
@@ -147,7 +147,7 @@ public struct MenuBarSpacingSectionView: View {
                     
                     VStack(alignment: .leading, spacing: 6) {
                         HStack {
-                            Text("Auswahl-Padding (Selection Padding):")
+                            Text("Klickbereich um Symbole:")
                             Spacer()
                             Text("\(spacingManager.currentSelectionPadding) pt")
                                 .monospacedDigit()
@@ -161,22 +161,24 @@ public struct MenuBarSpacingSectionView: View {
                     
                     Divider()
                     
-                    Toggle("ControlCenter nach Anpassung automatisch neu laden", isOn: Binding(
+                    Toggle("Änderungen automatisch auf die Menüleiste anwenden", isOn: Binding(
                         get: { spacingManager.autoRestartControlCenter },
                         set: { spacingManager.setAutoRestart($0) }
                     ))
                     .font(.subheadline)
                     
                     HStack {
-                        Button("ControlCenter jetzt neu laden") {
+                        Button("Menüleiste jetzt aktualisieren") {
                             spacingManager.restartControlCenter()
                         }
+                        .buttonStyle(.bordered)
                         
                         Spacer()
                         
-                        Button("Auf macOS Standard zurücksetzen (16 pt)") {
+                        Button("Auf Standard zurücksetzen") {
                             spacingManager.resetToDefaults()
                         }
+                        .buttonStyle(.bordered)
                     }
                 }
                 .padding()

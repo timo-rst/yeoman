@@ -283,7 +283,7 @@ public struct WebPanelView: View {
             
             Divider()
             
-            // Bottom Slim Toolbar (MenuBarX Style) - Fixed at the very bottom
+            // Bottom Slim Toolbar - Fixed at the very bottom
             HStack(spacing: 8) {
                 // Home
                 Button(action: { controller.goHome() }) {
@@ -395,7 +395,7 @@ public struct WebPanelView: View {
                 .menuStyle(.borderlessButton)
                 .fixedSize()
                 
-                // Zoom Level Menu (MenuBarX Feature: scales website to fit widget)
+                // Zoom Level Menu (scales website to fit widget)
                 Menu {
                     Section("Seiten-Skalierung (Zoom)") {
                         ForEach([0.5, 0.65, 0.75, 0.85, 1.0, 1.15, 1.25, 1.5], id: \.self) { z in

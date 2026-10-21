@@ -99,7 +99,7 @@ public struct MenuBarItemsView: View {
                     HStack(spacing: 8) {
                         Image(systemName: "checkmark.circle.fill")
                             .foregroundColor(.accentColor)
-                        Text("System-Symbole geändert. Klicke auf 'Übernehmen', um ControlCenter zu aktualisieren:")
+                        Text("System-Symbole geändert. Klicke auf 'Übernehmen', um die Menüleiste zu aktualisieren:")
                             .font(.caption)
                         Spacer()
                         Button("Jetzt übernehmen") {
@@ -147,7 +147,7 @@ public struct MenuBarItemsView: View {
             
             // Summary Footer
             HStack {
-                Text("Änderungen an macOS System-Symbolen werden nach Bestätigung via ControlCenter übernommen.")
+                Text("Änderungen an Systemeinstellungen werden nach dem Klick auf 'Übernehmen' in der Menüleiste sichtbar.")
                     .font(.caption2)
                     .foregroundColor(.secondary.opacity(0.8))
                 Spacer()

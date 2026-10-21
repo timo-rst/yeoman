@@ -19,10 +19,10 @@ public struct WebPanelSettingsView: View {
                 VStack(alignment: .leading, spacing: 8) {
                     HStack {
                         VStack(alignment: .leading, spacing: 2) {
-                            Text("Web-Widgets & iFrames (MenuBarX-Modul)")
+                            Text("Web-Widgets")
                                 .font(.title2)
                                 .fontWeight(.bold)
-                            Text("Erstelle und verwalte mehrere Web-Apps (z.B. Proton Calendar, Notion, ChatGPT) als eigene Menüleisten-Icons.")
+                            Text("Web-Apps direkt als Menüleisten-Symbole mit Live-Fenster nutzen.")
                                 .font(.subheadline)
                                 .foregroundColor(.secondary)
                         }
@@ -69,7 +69,7 @@ public struct WebPanelSettingsView: View {
                             Text("Noch keine Web-Widgets erstellt")
                                 .font(.headline)
                                 .foregroundColor(.secondary)
-                            Text("Klicke auf den Button oben, um dein erstes Web-Widget (wie deinen Kalender oder Notion) anzulegen.")
+                            Text("Klicke auf den Button oben, um dein erstes Web-Widget anzulegen.")
                                 .font(.caption)
                                 .foregroundColor(.secondary)
                                 .multilineTextAlignment(.center)
@@ -445,12 +445,12 @@ struct WebWidgetEditorSheet: View {
                             
                             Divider()
                             
-                            // Favicon Option (MenuBarX behavior)
+                            // Website Logo Option
                             VStack(alignment: .leading, spacing: 6) {
-                                Toggle("Website-Icon (Favicon) automatisch laden (wie MenuBarX)", isOn: $useFavicon)
+                                Toggle("Website-Logo automatisch verwenden", isOn: $useFavicon)
                                     .fontWeight(.medium)
                                 
-                                Text("Verwendet das Original-Logo der Website (z.B. Proton, Google, Notion) in Farbe in der Menüleiste. Wenn deaktiviert oder offline, wird das SF-Symbol unten als Fallback genutzt.")
+                                Text("Verwendet das farbige Original-Logo der Website für die Menüleiste. Falls nicht verfügbar oder offline, wird das unten gewählte Symbol verwendet.")
                                     .font(.caption)
                                     .foregroundColor(.secondary)
                                 
@@ -462,7 +462,7 @@ struct WebWidgetEditorSheet: View {
                                                 .aspectRatio(contentMode: .fit)
                                                 .frame(width: 18, height: 18)
                                                 .clipShape(RoundedRectangle(cornerRadius: 3))
-                                            Text("Website-Favicon aktiv (farbig)")
+                                            Text("Website-Logo aktiv")
                                                 .font(.caption2)
                                                 .foregroundColor(.green)
                                                 .fontWeight(.medium)
@@ -470,7 +470,7 @@ struct WebWidgetEditorSheet: View {
                                             Image(systemName: "arrow.clockwise")
                                                 .font(.caption2)
                                                 .foregroundColor(.secondary)
-                                            Text("Favicon wird für URL geladen...")
+                                            Text("Logo wird geladen...")
                                                 .font(.caption2)
                                                 .foregroundColor(.secondary)
                                         }
@@ -495,9 +495,9 @@ struct WebWidgetEditorSheet: View {
                             
                             Divider()
                             
-                            // Symbol Selection (Fallback or Manual)
+                            // Symbol Selection
                             VStack(alignment: .leading, spacing: 6) {
-                                Text(useFavicon ? "Fallback-Symbol auswählen (wenn kein Web-Icon verfügbar):" : "Manuelles Menüleisten-Symbol auswählen (immer anzeigen):")
+                                Text(useFavicon ? "Ersatz-Symbol auswählen (falls kein Logo verfügbar):" : "Symbol für die Menüleiste auswählen:")
                                     .font(.caption2)
                                     .foregroundColor(.secondary)
                                 
@@ -641,7 +641,7 @@ struct WebWidgetEditorSheet: View {
                             
                             Divider()
                             
-                            Text("User-Agent (Smartphone-Erkennung):")
+                            Text("Darstellung (Mobil / Desktop):")
                                 .font(.subheadline)
                                 .fontWeight(.medium)
                             

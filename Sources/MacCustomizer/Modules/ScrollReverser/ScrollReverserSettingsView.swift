@@ -15,10 +15,10 @@ public struct ScrollReverserSettingsView: View {
                 VStack(alignment: .leading, spacing: 4) {
                     HStack {
                         VStack(alignment: .leading, spacing: 3) {
-                            Text("Scroll Reverser (Maus & Trackpad)")
+                            Text("Scroll-Richtung (Maus & Trackpad)")
                                 .font(.title2)
                                 .fontWeight(.bold)
-                            Text("Steuert die Scrollrichtung von Maus und Trackpad völlig unabhängig voneinander.")
+                            Text("Steuert die Scrollrichtung von Maus und Trackpad unabhängig voneinander.")
                                 .font(.subheadline)
                                 .foregroundColor(.secondary)
                         }
@@ -41,7 +41,7 @@ public struct ScrollReverserSettingsView: View {
                             VStack(alignment: .leading, spacing: 3) {
                                 Text("Bedienungshilfen-Berechtigung erforderlich")
                                     .fontWeight(.medium)
-                                Text("macOS erfordert die Erlaubnis für Bedienungshilfen, damit MacCustomizer Scrollrad-Events abfangen und umkehren darf.")
+                                Text("macOS erfordert die Erlaubnis für Bedienungshilfen, damit die Scrollrichtung der Maus angepasst werden kann.")
                                     .font(.caption)
                                     .foregroundColor(.secondary)
                             }
@@ -164,7 +164,7 @@ public struct ScrollReverserSettingsView: View {
                     Text("Menüleisten-Integration")
                         .font(.headline)
                     
-                    Toggle("Eigenes Icon in der Menüleiste anzeigen (wie Pilotmoon Scroll Reverser)", isOn: $module.showsDedicatedStatusItem)
+                    Toggle("Eigenes Symbol in der Menüleiste anzeigen", isOn: $module.showsDedicatedStatusItem)
                         .font(.subheadline)
                     
                     Text("Zeigt ein separates Maus-Symbol in der Menüleiste an, über das du die Richtung per Klick umschalten kannst.")
@@ -174,16 +174,16 @@ public struct ScrollReverserSettingsView: View {
                 .padding()
                 .background(RoundedRectangle(cornerRadius: 12).fill(Color(nsColor: .controlBackgroundColor)))
                 
-                // Card 4: Live Event Monitor & Diagnostics
+                // Card 4: Status
                 VStack(alignment: .leading, spacing: 12) {
                     HStack {
                         Circle()
                             .fill(manager.isRunning ? Color.green : Color.secondary)
                             .frame(width: 8, height: 8)
-                        Text("Live-Status & Diagnose")
+                        Text("Status")
                             .font(.headline)
                         Spacer()
-                        Text(manager.isRunning ? "Aktiv & lauscht auf Scroll-Events" : "Angehalten")
+                        Text(manager.isRunning ? "Aktiv" : "Angehalten")
                             .font(.caption)
                             .foregroundColor(manager.isRunning ? .green : .secondary)
                     }

@@ -210,7 +210,7 @@ public final class ScrollReverserManager: ObservableObject {
         let fixedPtAxis2 = event.getDoubleValueField(.scrollWheelEventFixedPtDeltaAxis2)
         
         // 4. Invert axes if required
-        // Note: As documented by Pilotmoon, setting DeltaAxis first causes macOS to recompute
+        // Note: setting DeltaAxis first causes macOS to recompute
         // PointDeltaAxis internally, so we set DeltaAxis first, then restore the multiplied Point and FixedPt deltas.
         if vmul != 1 {
             event.setIntegerValueField(.scrollWheelEventDeltaAxis1, value: axis1 * Int64(vmul))

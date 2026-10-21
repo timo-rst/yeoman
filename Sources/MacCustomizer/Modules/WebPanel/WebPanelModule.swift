@@ -115,8 +115,8 @@ public struct WebWidgetItem: Identifiable, Codable, Equatable {
 
 public final class WebPanelModule: NSObject, CustomizerModule, ObservableObject {
     public let id = "web_panel"
-    public let name = "Web-Widgets (iFrames)"
-    public let moduleDescription = "Verwalte deine Web-Widgets & iFrames (wie in MenuBarX). Erstelle, bearbeite und lösche mehrere Web-Apps mit anpassbaren Größen und Smartphone-Vorschau."
+    public let name = "Web-Widgets"
+    public let moduleDescription = "Websites direkt in der Menüleiste öffnen. Erstelle und verwalte Widgets mit flexiblen Fenstergrößen."
     public let iconName = "globe"
     public let category = ModuleCategory.productivity
     

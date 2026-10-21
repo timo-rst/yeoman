@@ -3,7 +3,7 @@ import AppKit
 import Combine
 
 public enum StatsLayoutMode: String, CaseIterable, Codable {
-    case vertical = "Vertikal gestapelt (wie Stats)"
+    case vertical = "Vertikal gestapelt"
     case horizontal = "Horizontal nebeneinander"
 }
 
@@ -15,8 +15,8 @@ public enum StatsGraphStyle: String, CaseIterable, Codable {
 
 public final class SystemStatsModule: NSObject, CustomizerModule, ObservableObject {
     public let id = "system_stats"
-    public let name = "Mini Task-Manager & System-Stats"
-    public let moduleDescription = "CPU-, RAM- und GPU-Metriken in der Menüleiste mit Mini Task-Manager zum Abschießen von Prozessen."
+    public let name = "System-Monitor"
+    public let moduleDescription = "Live-Anzeige für Prozessor, Arbeitsspeicher und Grafik in der Menüleiste mit integriertem Task-Manager."
     public let iconName = "gauge.with.needle"
     public let category = ModuleCategory.system
     
@@ -265,7 +265,7 @@ public final class SystemStatsModule: NSObject, CustomizerModule, ObservableObje
             button.target = self
             button.action = #selector(statusItemClicked(_:))
             button.sendAction(on: [.leftMouseUp, .rightMouseUp])
-            button.toolTip = "System Monitor & Mini Task-Manager (Klick zum Öffnen)"
+            button.toolTip = "System-Monitor (Klick zum Öffnen)"
             
             let widgetView = MenuBarStatsWidgetView(isLiveMenuBar: true).allowsHitTesting(false)
             let hostingView = NSHostingView(rootView: widgetView)
@@ -361,10 +361,10 @@ public struct SystemStatsSettingsView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("System Monitor & Mini Task-Manager")
+                    Text("System-Monitor & Task-Manager")
                         .font(.title2)
                         .fontWeight(.bold)
-                    Text("Kompakte GPU-, RAM- und CPU-Graphen in der Menüleiste (wie in Stats) mit integriertem Mini Task-Manager (wie bei Windows) zum sofortigen Beenden und Abschießen hängender Prozesse.")
+                    Text("Kompakte Anzeige für Prozessor, Arbeitsspeicher und Grafik in der Menüleiste mit Task-Manager zum schnellen Beenden von Apps.")
                         .font(.subheadline)
                         .foregroundColor(.secondary)
                 }
@@ -469,10 +469,10 @@ public struct SystemStatsSettingsView: View {
                 
                 // Process Management Information
                 VStack(alignment: .leading, spacing: 12) {
-                    Text("Prozess-Verwaltung (Task-Manager)")
+                    Text("Laufende Prozesse & Task-Manager")
                         .font(.headline)
                     
-                    Text("Aktuell laufen \(provider.processes.count) Prozesse auf deinem Mac. Über den Mini Task-Manager kannst du hungrige oder nicht reagierende Prozesse mit einem einzigen Klick per SIGKILL sofort beenden.")
+                    Text("Aktuell laufen \(provider.processes.count) Prozesse auf deinem Mac. Über das Menüleisten-Symbol kannst du nicht reagierende Apps direkt mit einem Klick beenden.")
                         .font(.subheadline)
                         .foregroundColor(.secondary)
                     
@@ -481,6 +481,7 @@ public struct SystemStatsSettingsView: View {
                             let url = URL(fileURLWithPath: "/System/Applications/Utilities/Activity Monitor.app")
                             NSWorkspace.shared.openApplication(at: url, configuration: NSWorkspace.OpenConfiguration(), completionHandler: nil)
                         }
+                        .buttonStyle(.bordered)
                     }
                 }
                 .padding()

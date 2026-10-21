@@ -178,7 +178,7 @@ public final class MenuBarItemScanner: ObservableObject {
         var list: [MenuBarAppItem] = [
             MenuBarAppItem(
                 id: "module_clipboard",
-                name: "Clippy (MacCustomizer Clipboard)",
+                name: "Zwischenablage",
                 type: .internalModule,
                 bundleIdentifier: "de.trst.MacCustomizer.clipboard",
                 appPath: nil,
@@ -188,7 +188,7 @@ public final class MenuBarItemScanner: ObservableObject {
             ),
             MenuBarAppItem(
                 id: "module_stats",
-                name: "System Stats Monitor (MacCustomizer)",
+                name: "System-Monitor",
                 type: .internalModule,
                 bundleIdentifier: "de.trst.MacCustomizer.systemstats",
                 appPath: nil,
@@ -198,7 +198,7 @@ public final class MenuBarItemScanner: ObservableObject {
             ),
             MenuBarAppItem(
                 id: "module_spacing",
-                name: "Menüleisten-Optimizer Schnellwähler",
+                name: "Menüleisten-Abstände",
                 type: .internalModule,
                 bundleIdentifier: "de.trst.MacCustomizer.menubar",
                 appPath: nil,
@@ -208,7 +208,7 @@ public final class MenuBarItemScanner: ObservableObject {
             ),
             MenuBarAppItem(
                 id: "module_hub",
-                name: "MacCustomizer Haupt-Launcher",
+                name: "MacCustomizer Menü",
                 type: .internalModule,
                 bundleIdentifier: "de.trst.MacCustomizer.hub",
                 appPath: nil,
@@ -218,7 +218,7 @@ public final class MenuBarItemScanner: ObservableObject {
             ),
             MenuBarAppItem(
                 id: "module_scrollreverser",
-                name: "Scroll Reverser (Maus & Trackpad)",
+                name: "Scroll-Richtung (Maus)",
                 type: .internalModule,
                 bundleIdentifier: "de.trst.MacCustomizer.scrollreverser",
                 appPath: nil,
@@ -228,7 +228,7 @@ public final class MenuBarItemScanner: ObservableObject {
             )
         ]
         
-        // Include individual Web-Widgets (MenuBarX)
+        // Include individual Web-Widgets
         for widget in mm.webPanelModule.widgets {
             list.append(MenuBarAppItem(
                 id: "web_widget_\(widget.id.uuidString)",
