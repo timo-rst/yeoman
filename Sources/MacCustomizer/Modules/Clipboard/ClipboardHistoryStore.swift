@@ -55,7 +55,7 @@ public final class ClipboardHistoryStore: ObservableObject {
         save()
     }
     
-    public func addImageItem(image: NSImage, sourceApp: String? = nil) {
+    public func addImageItem(image: NSImage, sourceApp: String? = nil, isScreenshot: Bool? = nil) {
         guard let tiff = image.tiffRepresentation,
               let rep = NSBitmapImageRep(data: tiff),
               let pngData = rep.representation(using: .png, properties: [:]) else { return }
@@ -79,16 +79,31 @@ public final class ClipboardHistoryStore: ObservableObject {
             return
         }
         
+        let isScreen = isScreenshot ?? {
+            if let app = sourceApp?.lowercased() {
+                return app.contains("screenshot") ||
+                       app.contains("bildschirmfoto") ||
+                       app.contains("screencapture") ||
+                       app.contains("cleanshot") ||
+                       app.contains("shottr") ||
+                       app.contains("snagit") ||
+                       app.contains("kap") ||
+                       app.contains("grab")
+            }
+            return false
+        }()
+        
         let newItem = ClipboardItem(
             id: id,
-            content: "Bild (\(width) × \(height))",
+            content: "\(isScreen ? "Screenshot" : "Bild") (\(width) × \(height))",
             type: .image,
             createdAt: Date(),
             sourceApp: sourceApp,
             imageFileName: fileName,
             imageWidth: width,
             imageHeight: height,
-            imageByteSize: byteSize
+            imageByteSize: byteSize,
+            isScreenshot: isScreen
         )
         
         items.insert(newItem, at: 0)

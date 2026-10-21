@@ -4,7 +4,7 @@ import AppKit
 public enum ClipboardTabFilter: String, CaseIterable, Identifiable {
     case all = "Alle"
     case text = "Texte"
-    case images = "Fotos & Bilder"
+    case images = "Bilder"
     case pinned = "Favoriten"
     
     public var id: String { rawValue }
@@ -13,7 +13,7 @@ public enum ClipboardTabFilter: String, CaseIterable, Identifiable {
         switch self {
         case .all: return "square.grid.2x2"
         case .text: return "text.alignleft"
-        case .images: return "photo.on.rectangle.angled"
+        case .images: return "photo"
         case .pinned: return "pin.fill"
         }
     }
@@ -94,54 +94,58 @@ public struct ClipboardView: View {
             Divider()
             
             // Category Tabs Bar
-            HStack(spacing: 4) {
-                ForEach(ClipboardTabFilter.allCases) { tab in
-                    let isSelected = selectedTab == tab
-                    let count: Int = {
-                        switch tab {
-                        case .all: return store.items.count
-                        case .text: return textItemsCount
-                        case .images: return imageItemsCount
-                        case .pinned: return pinnedItemsCount
-                        }
-                    }()
-                    
-                    Button(action: {
-                        withAnimation(.easeInOut(duration: 0.18)) {
-                            selectedTab = tab
-                        }
-                    }) {
-                        HStack(spacing: 5) {
-                            Image(systemName: tab.icon)
-                                .font(.system(size: 11))
-                            Text(tab.rawValue)
-                                .font(.system(size: 11, weight: isSelected ? .semibold : .regular))
-                            if count > 0 {
-                                Text("\(count)")
-                                    .font(.system(size: 9, weight: .bold))
-                                    .padding(.horizontal, 5)
-                                    .padding(.vertical, 1.5)
-                                    .background(
-                                        Capsule()
-                                            .fill(isSelected ? Color.accentColor : Color.secondary.opacity(0.18))
-                                    )
-                                    .foregroundColor(isSelected ? .white : .secondary)
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 5) {
+                    ForEach(ClipboardTabFilter.allCases) { tab in
+                        let isSelected = selectedTab == tab
+                        let count: Int = {
+                            switch tab {
+                            case .all: return store.items.count
+                            case .text: return textItemsCount
+                            case .images: return imageItemsCount
+                            case .pinned: return pinnedItemsCount
                             }
+                        }()
+                        
+                        Button(action: {
+                            withAnimation(.easeInOut(duration: 0.18)) {
+                                selectedTab = tab
+                            }
+                        }) {
+                            HStack(spacing: 5) {
+                                Image(systemName: tab.icon)
+                                    .font(.system(size: 11))
+                                Text(tab.rawValue)
+                                    .font(.system(size: 11, weight: isSelected ? .semibold : .regular))
+                                    .lineLimit(1)
+                                if count > 0 {
+                                    Text("\(count)")
+                                        .font(.system(size: 9, weight: .bold))
+                                        .lineLimit(1)
+                                        .padding(.horizontal, 5)
+                                        .padding(.vertical, 1.5)
+                                        .background(
+                                            Capsule()
+                                                .fill(isSelected ? Color.accentColor : Color.secondary.opacity(0.18))
+                                        )
+                                        .foregroundColor(isSelected ? .white : .secondary)
+                                }
+                            }
+                            .padding(.vertical, 5)
+                            .padding(.horizontal, 8)
+                            .background(
+                                RoundedRectangle(cornerRadius: 6)
+                                    .fill(isSelected ? Color.accentColor.opacity(0.15) : Color.clear)
+                            )
+                            .foregroundColor(isSelected ? .accentColor : .secondary)
                         }
-                        .padding(.vertical, 5)
-                        .padding(.horizontal, 8)
-                        .background(
-                            RoundedRectangle(cornerRadius: 6)
-                                .fill(isSelected ? Color.accentColor.opacity(0.15) : Color.clear)
-                        )
-                        .foregroundColor(isSelected ? .accentColor : .secondary)
+                        .buttonStyle(.plain)
+                        .fixedSize(horizontal: true, vertical: false)
                     }
-                    .buttonStyle(.plain)
                 }
-                Spacer()
+                .padding(.horizontal, 10)
+                .padding(.vertical, 6)
             }
-            .padding(.horizontal, 10)
-            .padding(.vertical, 6)
             .background(Color(nsColor: .windowBackgroundColor))
             
             Divider()
@@ -186,10 +190,10 @@ public struct ClipboardView: View {
     private func emptyStateView() -> some View {
         VStack(spacing: 12) {
             if selectedTab == .images {
-                Image(systemName: "photo.on.rectangle.angled")
+                Image(systemName: "photo")
                     .font(.system(size: 38))
                     .foregroundColor(.accentColor.opacity(0.7))
-                Text("Keine Fotos im Zwischenspeicher")
+                Text("Keine Bilder im Zwischenspeicher")
                     .font(.headline)
                 Text("Kopiere ein Bild im Browser, erstelle einen Screenshot oder kopiere eine Bilddatei im Finder – sie erscheint sofort hier.")
                     .font(.caption)
@@ -366,7 +370,7 @@ struct ClipboardRowView: View {
                 VStack(alignment: .leading, spacing: 3) {
                     if item.type == .image {
                         HStack(spacing: 6) {
-                            Text("Foto / Bild")
+                            Text(item.imageTypeTitle)
                                 .font(.system(size: 12, weight: .semibold))
                                 .foregroundColor(.primary)
                             if !item.formattedDimensions.isEmpty {
@@ -647,7 +651,7 @@ struct ImageDetailModalView: View {
             // Header
             HStack {
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("Foto-Vorschau")
+                    Text("\(item.imageTypeTitle)-Vorschau")
                         .font(.headline)
                     if let app = item.sourceApp {
                         Text("Kopiert aus: \(app)")

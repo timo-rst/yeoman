@@ -129,13 +129,22 @@ public final class ClipboardMonitor: ObservableObject {
         
         // 1. Check for direct image data on pasteboard (Screenshots, copied images)
         if pasteboard.canReadItem(withDataConformingToTypes: [NSPasteboard.PasteboardType.png.rawValue, NSPasteboard.PasteboardType.tiff.rawValue]) {
+            let bundleID = frontmostApp?.bundleIdentifier?.lowercased() ?? ""
+            let lowerApp = (appName ?? "").lowercased()
+            let isScreenshot = lowerApp.contains("screenshot") ||
+                               lowerApp.contains("bildschirmfoto") ||
+                               lowerApp.contains("screencapture") ||
+                               lowerApp.contains("cleanshot") ||
+                               lowerApp.contains("shottr") ||
+                               bundleID.contains("screencapture")
+            
             if let readImages = pasteboard.readObjects(forClasses: [NSImage.self], options: nil) as? [NSImage],
                let image = readImages.first {
-                ClipboardHistoryStore.shared.addImageItem(image: image, sourceApp: appName)
+                ClipboardHistoryStore.shared.addImageItem(image: image, sourceApp: isScreenshot ? (appName ?? "Bildschirmfoto") : appName, isScreenshot: isScreenshot ? true : nil)
                 return
             } else if let data = pasteboard.data(forType: .png) ?? pasteboard.data(forType: .tiff),
                       let image = NSImage(data: data) {
-                ClipboardHistoryStore.shared.addImageItem(image: image, sourceApp: appName)
+                ClipboardHistoryStore.shared.addImageItem(image: image, sourceApp: isScreenshot ? (appName ?? "Bildschirmfoto") : appName, isScreenshot: isScreenshot ? true : nil)
                 return
             }
         }
@@ -146,7 +155,9 @@ public final class ClipboardMonitor: ObservableObject {
             let ext = fileURL.pathExtension.lowercased()
             let imageExtensions = ["png", "jpg", "jpeg", "heic", "webp", "gif", "tiff", "bmp", "ico", "svg"]
             if imageExtensions.contains(ext), let img = NSImage(contentsOf: fileURL) {
-                ClipboardHistoryStore.shared.addImageItem(image: img, sourceApp: appName ?? "Finder")
+                let filename = fileURL.lastPathComponent.lowercased()
+                let isScreenshot = filename.contains("screenshot") || filename.contains("bildschirmfoto")
+                ClipboardHistoryStore.shared.addImageItem(image: img, sourceApp: isScreenshot ? "Bildschirmfoto" : (appName ?? "Finder"), isScreenshot: isScreenshot)
                 return
             }
         }

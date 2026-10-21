@@ -20,6 +20,7 @@ public struct ClipboardItem: Identifiable, Codable, Equatable {
     public var imageWidth: Int?
     public var imageHeight: Int?
     public var imageByteSize: Int?
+    public var isScreenshot: Bool?
     
     public init(
         id: UUID = UUID(),
@@ -31,7 +32,8 @@ public struct ClipboardItem: Identifiable, Codable, Equatable {
         imageFileName: String? = nil,
         imageWidth: Int? = nil,
         imageHeight: Int? = nil,
-        imageByteSize: Int? = nil
+        imageByteSize: Int? = nil,
+        isScreenshot: Bool? = nil
     ) {
         self.id = id
         self.content = content
@@ -43,6 +45,37 @@ public struct ClipboardItem: Identifiable, Codable, Equatable {
         self.imageWidth = imageWidth
         self.imageHeight = imageHeight
         self.imageByteSize = imageByteSize
+        self.isScreenshot = isScreenshot
+    }
+    
+    public var isScreenshotItem: Bool {
+        if let s = isScreenshot { return s }
+        if let app = sourceApp?.lowercased() {
+            if app.contains("screenshot") ||
+               app.contains("bildschirmfoto") ||
+               app.contains("screencapture") ||
+               app.contains("cleanshot") ||
+               app.contains("shottr") ||
+               app.contains("snagit") ||
+               app.contains("kap") ||
+               app.contains("grab") {
+                return true
+            }
+        }
+        if let name = imageFileName?.lowercased() {
+            if name.contains("screenshot") || name.contains("bildschirmfoto") {
+                return true
+            }
+        }
+        let lower = content.lowercased()
+        if lower.contains("screenshot") || lower.contains("bildschirmfoto") {
+            return true
+        }
+        return false
+    }
+    
+    public var imageTypeTitle: String {
+        isScreenshotItem ? "Screenshot" : "Bild"
     }
     
     public var imageURL: URL? {
@@ -78,10 +111,11 @@ public struct ClipboardItem: Identifiable, Codable, Equatable {
     
     public var preview: String {
         if type == .image {
+            let label = imageTypeTitle
             if !formattedDimensions.isEmpty {
-                return "Foto / Grafik (\(formattedDimensions))"
+                return "\(label) (\(formattedDimensions))"
             }
-            return "Foto / Grafik"
+            return label
         }
         let trimmed = content.trimmingCharacters(in: .whitespacesAndNewlines)
         if trimmed.count > 120 {
