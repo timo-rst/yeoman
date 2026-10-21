@@ -86,10 +86,10 @@ public struct ClipboardSettingsView: View {
                             Text("Überwachung & Sicherheit")
                                 .font(.headline)
                             
-                            Toggle("Passwort-Manager ignorieren (1Password, Bitwarden, KeePass etc.)", isOn: $monitor.ignorePasswordManagers)
+                            Toggle("Passwort-Manager & Browser-Erweiterungen ignorieren", isOn: $monitor.ignorePasswordManagers)
                                 .font(.subheadline)
                             
-                            Text("Passwörter und temporäre Zwischenablagen werden automatisch erkannt und nicht im Verlauf gespeichert.")
+                            Text("Passwörter und sensible Daten aus Proton Pass (Browser-Extension & Web), Bitwarden, 1Password, KeePassXC, macOS Passwörter sowie temporäre Zwischenablagen werden automatisch erkannt und nicht im Verlauf gespeichert.")
                                 .font(.caption)
                                 .foregroundColor(.secondary)
                             
