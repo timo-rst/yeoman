@@ -83,6 +83,13 @@ struct GeneralSettingsView: View {
     @AppStorage("showDockIcon") private var showDockIcon = true
     @AppStorage("showMainStatusItem") private var showMainStatusItem = true
     
+    @ObservedObject private var mm = ModuleManager.shared
+    @ObservedObject private var webPanel = ModuleManager.shared.webPanelModule
+    @ObservedObject private var clipboard = ModuleManager.shared.clipboardModule
+    @ObservedObject private var stats = ModuleManager.shared.systemStatsModule
+    @ObservedObject private var scrollReverser = ModuleManager.shared.scrollReverserModule
+    @ObservedObject private var menuBar = ModuleManager.shared.menuBarModule
+    
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
@@ -126,65 +133,118 @@ struct GeneralSettingsView: View {
                     Text("Aktive Module & Menüleisten-Symbole")
                         .font(.headline)
                     
+                    // 1. Menüleisten-Optimizer
                     ModuleToggleRow(
                         title: "Menüleisten-Optimizer",
                         subtitle: "Icon-Abstand und Multi-Display-Management",
                         icon: "menubar.rectangle",
                         isOn: Binding(
-                            get: { ModuleManager.shared.menuBarModule.isEnabled },
-                            set: { ModuleManager.shared.toggleModule(id: ModuleManager.shared.menuBarModule.id, enabled: $0) }
+                            get: { menuBar.isEnabled },
+                            set: { mm.toggleModule(id: menuBar.id, enabled: $0) }
                         ),
                         showsDedicatedIcon: Binding(
-                            get: { ModuleManager.shared.menuBarModule.showsDedicatedStatusItem },
-                            set: { ModuleManager.shared.menuBarModule.showsDedicatedStatusItem = $0 }
+                            get: { menuBar.showsDedicatedStatusItem },
+                            set: { menuBar.showsDedicatedStatusItem = $0 }
                         )
                     )
                     
                     Divider()
                     
+                    // 2. Scroll Reverser
+                    ModuleToggleRow(
+                        title: "Scroll Reverser (Maus & Trackpad)",
+                        subtitle: "Trennt die Scrollrichtung von Maus und Trackpad für natürliches Verhalten",
+                        icon: "computermouse",
+                        isOn: Binding(
+                            get: { scrollReverser.isEnabled },
+                            set: { mm.toggleModule(id: scrollReverser.id, enabled: $0) }
+                        ),
+                        showsDedicatedIcon: Binding(
+                            get: { scrollReverser.showsDedicatedStatusItem },
+                            set: { scrollReverser.showsDedicatedStatusItem = $0 }
+                        )
+                    )
+                    
+                    Divider()
+                    
+                    // 3. Web-Widget (MenuBarX)
                     ModuleToggleRow(
                         title: "Web-Widget (MenuBarX)",
-                        subtitle: "Eingebettete Web-App (z.B. Proton Calendar, Notion, ChatGPT)",
+                        subtitle: "Eingebettete Web-Apps (z.B. Proton Calendar, Notion, ChatGPT)",
                         icon: "calendar",
                         isOn: Binding(
-                            get: { ModuleManager.shared.webPanelModule.isEnabled },
-                            set: { ModuleManager.shared.toggleModule(id: ModuleManager.shared.webPanelModule.id, enabled: $0) }
+                            get: { webPanel.isEnabled },
+                            set: { mm.toggleModule(id: webPanel.id, enabled: $0) }
                         ),
                         showsDedicatedIcon: Binding(
-                            get: { ModuleManager.shared.webPanelModule.showsDedicatedStatusItem },
-                            set: { ModuleManager.shared.webPanelModule.showsDedicatedStatusItem = $0 }
-                        )
+                            get: { webPanel.showsDedicatedStatusItem },
+                            set: { webPanel.showsDedicatedStatusItem = $0 }
+                        ),
+                        extraContent: {
+                            if webPanel.isEnabled && webPanel.showsDedicatedStatusItem && !webPanel.widgets.isEmpty {
+                                VStack(spacing: 6) {
+                                    ForEach(webPanel.widgets) { widget in
+                                        HStack(spacing: 8) {
+                                            Spacer().frame(width: 44)
+                                            Image(systemName: widget.iconName.isEmpty ? "globe" : widget.iconName)
+                                                .font(.caption)
+                                                .foregroundColor(.accentColor)
+                                                .frame(width: 14)
+                                            Text(widget.title)
+                                                .font(.caption)
+                                                .foregroundColor(.primary)
+                                            Spacer()
+                                            Toggle("", isOn: Binding(
+                                                get: { widget.isEnabled },
+                                                set: { enabled in
+                                                    webPanel.toggleWidget(id: widget.id, isEnabled: enabled)
+                                                }
+                                            ))
+                                            .toggleStyle(.switch)
+                                            .scaleEffect(0.75)
+                                        }
+                                        .padding(.vertical, 3)
+                                        .padding(.horizontal, 8)
+                                        .background(RoundedRectangle(cornerRadius: 6).fill(Color.primary.opacity(0.04)))
+                                    }
+                                }
+                                .padding(.leading, 8)
+                                .padding(.top, 4)
+                            }
+                        }
                     )
                     
                     Divider()
                     
+                    // 4. Clipboard Manager (Clippy)
                     ModuleToggleRow(
                         title: "Clipboard Manager (Clippy)",
                         subtitle: "Zwischenablage-Historie mit Suche und Filter",
                         icon: "doc.on.clipboard",
                         isOn: Binding(
-                            get: { ModuleManager.shared.clipboardModule.isEnabled },
-                            set: { ModuleManager.shared.toggleModule(id: ModuleManager.shared.clipboardModule.id, enabled: $0) }
+                            get: { clipboard.isEnabled },
+                            set: { mm.toggleModule(id: clipboard.id, enabled: $0) }
                         ),
                         showsDedicatedIcon: Binding(
-                            get: { ModuleManager.shared.clipboardModule.showsDedicatedStatusItem },
-                            set: { ModuleManager.shared.clipboardModule.showsDedicatedStatusItem = $0 }
+                            get: { clipboard.showsDedicatedStatusItem },
+                            set: { clipboard.showsDedicatedStatusItem = $0 }
                         )
                     )
                     
                     Divider()
                     
+                    // 5. System Stats Monitor
                     ModuleToggleRow(
                         title: "System Stats Monitor",
                         subtitle: "CPU-, GPU- und RAM-Graphen",
                         icon: "gauge.with.needle",
                         isOn: Binding(
-                            get: { ModuleManager.shared.systemStatsModule.isEnabled },
-                            set: { ModuleManager.shared.toggleModule(id: ModuleManager.shared.systemStatsModule.id, enabled: $0) }
+                            get: { stats.isEnabled },
+                            set: { mm.toggleModule(id: stats.id, enabled: $0) }
                         ),
                         showsDedicatedIcon: Binding(
-                            get: { ModuleManager.shared.systemStatsModule.showsDedicatedStatusItem },
-                            set: { ModuleManager.shared.systemStatsModule.showsDedicatedStatusItem = $0 }
+                            get: { stats.showsDedicatedStatusItem },
+                            set: { stats.showsDedicatedStatusItem = $0 }
                         )
                     )
                 }
@@ -196,12 +256,29 @@ struct GeneralSettingsView: View {
     }
 }
 
-struct ModuleToggleRow: View {
+struct ModuleToggleRow<ExtraContent: View>: View {
     let title: String
     let subtitle: String
     let icon: String
     @Binding var isOn: Bool
     var showsDedicatedIcon: Binding<Bool>? = nil
+    var extraContent: ExtraContent
+    
+    init(
+        title: String,
+        subtitle: String,
+        icon: String,
+        isOn: Binding<Bool>,
+        showsDedicatedIcon: Binding<Bool>? = nil,
+        @ViewBuilder extraContent: () -> ExtraContent = { EmptyView() }
+    ) {
+        self.title = title
+        self.subtitle = subtitle
+        self.icon = icon
+        self._isOn = isOn
+        self.showsDedicatedIcon = showsDedicatedIcon
+        self.extraContent = extraContent()
+    }
     
     var body: some View {
         VStack(spacing: 8) {
@@ -239,6 +316,8 @@ struct ModuleToggleRow: View {
                         .toggleStyle(.switch)
                         .scaleEffect(0.85)
                 }
+                
+                extraContent
             }
         }
     }

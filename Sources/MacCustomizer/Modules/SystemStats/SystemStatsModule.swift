@@ -34,7 +34,7 @@ public final class SystemStatsModule: NSObject, CustomizerModule, ObservableObje
     @Published public var showsDedicatedStatusItem: Bool {
         didSet {
             UserDefaults.standard.set(showsDedicatedStatusItem, forKey: "system_stats_shows_dedicated_status_item")
-            updateStatusItemVisibility()
+            ModuleManager.shared.recreateAllStatusItems()
         }
     }
     
@@ -233,8 +233,7 @@ public final class SystemStatsModule: NSObject, CustomizerModule, ObservableObje
         guard isEnabled && showsDedicatedStatusItem else { return }
         DispatchQueue.main.async { [weak self] in
             guard let self = self else { return }
-            if self.statusItem == nil || self.statusItem?.button?.window == nil {
-                self.removeStatusItem()
+            if self.statusItem == nil {
                 self.setupStatusItem()
             } else {
                 self.updateStatusItemLength()
@@ -252,7 +251,7 @@ public final class SystemStatsModule: NSObject, CustomizerModule, ObservableObje
     public func setupStatusItem() {
         guard isEnabled && showsDedicatedStatusItem else { return }
         if let existing = statusItem {
-            if existing.button?.window != nil && !(existing.button?.subviews.isEmpty ?? true) {
+            if !(existing.button?.subviews.isEmpty ?? true) {
                 updateStatusItemLength()
                 return
             }

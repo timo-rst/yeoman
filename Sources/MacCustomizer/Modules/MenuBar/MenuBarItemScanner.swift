@@ -175,7 +175,7 @@ public final class MenuBarItemScanner: ObservableObject {
     
     private func scanInternalModules() -> [MenuBarAppItem] {
         let mm = ModuleManager.shared
-        return [
+        var list: [MenuBarAppItem] = [
             MenuBarAppItem(
                 id: "module_clipboard",
                 name: "Clippy (MacCustomizer Clipboard)",
@@ -227,6 +227,22 @@ public final class MenuBarItemScanner: ObservableObject {
                 isRunning: mm.scrollReverserModule.isEnabled
             )
         ]
+        
+        // Include individual Web-Widgets (MenuBarX)
+        for widget in mm.webPanelModule.widgets {
+            list.append(MenuBarAppItem(
+                id: "web_widget_\(widget.id.uuidString)",
+                name: "\(widget.title) (Web-Widget)",
+                type: .internalModule,
+                bundleIdentifier: "de.trst.MacCustomizer.webwidget.\(widget.id.uuidString)",
+                appPath: nil,
+                sfSymbol: widget.iconName.isEmpty ? "globe" : widget.iconName,
+                isVisibleInMenuBar: mm.webPanelModule.isEnabled && mm.webPanelModule.showsDedicatedStatusItem && widget.isEnabled,
+                isRunning: mm.webPanelModule.isEnabled && widget.isEnabled
+            ))
+        }
+        
+        return list
     }
     
     // MARK: - Toggle Action
@@ -271,7 +287,14 @@ public final class MenuBarItemScanner: ObservableObject {
             } else if id == "module_scrollreverser" {
                 mm.scrollReverserModule.showsDedicatedStatusItem = enable
                 items[idx].isVisibleInMenuBar = enable
+            } else if id.hasPrefix("web_widget_") {
+                let uuidStr = id.replacingOccurrences(of: "web_widget_", with: "")
+                if let uuid = UUID(uuidString: uuidStr) {
+                    mm.webPanelModule.toggleWidget(id: uuid, isEnabled: enable)
+                    items[idx].isVisibleInMenuBar = enable
+                }
             }
+            mm.recreateAllStatusItems()
             
         case .all:
             break

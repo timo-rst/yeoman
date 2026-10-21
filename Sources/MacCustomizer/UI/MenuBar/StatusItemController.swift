@@ -16,7 +16,7 @@ public final class StatusItemController: NSObject, NSMenuDelegate {
         get { UserDefaults.standard.object(forKey: "showMainStatusItem") as? Bool ?? true }
         set {
             UserDefaults.standard.set(newValue, forKey: "showMainStatusItem")
-            updateStatusItemVisibility()
+            ModuleManager.shared.recreateAllStatusItems()
         }
     }
     

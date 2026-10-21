@@ -134,7 +134,7 @@ public final class WebPanelModule: NSObject, CustomizerModule, ObservableObject 
     @Published public var showsDedicatedStatusItem: Bool {
         didSet {
             UserDefaults.standard.set(showsDedicatedStatusItem, forKey: "web_panel_shows_status_item")
-            syncAllInstances()
+            ModuleManager.shared.recreateAllStatusItems()
         }
     }
     
@@ -176,6 +176,7 @@ public final class WebPanelModule: NSObject, CustomizerModule, ObservableObject 
     
     public func addWidget(_ item: WebWidgetItem) {
         widgets.append(item)
+        ModuleManager.shared.recreateAllStatusItems()
     }
     
     public func updateWidget(_ item: WebWidgetItem) {
@@ -192,11 +193,14 @@ public final class WebPanelModule: NSObject, CustomizerModule, ObservableObject 
             controller.cleanup()
         }
         widgets.removeAll(where: { $0.id == id })
+        ModuleManager.shared.recreateAllStatusItems()
     }
     
     public func toggleWidget(id: UUID, isEnabled: Bool) {
         if let idx = widgets.firstIndex(where: { $0.id == id }) {
             widgets[idx].isEnabled = isEnabled
+            saveWidgets()
+            ModuleManager.shared.recreateAllStatusItems()
         }
     }
     
@@ -428,10 +432,18 @@ public final class WebWidgetInstanceController: NSObject, ObservableObject {
             newURL: newItem.url
         )
         
-        if let button = statusItem?.button {
-            button.toolTip = "\(newItem.title) (Klick zum Öffnen)"
+        if module?.isEnabled == true && module?.showsDedicatedStatusItem == true && newItem.isEnabled {
+            if statusItem == nil {
+                setup()
+            } else {
+                if let button = statusItem?.button {
+                    button.toolTip = "\(newItem.title) (Klick zum Öffnen)"
+                }
+                updateStatusItemIcon()
+            }
+        } else {
+            removeStatusItem()
         }
-        updateStatusItemIcon()
         
         if (newItem.url != oldUrl || newItem.useFavicon != oldUseFavicon || newItem.iconName != oldIconName) && newItem.useFavicon {
             WebFaviconManager.shared.fetchFavicon(for: newItem.url, widgetId: newItem.id) { [weak self] _ in

@@ -47,6 +47,7 @@ public final class ModuleManager: ObservableObject {
                 module.stop()
             }
             objectWillChange.send()
+            recreateAllStatusItems()
         }
     }
     

@@ -9,9 +9,7 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
         // Initialize DisplayManager and ModuleManager
         _ = DisplayManager.shared
         ModuleManager.shared.startAllEnabled()
-        
-        // Create Status Item in Menu Bar
-        StatusItemController.shared.setup()
+        ModuleManager.shared.recreateAllStatusItems()
         
         // Show main window on launch
         DispatchQueue.main.async {

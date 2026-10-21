@@ -22,7 +22,7 @@ public final class ScrollReverserModule: NSObject, CustomizerModule, ObservableO
     @Published public var showsDedicatedStatusItem: Bool {
         didSet {
             UserDefaults.standard.set(showsDedicatedStatusItem, forKey: "sr_shows_dedicated_status_item")
-            updateStatusItemVisibility()
+            ModuleManager.shared.recreateAllStatusItems()
         }
     }
     

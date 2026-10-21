@@ -22,7 +22,7 @@ public final class MenuBarModule: NSObject, CustomizerModule, ObservableObject {
     @Published public var showsDedicatedStatusItem: Bool {
         didSet {
             UserDefaults.standard.set(showsDedicatedStatusItem, forKey: "menu_bar_shows_dedicated_status_item")
-            updateStatusItemVisibility()
+            ModuleManager.shared.recreateAllStatusItems()
         }
     }
     
