@@ -4,7 +4,6 @@ import WebKit
 public enum WebWidgetEditorMode: Identifiable {
     case create
     case edit(WebWidgetItem)
-    case editIcon(WebWidgetItem)
     
     public var id: String {
         switch self {
@@ -12,29 +11,20 @@ public enum WebWidgetEditorMode: Identifiable {
             return "create"
         case .edit(let widget):
             return "edit_\(widget.id.uuidString)"
-        case .editIcon(let widget):
-            return "edit_icon_\(widget.id.uuidString)"
         }
     }
     
     public var widget: WebWidgetItem? {
         switch self {
         case .create: return nil
-        case .edit(let widget), .editIcon(let widget): return widget
+        case .edit(let widget): return widget
         }
     }
     
     public var isEditing: Bool {
         switch self {
         case .create: return false
-        case .edit, .editIcon: return true
-        }
-    }
-    
-    public var startWithIconPicker: Bool {
-        switch self {
-        case .editIcon: return true
-        default: return false
+        case .edit: return true
         }
     }
 }
@@ -121,8 +111,8 @@ public struct WebPanelSettingsView: View {
                                 onEdit: {
                                     editorMode = .edit(widget)
                                 },
-                                onEditIcon: {
-                                    editorMode = .editIcon(widget)
+                                onUpdateWidget: { updated in
+                                    module.updateWidget(updated)
                                 },
                                 onDelete: {
                                     widgetToDelete = widget
@@ -166,7 +156,6 @@ public struct WebPanelSettingsView: View {
         .sheet(item: $editorMode) { mode in
             WebWidgetEditorSheet(
                 initialWidget: mode.widget,
-                startWithIconPicker: mode.startWithIconPicker,
                 onSave: { savedItem in
                     if mode.isEditing {
                         module.updateWidget(savedItem)
@@ -208,10 +197,11 @@ struct WebWidgetRowView: View {
     let widget: WebWidgetItem
     let onToggleEnabled: (Bool) -> Void
     let onEdit: () -> Void
-    let onEditIcon: () -> Void
+    let onUpdateWidget: (WebWidgetItem) -> Void
     let onDelete: () -> Void
     let onOpen: () -> Void
     @ObservedObject private var faviconManager = WebFaviconManager.shared
+    @State private var showIconPopover: Bool = false
     
     var body: some View {
         HStack(spacing: 14) {
@@ -300,7 +290,7 @@ struct WebWidgetRowView: View {
                     .controlSize(.regular)
                     .help("Fenster in Menüleiste öffnen")
                     
-                    Button(action: onEditIcon) {
+                    Button(action: { showIconPopover.toggle() }) {
                         HStack(spacing: 5) {
                             Image(systemName: "photo")
                             Text("Icon")
@@ -310,6 +300,13 @@ struct WebWidgetRowView: View {
                     .buttonStyle(.bordered)
                     .controlSize(.regular)
                     .help("Menüleisten-Symbol & Logo anpassen")
+                    .popover(isPresented: $showIconPopover, arrowEdge: .trailing) {
+                        WebWidgetIconPickerPopover(
+                            widget: widget,
+                            onUpdate: onUpdateWidget,
+                            onDismiss: { showIconPopover = false }
+                        )
+                    }
                 }
                 
                 GridRow {
@@ -360,6 +357,272 @@ struct WebWidgetRowView: View {
         }
         .padding(12)
         .background(RoundedRectangle(cornerRadius: 10).fill(Color(nsColor: .windowBackgroundColor)))
+    }
+}
+
+// MARK: - Dedicated Lightweight Icon & Logo Picker Popover
+
+struct WebWidgetIconPickerPopover: View {
+    let widget: WebWidgetItem
+    let onUpdate: (WebWidgetItem) -> Void
+    let onDismiss: () -> Void
+    
+    @ObservedObject private var faviconManager = WebFaviconManager.shared
+    @State private var useFavicon: Bool
+    @State private var selectedFaviconURL: String?
+    @State private var removeWhiteBackground: Bool
+    @State private var iconName: String
+    
+    init(widget: WebWidgetItem, onUpdate: @escaping (WebWidgetItem) -> Void, onDismiss: @escaping () -> Void) {
+        self.widget = widget
+        self.onUpdate = onUpdate
+        self.onDismiss = onDismiss
+        _useFavicon = State(initialValue: widget.useFavicon)
+        _selectedFaviconURL = State(initialValue: widget.selectedFaviconURL)
+        _removeWhiteBackground = State(initialValue: widget.removeWhiteBackground)
+        _iconName = State(initialValue: widget.iconName)
+    }
+    
+    private func applyChange() {
+        var updated = widget
+        updated.useFavicon = useFavicon
+        updated.selectedFaviconURL = selectedFaviconURL
+        updated.removeWhiteBackground = removeWhiteBackground
+        updated.iconName = iconName
+        onUpdate(updated)
+    }
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            // Header with current live icon preview badge and title
+            HStack(spacing: 10) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 8)
+                        .fill(Color(nsColor: .controlBackgroundColor))
+                        .frame(width: 32, height: 32)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 8)
+                                .stroke(Color.primary.opacity(0.12), lineWidth: 1)
+                        )
+                    
+                    if useFavicon, let icon = faviconManager.previewIcon(for: widget.url, widgetId: widget.id, selectedFaviconURL: selectedFaviconURL, removeWhite: removeWhiteBackground) {
+                        Image(nsImage: icon)
+                            .resizable()
+                            .aspectRatio(contentMode: .fit)
+                            .frame(width: 20, height: 20)
+                            .clipShape(RoundedRectangle(cornerRadius: 3.5))
+                    } else {
+                        Image(systemName: iconName)
+                            .font(.system(size: 15))
+                            .foregroundColor(.accentColor)
+                    }
+                }
+                
+                VStack(alignment: .leading, spacing: 1) {
+                    Text("Symbol & Logo wählen")
+                        .font(.system(size: 12, weight: .semibold))
+                    Text(widget.title)
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
+                        .lineLimit(1)
+                }
+                
+                Spacer()
+                
+                Button(action: onDismiss) {
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.system(size: 14))
+                        .foregroundColor(.secondary.opacity(0.7))
+                }
+                .buttonStyle(.plain)
+                .help("Schließen")
+            }
+            
+            Divider()
+            
+            // Web Favicon Options
+            VStack(alignment: .leading, spacing: 8) {
+                HStack(spacing: 6) {
+                    Toggle("Website-Logo verwenden", isOn: Binding(
+                        get: { useFavicon },
+                        set: { val in
+                            useFavicon = val
+                            applyChange()
+                        }
+                    ))
+                    .fontWeight(.medium)
+                    
+                    InfoTooltip(text: "Verwendet das farbige Original-Logo der Website direkt in der Menüleiste.")
+                }
+                
+                if useFavicon {
+                    let options = faviconManager.options(for: widget.url)
+                    if !options.isEmpty {
+                        VStack(alignment: .leading, spacing: 5) {
+                            HStack(spacing: 4) {
+                                Text("Verfügbare Logos (\(options.count)):")
+                                    .font(.caption2)
+                                    .foregroundColor(.secondary)
+                                
+                                Spacer()
+                                
+                                if selectedFaviconURL != nil {
+                                    Button("Automatisch") {
+                                        selectedFaviconURL = nil
+                                        applyChange()
+                                    }
+                                    .font(.caption2)
+                                    .buttonStyle(.link)
+                                }
+                                
+                                Button(action: {
+                                    faviconManager.discoverFavicons(for: widget.url, widgetId: widget.id)
+                                }) {
+                                    Image(systemName: "arrow.clockwise")
+                                        .font(.system(size: 10))
+                                }
+                                .buttonStyle(.plain)
+                                .help("Neu scannen")
+                            }
+                            
+                            ScrollView(.horizontal, showsIndicators: false) {
+                                HStack(spacing: 6) {
+                                    ForEach(options) { opt in
+                                        let isAuto = (selectedFaviconURL == nil && opt == options.first)
+                                        let isChosen = (selectedFaviconURL == opt.urlString)
+                                        let isSelected = isChosen || isAuto
+                                        
+                                        Button(action: {
+                                            selectedFaviconURL = opt.urlString
+                                            applyChange()
+                                        }) {
+                                            VStack(spacing: 2) {
+                                                ZStack {
+                                                    RoundedRectangle(cornerRadius: 6)
+                                                        .fill(Color(nsColor: .controlBackgroundColor))
+                                                        .frame(width: 30, height: 30)
+                                                    
+                                                    if let img = faviconManager.icon(forOption: opt.urlString, removeWhite: removeWhiteBackground) {
+                                                        Image(nsImage: img)
+                                                            .resizable()
+                                                            .aspectRatio(contentMode: .fit)
+                                                            .frame(width: 18, height: 18)
+                                                            .clipShape(RoundedRectangle(cornerRadius: 3))
+                                                    } else {
+                                                        Image(systemName: "photo")
+                                                            .foregroundColor(.secondary)
+                                                    }
+                                                }
+                                                .overlay(
+                                                    RoundedRectangle(cornerRadius: 6)
+                                                        .stroke(isSelected ? Color.accentColor : Color.primary.opacity(0.12), lineWidth: isSelected ? 2 : 1)
+                                                )
+                                                .overlay(
+                                                    Group {
+                                                        if isSelected {
+                                                            Image(systemName: "checkmark.circle.fill")
+                                                                .font(.system(size: 10))
+                                                                .foregroundColor(.accentColor)
+                                                                .background(Circle().fill(Color.white))
+                                                                .offset(x: 11, y: -11)
+                                                        }
+                                                    }
+                                                )
+                                                
+                                                Text(opt.label)
+                                                    .font(.system(size: 8.5, weight: isSelected ? .bold : .regular))
+                                                    .foregroundColor(.primary)
+                                                    .lineLimit(1)
+                                                
+                                                Text(opt.isTransparent ? "Transparent" : "Hintergrund")
+                                                    .font(.system(size: 7, weight: .medium))
+                                                    .foregroundColor(opt.isTransparent ? .green : .secondary)
+                                                    .padding(.horizontal, 3)
+                                                    .padding(.vertical, 0.5)
+                                                    .background(Capsule().fill(opt.isTransparent ? Color.green.opacity(0.15) : Color.primary.opacity(0.06)))
+                                            }
+                                            .frame(width: 68)
+                                            .padding(3)
+                                            .background(
+                                                RoundedRectangle(cornerRadius: 6)
+                                                    .fill(isSelected ? Color.accentColor.opacity(0.08) : Color.clear)
+                                            )
+                                        }
+                                        .buttonStyle(.plain)
+                                        .help(opt.urlString)
+                                    }
+                                }
+                                .padding(.vertical, 2)
+                                .padding(.horizontal, 1)
+                            }
+                        }
+                    }
+                    
+                    HStack(spacing: 6) {
+                        Toggle("Weißer Hintergrund transparent machen", isOn: Binding(
+                            get: { removeWhiteBackground },
+                            set: { val in
+                                removeWhiteBackground = val
+                                applyChange()
+                            }
+                        ))
+                        .font(.caption)
+                        
+                        InfoTooltip(text: "Entfernt automatisch weiße Flächen aus quadratischen Logos.")
+                    }
+                }
+            }
+            
+            Divider()
+            
+            // SF Symbols Grid
+            VStack(alignment: .leading, spacing: 6) {
+                Text(useFavicon ? "Ersatz-Symbol (Fallback):" : "Symbol auswählen:")
+                    .font(.caption2)
+                    .foregroundColor(.secondary)
+                
+                LazyVGrid(columns: [GridItem(.adaptive(minimum: 28))], spacing: 6) {
+                    ForEach([
+                        "calendar", "calendar.badge.clock", "note.text",
+                        "bubble.left.and.bubble.right", "globe", "safari",
+                        "checklist", "bookmark", "envelope", "bell",
+                        "sparkles", "star", "music.note", "chart.bar",
+                        "chevron.left.forwardslash.chevron.right", "tray.full", "cloud", "person"
+                    ], id: \.self) { icon in
+                        Button(action: {
+                            iconName = icon
+                            applyChange()
+                        }) {
+                            Image(systemName: icon)
+                                .font(.system(size: 13))
+                                .foregroundColor(iconName == icon ? .white : .primary)
+                                .frame(width: 28, height: 28)
+                                .background(
+                                    RoundedRectangle(cornerRadius: 6)
+                                        .fill(iconName == icon ? Color.accentColor : Color(nsColor: .controlColor))
+                                )
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+            }
+            
+            Divider()
+            
+            HStack {
+                Spacer()
+                Button("Fertig") { onDismiss() }
+                    .buttonStyle(.borderedProminent)
+                    .controlSize(.small)
+            }
+        }
+        .padding(14)
+        .frame(width: 330)
+        .onAppear {
+            if faviconManager.options(for: widget.url).isEmpty && !widget.url.isEmpty {
+                faviconManager.discoverFavicons(for: widget.url, widgetId: widget.id)
+            }
+        }
     }
 }
 
