@@ -220,6 +220,8 @@ public struct WebPanelView: View {
     
     @State private var inputURL: String = ""
     @State private var isShowingAddressInput: Bool = false
+    @State private var isToolbarTemporarilyVisible: Bool = false
+    @State private var isHovered: Bool = false
     
     public init(
         instance: WebWidgetInstanceController,
@@ -233,8 +235,8 @@ public struct WebPanelView: View {
     
     public var body: some View {
         VStack(spacing: 0) {
-            // Optional Address / Input Bar
-            if item.showsAddressBar || isShowingAddressInput {
+            // Address / Input Bar (only when actively editing URL)
+            if isShowingAddressInput {
                 HStack(spacing: 6) {
                     Image(systemName: "globe")
                         .font(.system(size: 11))
@@ -264,7 +266,7 @@ public struct WebPanelView: View {
             }
             
             // Web View - Flexible area filling all available height
-            ZStack {
+            ZStack(alignment: .bottomTrailing) {
                 WebViewRepresentable(controller: controller)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                 
@@ -278,13 +280,35 @@ public struct WebPanelView: View {
                     }
                     .padding(.top, 10)
                 }
+                
+                // Subtle floating button when toolbar is hidden to temporarily reveal it
+                if !item.showsAddressBar && !isToolbarTemporarilyVisible {
+                    Button(action: {
+                        withAnimation(.easeInOut(duration: 0.15)) {
+                            isToolbarTemporarilyVisible = true
+                        }
+                    }) {
+                        Image(systemName: "slider.horizontal.3")
+                            .font(.system(size: 9))
+                            .foregroundColor(.primary.opacity(0.7))
+                            .padding(5)
+                            .background(Circle().fill(Color(nsColor: .controlBackgroundColor).opacity(0.9)))
+                            .shadow(radius: 2)
+                    }
+                    .buttonStyle(.plain)
+                    .padding(6)
+                    .opacity(isHovered ? 0.9 : 0.0)
+                    .help("Steuerleiste einblenden")
+                }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .onHover { isHovered = $0 }
             
-            Divider()
-            
-            // Bottom Slim Toolbar - Fixed at the very bottom
-            HStack(spacing: 8) {
+            // Bottom Slim Toolbar - Only visible if enabled or temporarily revealed
+            if item.showsAddressBar || isToolbarTemporarilyVisible {
+                Divider()
+                
+                HStack(spacing: 8) {
                 // Home
                 Button(action: { controller.goHome() }) {
                     Image(systemName: "house")
@@ -364,7 +388,7 @@ public struct WebPanelView: View {
                     
                     Divider()
                     
-                    Button(item.showsAddressBar ? "Adressleiste verstecken" : "Adressleiste anzeigen") {
+                    Button(item.showsAddressBar ? "Steuerleiste standardmäßig ausblenden" : "Steuerleiste standardmäßig einblenden") {
                         var updated = item
                         updated.showsAddressBar.toggle()
                         onUpdateItem?(updated)
@@ -434,7 +458,7 @@ public struct WebPanelView: View {
                     inputURL = controller.currentURL
                     isShowingAddressInput.toggle()
                 }) {
-                    Image(systemName: isShowingAddressInput || item.showsAddressBar ? "link.circle.fill" : "link")
+                    Image(systemName: isShowingAddressInput ? "link.circle.fill" : "link")
                         .font(.system(size: 11))
                         .foregroundColor(isShowingAddressInput ? .accentColor : .primary)
                 }
@@ -454,22 +478,37 @@ public struct WebPanelView: View {
                 .buttonStyle(.plain)
                 .help(item.isPinned ? "Fenster lösen" : "Fenster anheften (offen halten)")
                 
-                // Open in External Browser
-                Button(action: {
-                    if let url = URL(string: controller.currentURL) {
-                        NSWorkspace.shared.open(url)
+                if !item.showsAddressBar && isToolbarTemporarilyVisible {
+                    Button(action: {
+                        withAnimation(.easeInOut(duration: 0.15)) {
+                            isToolbarTemporarilyVisible = false
+                        }
+                    }) {
+                        Image(systemName: "xmark.circle")
+                            .font(.system(size: 11))
+                            .foregroundColor(.secondary)
                     }
-                }) {
-                    Image(systemName: "arrow.up.forward.square")
-                        .font(.system(size: 11))
+                    .buttonStyle(.plain)
+                    .help("Steuerleiste schließen")
+                } else {
+                    // Open in External Browser
+                    Button(action: {
+                        if let url = URL(string: controller.currentURL) {
+                            NSWorkspace.shared.open(url)
+                        }
+                    }) {
+                        Image(systemName: "arrow.up.forward.square")
+                            .font(.system(size: 11))
+                    }
+                    .buttonStyle(.plain)
+                    .help("Im Standard-Browser öffnen")
                 }
-                .buttonStyle(.plain)
-                .help("Im Standard-Browser öffnen")
             }
             .padding(.horizontal, 8)
             .padding(.vertical, 5)
             .background(Color(nsColor: .controlBackgroundColor))
             .frame(maxWidth: .infinity)
+        }
         }
         .frame(width: item.effectiveWidth, height: item.effectiveHeight)
     }

@@ -1179,8 +1179,8 @@ struct WebWidgetEditorSheet: View {
                                 }
                                 
                                 HStack(spacing: 6) {
-                                    Toggle("Adressleiste standardmäßig einblenden", isOn: $showsAddressBar)
-                                    InfoTooltip(text: "Zeigt im Popup eine Navigationsleiste mit Vor-, Zurück- und Neuladen-Buttons.")
+                                    Toggle("Steuer- & Navigationsleiste einblenden", isOn: $showsAddressBar)
+                                    InfoTooltip(text: "Zeigt die Leiste mit Vor-, Zurück-, Neuladen-, Zoom- und URL-Buttons am unteren Rand des Widgets an. Wenn deaktiviert, wird die Leiste ausgeblendet für eine saubere, randlose Ansicht.")
                                 }
                                 
                                 HStack(spacing: 6) {
