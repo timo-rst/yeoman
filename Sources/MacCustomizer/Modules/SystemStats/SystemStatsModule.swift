@@ -381,12 +381,11 @@ public struct SystemStatsSettingsView: View {
                         Text("Menüleisten-Widget")
                             .font(.headline)
                         
-                        Toggle("Mini-Graphen & Metriken in Menüleiste anzeigen", isOn: $module.showsDedicatedStatusItem)
-                            .font(.subheadline)
-                        
-                        Text("Rendert kompakte Live-Metriken für CPU, RAM und GPU direkt in der Menüleiste. Klick darauf öffnet den Mini Task-Manager.")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
+                        HStack(spacing: 6) {
+                            Toggle("Mini-Graphen & Metriken in Menüleiste anzeigen", isOn: $module.showsDedicatedStatusItem)
+                                .font(.subheadline)
+                            InfoTooltip(text: "Rendert kompakte Live-Metriken für CPU, RAM und GPU direkt in der Menüleiste. Klick darauf öffnet den Mini Task-Manager.")
+                        }
                     }
                     .padding()
                     .background(RoundedRectangle(cornerRadius: 12).fill(Color(nsColor: .controlBackgroundColor)))
@@ -474,12 +473,15 @@ public struct SystemStatsSettingsView: View {
                     
                     // Process Management Information
                     VStack(alignment: .leading, spacing: 12) {
-                        Text("Laufende Prozesse & Task-Manager")
-                            .font(.headline)
-                        
-                        Text("Aktuell laufen \(provider.processes.count) Prozesse auf deinem Mac. Über das Menüleisten-Symbol kannst du nicht reagierende Apps direkt mit einem Klick beenden.")
-                            .font(.subheadline)
-                            .foregroundColor(.secondary)
+                        HStack(spacing: 6) {
+                            Text("Laufende Prozesse & Task-Manager")
+                                .font(.headline)
+                            InfoTooltip(text: "Über das Menüleisten-Symbol kannst du Prozesse einsehen und nicht reagierende Apps direkt beenden.")
+                            Spacer()
+                            Text("\(provider.processes.count) Prozesse aktiv")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
                         
                         HStack {
                             Button("Aktivitätsanzeige öffnen") {

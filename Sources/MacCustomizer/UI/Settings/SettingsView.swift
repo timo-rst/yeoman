@@ -111,23 +111,32 @@ struct GeneralSettingsView: View {
                     Text("Start & Darstellung")
                         .font(.headline)
                     
-                    Toggle("Beim Mac-Start automatisch öffnen (Launch at Login)", isOn: $launchAtLogin)
+                    HStack(spacing: 6) {
+                        Toggle("Beim Mac-Start automatisch öffnen", isOn: $launchAtLogin)
+                        InfoTooltip(text: "Startet MacCustomizer automatisch beim Hochfahren deines Macs (Launch at Login).")
+                    }
                     
-                    Toggle("Dock-Symbol anzeigen", isOn: Binding(
-                        get: { showDockIcon },
-                        set: {
-                            showDockIcon = $0
-                            NSApp.setActivationPolicy($0 ? .regular : .accessory)
-                        }
-                    ))
+                    HStack(spacing: 6) {
+                        Toggle("Dock-Symbol anzeigen", isOn: Binding(
+                            get: { showDockIcon },
+                            set: {
+                                showDockIcon = $0
+                                NSApp.setActivationPolicy($0 ? .regular : .accessory)
+                            }
+                        ))
+                        InfoTooltip(text: "Bestimmt, ob MacCustomizer im Dock sichtbar ist. Wenn deaktiviert, läuft die App rein in der Menüleiste.")
+                    }
                     
-                    Toggle("Haupt-Icon (MacCustomizer Launcher) in der Menüleiste anzeigen", isOn: Binding(
-                        get: { showMainStatusItem },
-                        set: {
-                            showMainStatusItem = $0
-                            StatusItemController.shared.showsMainStatusItem = $0
-                        }
-                    ))
+                    HStack(spacing: 6) {
+                        Toggle("Haupt-Symbol in der Menüleiste anzeigen", isOn: Binding(
+                            get: { showMainStatusItem },
+                            set: {
+                                showMainStatusItem = $0
+                                StatusItemController.shared.showsMainStatusItem = $0
+                            }
+                        ))
+                        InfoTooltip(text: "Zeigt das MacCustomizer Hauptsymbol (Launcher) in der Menüleiste an, über das du schnellen Zugriff auf alle Module hast.")
+                    }
                 }
                 .padding()
                 .background(RoundedRectangle(cornerRadius: 12).fill(Color(nsColor: .controlBackgroundColor)))

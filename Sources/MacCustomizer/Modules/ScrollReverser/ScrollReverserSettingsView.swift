@@ -80,38 +80,30 @@ public struct ScrollReverserSettingsView: View {
                     
                     // Card 1: Mouse Settings
                     VStack(alignment: .leading, spacing: 14) {
-                        HStack(spacing: 8) {
+                        HStack(spacing: 6) {
                             Image(systemName: "computermouse")
                                 .font(.title3)
                                 .foregroundColor(.accentColor)
                             Text("Maus (Klassisches Scrollrad)")
                                 .font(.headline)
+                            InfoTooltip(text: "Gilt für herkömmliche USB-, Funk- und Bluetooth-Mäuse mit physischem Scrollrad.")
                         }
-                        
-                        Text("Gilt für herkömmliche USB-, Funk- und Bluetooth-Mäuse mit physischem Scrollrad.")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
                         
                         Divider()
                         
-                        Toggle("Vertikales Scrollen umkehren (Klassisches Mausrad)", isOn: $manager.reverseMouseVertical)
-                            .font(.subheadline)
-                        
-                        Text("Empfohlen: Aktiviert. Wenn macOS auf 'Natürliches Scrollen' steht, scrollt die Maus hiermit gewohnt nach unten, während das Trackpad natürlich bleibt.")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
+                        HStack(spacing: 6) {
+                            Toggle("Vertikales Scrollen umkehren", isOn: $manager.reverseMouseVertical)
+                                .font(.subheadline)
+                            InfoTooltip(text: "Empfohlen: Aktiviert. Wenn macOS auf 'Natürliches Scrollen' steht, scrollt die Maus hiermit gewohnt nach unten, während das Trackpad unverändert bleibt.")
+                        }
                         
                         Toggle("Horizontales Scrollen umkehren", isOn: $manager.reverseMouseHorizontal)
                             .font(.subheadline)
                         
-                        HStack {
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text("Scrollrad-Schrittmultiplikator:")
-                                    .font(.subheadline)
-                                Text("Erhöht die Scroll-Geschwindigkeit pro Mausrad-Rasterung.")
-                                    .font(.caption)
-                                    .foregroundColor(.secondary)
-                            }
+                        HStack(spacing: 6) {
+                            Text("Scrollrad-Schrittmultiplikator:")
+                                .font(.subheadline)
+                            InfoTooltip(text: "Erhöht die Scroll-Geschwindigkeit pro Mausrad-Rasterung.")
                             Spacer()
                             Picker("", selection: $manager.mouseStepMultiplier) {
                                 Text("1x (Standard)").tag(1)
@@ -128,26 +120,22 @@ public struct ScrollReverserSettingsView: View {
                     
                     // Card 2: Trackpad Settings
                     VStack(alignment: .leading, spacing: 14) {
-                        HStack(spacing: 8) {
+                        HStack(spacing: 6) {
                             Image(systemName: "hand.draw")
                                 .font(.title3)
                                 .foregroundColor(.accentColor)
                             Text("Trackpad")
                                 .font(.headline)
+                            InfoTooltip(text: "Gilt für das integrierte MacBook-Trackpad und Apple Magic Trackpad.")
                         }
-                        
-                        Text("Gilt für das integrierte MacBook-Trackpad und Apple Magic Trackpad.")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
                         
                         Divider()
                         
-                        Toggle("Vertikales Scrollen umkehren", isOn: $manager.reverseTrackpadVertical)
-                            .font(.subheadline)
-                        
-                        Text("Empfohlen: Deaktiviert. Das Trackpad behält so das native macOS-Verhalten (Zwei-Finger-Wischgeste wie auf Touchscreens).")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
+                        HStack(spacing: 6) {
+                            Toggle("Vertikales Scrollen umkehren", isOn: $manager.reverseTrackpadVertical)
+                                .font(.subheadline)
+                            InfoTooltip(text: "Empfohlen: Deaktiviert. Das Trackpad behält so das native macOS-Verhalten (Zwei-Finger-Wischgeste wie auf Touchscreens).")
+                        }
                         
                         Toggle("Horizontales Scrollen umkehren", isOn: $manager.reverseTrackpadHorizontal)
                             .font(.subheadline)
@@ -160,12 +148,11 @@ public struct ScrollReverserSettingsView: View {
                         Text("Menüleisten-Integration")
                             .font(.headline)
                         
-                        Toggle("Eigenes Symbol in der Menüleiste anzeigen", isOn: $module.showsDedicatedStatusItem)
-                            .font(.subheadline)
-                        
-                        Text("Zeigt ein separates Maus-Symbol in der Menüleiste an, über das du die Richtung per Klick umschalten kannst.")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
+                        HStack(spacing: 6) {
+                            Toggle("Eigenes Symbol in der Menüleiste anzeigen", isOn: $module.showsDedicatedStatusItem)
+                                .font(.subheadline)
+                            InfoTooltip(text: "Zeigt ein separates Maus-Symbol in der Menüleiste an, über das du die Richtung per Klick umschalten kannst.")
+                        }
                     }
                     .padding()
                     .background(RoundedRectangle(cornerRadius: 12).fill(Color(nsColor: .controlBackgroundColor)))

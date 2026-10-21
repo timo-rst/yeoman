@@ -76,12 +76,11 @@ public struct MenuBarSpacingSectionView: View {
                     Text("Menüleisten-Integration")
                         .font(.headline)
                     
-                    Toggle("Eigenes Symbol in der Menüleiste anzeigen", isOn: $module.showsDedicatedStatusItem)
-                        .font(.subheadline)
-                    
-                    Text("Ermöglicht das schnelle Wechseln der Abstands-Presets direkt über ein Menüleisten-Symbol.")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
+                    HStack(spacing: 6) {
+                        Toggle("Eigenes Symbol in der Menüleiste anzeigen", isOn: $module.showsDedicatedStatusItem)
+                            .font(.subheadline)
+                        InfoTooltip(text: "Ermöglicht das schnelle Wechseln der Abstands-Presets direkt über ein Menüleisten-Symbol.")
+                    }
                 }
                 .padding()
                 .background(RoundedRectangle(cornerRadius: 12).fill(Color(nsColor: .controlBackgroundColor)))
@@ -155,11 +154,14 @@ public struct MenuBarSpacingSectionView: View {
                     
                     Divider()
                     
-                    Toggle("Änderungen automatisch auf die Menüleiste anwenden", isOn: Binding(
-                        get: { spacingManager.autoRestartControlCenter },
-                        set: { spacingManager.setAutoRestart($0) }
-                    ))
-                    .font(.subheadline)
+                    HStack(spacing: 6) {
+                        Toggle("Änderungen automatisch anwenden", isOn: Binding(
+                            get: { spacingManager.autoRestartControlCenter },
+                            set: { spacingManager.setAutoRestart($0) }
+                        ))
+                        .font(.subheadline)
+                        InfoTooltip(text: "Startet das macOS ControlCenter bei Abstandsänderungen automatisch im Hintergrund neu.")
+                    }
                     
                     HStack {
                         Button("Menüleiste jetzt aktualisieren") {

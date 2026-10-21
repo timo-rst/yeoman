@@ -65,12 +65,11 @@ public struct ClipboardSettingsView: View {
                             Text("Menüleisten-Integration")
                                 .font(.headline)
                             
-                            Toggle("Eigenes Symbol in der Menüleiste anzeigen", isOn: $module.showsDedicatedStatusItem)
-                                .font(.subheadline)
-                            
-                            Text("Zeigt ein separates Zwischenablagen-Symbol in der Menüleiste an, um den Verlauf schnell per Klick zu öffnen.")
-                                .font(.caption)
-                                .foregroundColor(.secondary)
+                            HStack(spacing: 6) {
+                                Toggle("Eigenes Symbol in der Menüleiste anzeigen", isOn: $module.showsDedicatedStatusItem)
+                                    .font(.subheadline)
+                                InfoTooltip(text: "Zeigt ein separates Zwischenablagen-Symbol in der Menüleiste an, um den Verlauf schnell per Klick zu öffnen.")
+                            }
                         }
                         .padding()
                         .background(RoundedRectangle(cornerRadius: 12).fill(Color(nsColor: .controlBackgroundColor)))
@@ -79,12 +78,11 @@ public struct ClipboardSettingsView: View {
                             Text("Überwachung & Sicherheit")
                                 .font(.headline)
                             
-                            Toggle("Passwörter und sensible Daten nicht speichern", isOn: $monitor.ignorePasswordManagers)
-                                .font(.subheadline)
-                            
-                            Text("Kopierte Passwörter aus Passwort-Managern und Browser-Erweiterungen werden automatisch erkannt und vom Verlauf ausgeschlossen.")
-                                .font(.caption)
-                                .foregroundColor(.secondary)
+                            HStack(spacing: 6) {
+                                Toggle("Passwörter und sensible Daten nicht speichern", isOn: $monitor.ignorePasswordManagers)
+                                    .font(.subheadline)
+                                InfoTooltip(text: "Kopierte Passwörter aus Passwort-Managern und Browser-Erweiterungen werden automatisch erkannt und vom Verlauf ausgeschlossen.")
+                            }
                             
                             Divider()
                             
