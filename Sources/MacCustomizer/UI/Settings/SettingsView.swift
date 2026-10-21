@@ -68,7 +68,7 @@ public struct SettingsView: View {
 
 struct GeneralSettingsView: View {
     @AppStorage("launchAtLogin") private var launchAtLogin = false
-    @AppStorage("showDockIcon") private var showDockIcon = false
+    @AppStorage("showDockIcon") private var showDockIcon = true
     
     var body: some View {
         ScrollView {
@@ -89,9 +89,12 @@ struct GeneralSettingsView: View {
                         .font(.headline)
                     
                     Toggle("Beim Mac-Start automatisch öffnen (Launch at Login)", isOn: $launchAtLogin)
-                    Toggle("Als Menüleisten-App ausführen (Dock-Symbol ausblenden)", isOn: Binding(
-                        get: { !showDockIcon },
-                        set: { showDockIcon = !$0 }
+                    Toggle("Dock-Symbol anzeigen", isOn: Binding(
+                        get: { showDockIcon },
+                        set: {
+                            showDockIcon = $0
+                            NSApp.setActivationPolicy($0 ? .regular : .accessory)
+                        }
                     ))
                 }
                 .padding()

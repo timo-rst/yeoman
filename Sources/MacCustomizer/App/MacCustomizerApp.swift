@@ -3,8 +3,7 @@ import AppKit
 
 public final class AppDelegate: NSObject, NSApplicationDelegate {
     public func applicationDidFinishLaunching(_ notification: Notification) {
-        // Configure as accessory application (menu bar utility without Dock icon clutter)
-        let showDockIcon = UserDefaults.standard.bool(forKey: "showDockIcon")
+        let showDockIcon = UserDefaults.standard.object(forKey: "showDockIcon") as? Bool ?? true
         NSApp.setActivationPolicy(showDockIcon ? .regular : .accessory)
         
         // Initialize DisplayManager and ModuleManager
@@ -13,6 +12,16 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
         
         // Create Status Item in Menu Bar
         StatusItemController.shared.setup()
+        
+        // Show main window on launch
+        DispatchQueue.main.async {
+            StatusItemController.shared.openSettingsWindow()
+        }
+    }
+    
+    public func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
+        StatusItemController.shared.openSettingsWindow()
+        return true
     }
     
     public func applicationWillTerminate(_ notification: Notification) {

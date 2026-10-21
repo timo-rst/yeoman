@@ -16,7 +16,7 @@ public final class StatusItemController: NSObject, NSMenuDelegate {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         
         if let button = statusItem?.button {
-            let image = NSImage(systemSymbolName: "slider.horizontal.2.square.on.square", accessibilityDescription: "MacCustomizer")
+            let image = NSImage(systemSymbolName: "slider.horizontal.3", accessibilityDescription: "MacCustomizer")
             image?.isTemplate = true
             button.image = image
             button.toolTip = "MacCustomizer"
@@ -157,6 +157,7 @@ public final class StatusItemController: NSObject, NSMenuDelegate {
             window.isReleasedWhenClosed = false
             self.clipboardWindow = window
         }
+        clipboardWindow?.orderFrontRegardless()
         clipboardWindow?.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
     }
@@ -175,6 +176,7 @@ public final class StatusItemController: NSObject, NSMenuDelegate {
             window.isReleasedWhenClosed = false
             self.settingsWindow = window
         }
+        settingsWindow?.orderFrontRegardless()
         settingsWindow?.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
     }
