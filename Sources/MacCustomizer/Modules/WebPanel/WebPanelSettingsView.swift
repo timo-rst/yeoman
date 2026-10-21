@@ -16,42 +16,34 @@ public struct WebPanelSettingsView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
                 // Header
-                VStack(alignment: .leading, spacing: 8) {
-                    HStack {
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text("Web-Widgets")
-                                .font(.title2)
-                                .fontWeight(.bold)
-                            Text("Web-Apps direkt als Menüleisten-Symbole mit Live-Fenster nutzen.")
-                                .font(.subheadline)
+                ModuleHeaderView(
+                    title: "Web-Widgets",
+                    subtitle: "Web-Apps direkt als Menüleisten-Symbole mit Live-Fenster nutzen.",
+                    icon: "globe",
+                    isEnabled: $module.isEnabled,
+                    extraContent: {
+                        HStack {
+                            Text("\(module.widgets.count) Web-Widget(s) eingerichtet • \(module.widgets.filter { $0.isEnabled }.count) aktiv in der Menüleiste")
+                                .font(.caption)
                                 .foregroundColor(.secondary)
-                        }
-                        Spacer()
-                        Toggle("Modul aktiv", isOn: $module.isEnabled)
-                            .toggleStyle(.switch)
-                    }
-                    
-                    HStack {
-                        Text("\(module.widgets.count) Web-Widget(s) eingerichtet • \(module.widgets.filter { $0.isEnabled }.count) aktiv in der Menüleiste")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                        Spacer()
-                        
-                        Button(action: {
-                            editingWidget = nil
-                            isShowingEditor = true
-                        }) {
-                            HStack(spacing: 6) {
-                                Image(systemName: "plus.circle.fill")
-                                Text("Neues Web-Widget hinzufügen")
+                            Spacer()
+                            
+                            Button(action: {
+                                editingWidget = nil
+                                isShowingEditor = true
+                            }) {
+                                HStack(spacing: 6) {
+                                    Image(systemName: "plus.circle.fill")
+                                    Text("Neues Web-Widget hinzufügen")
+                                }
+                                .fontWeight(.medium)
                             }
-                            .fontWeight(.medium)
+                            .buttonStyle(.borderedProminent)
                         }
-                        .buttonStyle(.borderedProminent)
                     }
-                }
-                .padding()
-                .background(RoundedRectangle(cornerRadius: 12).fill(Color(nsColor: .controlBackgroundColor)))
+                )
+                
+                Group {
                 
                 // Widgets List
                 VStack(alignment: .leading, spacing: 14) {
@@ -129,6 +121,9 @@ public struct WebPanelSettingsView: View {
                 }
                 .padding()
                 .background(RoundedRectangle(cornerRadius: 12).fill(Color(nsColor: .controlBackgroundColor)))
+                }
+                .disabled(!module.isEnabled)
+                .opacity(module.isEnabled ? 1.0 : 0.6)
             }
             .padding(20)
         }

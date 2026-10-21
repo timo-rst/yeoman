@@ -20,20 +20,12 @@ public struct ClipboardSettingsView: View {
         VStack(spacing: 0) {
             // Header
             VStack(alignment: .leading, spacing: 12) {
-                HStack {
-                    VStack(alignment: .leading, spacing: 3) {
-                        Text("Zwischenablage-Manager")
-                            .font(.title2)
-                            .fontWeight(.bold)
-                        Text("Verlauf kopierter Texte, Links und Bilder mit Such- und Filterfunktion.")
-                            .font(.subheadline)
-                            .foregroundColor(.secondary)
-                    }
-                    Spacer()
-                    
-                    Toggle("", isOn: $module.isEnabled)
-                        .toggleStyle(.switch)
-                }
+                ModuleHeaderView(
+                    title: "Zwischenablage",
+                    subtitle: "Verlauf kopierter Texte, Links und Bilder mit Such- und Filterfunktion.",
+                    icon: "doc.on.clipboard",
+                    isEnabled: $module.isEnabled
+                )
                 
                 Picker("", selection: $selectedTab) {
                     ForEach(SettingsSubTab.allCases, id: \.self) { tab in
@@ -48,7 +40,8 @@ public struct ClipboardSettingsView: View {
             
             Divider()
             
-            if selectedTab == .history {
+            Group {
+                if selectedTab == .history {
                 // Live Clipboard Browser (Full View)
                 HStack(spacing: 0) {
                     Spacer()
@@ -146,6 +139,9 @@ public struct ClipboardSettingsView: View {
                     .padding(20)
                 }
             }
+            }
+            .disabled(!module.isEnabled)
+            .opacity(module.isEnabled ? 1.0 : 0.6)
         }
     }
 }

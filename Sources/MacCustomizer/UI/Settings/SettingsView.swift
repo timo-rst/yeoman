@@ -38,19 +38,6 @@ public struct SettingsView: View {
                         .frame(width: 18)
                         .foregroundColor(.accentColor)
                     Text(tab.rawValue)
-                    Spacer()
-                    
-                    if tab == .menuBar && moduleManager.menuBarModule.isEnabled {
-                        Circle().fill(Color.green).frame(width: 6, height: 6)
-                    } else if tab == .scrollReverser && moduleManager.scrollReverserModule.isEnabled {
-                        Circle().fill(Color.green).frame(width: 6, height: 6)
-                    } else if tab == .webPanel && moduleManager.webPanelModule.isEnabled {
-                        Circle().fill(Color.green).frame(width: 6, height: 6)
-                    } else if tab == .clipboard && moduleManager.clipboardModule.isEnabled {
-                        Circle().fill(Color.green).frame(width: 6, height: 6)
-                    } else if tab == .systemStats && moduleManager.systemStatsModule.isEnabled {
-                        Circle().fill(Color.green).frame(width: 6, height: 6)
-                    }
                 }
                 .tag(tab)
             }
@@ -298,8 +285,16 @@ struct ModuleToggleRow<ExtraContent: View>: View {
                 
                 Spacer()
                 
-                Toggle("", isOn: $isOn)
-                    .toggleStyle(.switch)
+                HStack(spacing: 10) {
+                    Text(isOn ? "Aktiviert" : "Deaktiviert")
+                        .font(.subheadline)
+                        .fontWeight(.medium)
+                        .foregroundColor(isOn ? .primary : .secondary)
+                    
+                    Toggle("", isOn: $isOn)
+                        .toggleStyle(.switch)
+                        .labelsHidden()
+                }
             }
             
             if isOn, let dedicatedBinding = showsDedicatedIcon {

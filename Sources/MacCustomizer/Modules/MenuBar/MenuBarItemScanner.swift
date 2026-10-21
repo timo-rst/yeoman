@@ -148,7 +148,7 @@ public final class MenuBarItemScanner: ObservableObject {
                 let name = dict["CFBundleDisplayName"] as? String ?? dict["CFBundleName"] as? String ?? (item as NSString).deletingPathExtension
                 
                 // Identify menu bar apps (LSUIElement or known utilities)
-                let isKnownUtility = ["Clipy", "Stats", "Ice", "Magnet", "Rectangle", "Docker", "Scroll Reverser", "MenubarX"].contains(name)
+                let isKnownUtility = ["Magnet", "Rectangle", "Docker", "Alfred", "Raycast", "Slack"].contains(name)
                 
                 if lsUIElement || isKnownUtility {
                     seenBundleIds.insert(bundleId)

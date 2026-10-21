@@ -16,6 +16,8 @@ public final class MenuBarModule: NSObject, CustomizerModule, ObservableObject {
             } else {
                 stop()
             }
+            ModuleManager.shared.objectWillChange.send()
+            ModuleManager.shared.recreateAllStatusItems()
         }
     }
     

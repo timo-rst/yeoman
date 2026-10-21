@@ -16,6 +16,8 @@ public final class ScrollReverserModule: NSObject, CustomizerModule, ObservableO
             } else {
                 stop()
             }
+            ModuleManager.shared.objectWillChange.send()
+            ModuleManager.shared.recreateAllStatusItems()
         }
     }
     

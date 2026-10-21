@@ -28,6 +28,8 @@ public final class SystemStatsModule: NSObject, CustomizerModule, ObservableObje
             } else {
                 stop()
             }
+            ModuleManager.shared.objectWillChange.send()
+            ModuleManager.shared.recreateAllStatusItems()
         }
     }
     
@@ -360,132 +362,132 @@ public struct SystemStatsSettingsView: View {
     public var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("System-Monitor & Task-Manager")
-                        .font(.title2)
-                        .fontWeight(.bold)
-                    Text("Kompakte Anzeige für Prozessor, Arbeitsspeicher und Grafik in der Menüleiste mit Task-Manager zum schnellen Beenden von Apps.")
-                        .font(.subheadline)
-                        .foregroundColor(.secondary)
-                }
+                ModuleHeaderView(
+                    title: "System-Monitor",
+                    subtitle: "Live-Auslastung von Prozessor, Arbeitsspeicher und Grafik in der Menüleiste.",
+                    icon: "gauge.with.needle",
+                    isEnabled: $module.isEnabled
+                )
                 
-                Divider()
-                
-                // Menüleisten-Option
-                VStack(alignment: .leading, spacing: 14) {
-                    Text("Menüleisten-Widget")
-                        .font(.headline)
+                Group {
+                    // Menüleisten-Option
+                    VStack(alignment: .leading, spacing: 14) {
+                        Text("Menüleisten-Widget")
+                            .font(.headline)
+                        
+                        Toggle("Mini-Graphen & Metriken in Menüleiste anzeigen", isOn: $module.showsDedicatedStatusItem)
+                            .font(.subheadline)
+                        
+                        Text("Rendert kompakte Live-Metriken für CPU, RAM und GPU direkt in der Menüleiste. Klick darauf öffnet den Mini Task-Manager.")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                    .padding()
+                    .background(RoundedRectangle(cornerRadius: 12).fill(Color(nsColor: .controlBackgroundColor)))
                     
-                    Toggle("Mini-Graphen & Metriken in Menüleiste anzeigen", isOn: $module.showsDedicatedStatusItem)
-                        .font(.subheadline)
+                    // Menüleisten-Anzeige Konfiguration
+                    VStack(alignment: .leading, spacing: 14) {
+                        Text("Menüleisten-Anzeige konfigurieren")
+                            .font(.headline)
+                        
+                        // Live Vorschau
+                        HStack {
+                            Text("Live-Vorschau:")
+                                .font(.subheadline)
+                                .foregroundColor(.secondary)
+                            Spacer()
+                            MenuBarStatsWidgetView(isLiveMenuBar: false)
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 4)
+                                .background(RoundedRectangle(cornerRadius: 6).fill(Color(nsColor: .windowBackgroundColor)))
+                        }
+                        .padding(10)
+                        .background(RoundedRectangle(cornerRadius: 8).fill(Color(nsColor: .controlBackgroundColor)))
+                        
+                        Divider()
+                        
+                        Text("Aktive Messwerte in der Menüleiste:")
+                            .font(.subheadline)
+                            .fontWeight(.medium)
+                        
+                        HStack(spacing: 24) {
+                            Toggle("CPU", isOn: $module.showCPU)
+                            Toggle("RAM (Speicher)", isOn: $module.showRAM)
+                            Toggle("GPU (Grafik)", isOn: $module.showGPU)
+                        }
+                        
+                        Divider()
+                        
+                        Text("Layout & Text-Ausrichtung:")
+                            .font(.subheadline)
+                            .fontWeight(.medium)
+                        
+                        Picker("Layout-Stil:", selection: $module.layoutMode) {
+                            ForEach(StatsLayoutMode.allCases, id: \.self) { mode in
+                                Text(mode.rawValue).tag(mode)
+                            }
+                        }
+                        .pickerStyle(.segmented)
+                        
+                        Picker("Graph-Typ:", selection: $module.graphStyle) {
+                            ForEach(StatsGraphStyle.allCases, id: \.self) { style in
+                                Text(style.rawValue).tag(style)
+                            }
+                        }
+                        .pickerStyle(.segmented)
+                        
+                        Divider()
+                        
+                        Text("Darstellungs-Optionen:")
+                            .font(.subheadline)
+                            .fontWeight(.medium)
+                        
+                        VStack(alignment: .leading, spacing: 10) {
+                            Toggle("Text-Bezeichnung anzeigen (z.B. „CPU“, „RAM“, „GPU“)", isOn: $module.showLabels)
+                            Toggle("Prozentwert als Text anzeigen (z.B. „10%“, „61%“)", isOn: $module.showPercentage)
+                            Toggle("Mini-Graphen & Balken anzeigen", isOn: $module.showGraphs)
+                            Toggle("Dezenter Kapsel-Hintergrund (Pill)", isOn: $module.useSubtleBackground)
+                        }
+                    }
+                    .padding()
+                    .background(RoundedRectangle(cornerRadius: 12).fill(Color(nsColor: .controlBackgroundColor)))
                     
-                    Text("Rendert kompakte Live-Metriken für CPU, RAM und GPU direkt in der Menüleiste. Klick darauf öffnet den Mini Task-Manager.")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                }
-                .padding()
-                .background(RoundedRectangle(cornerRadius: 12).fill(Color(nsColor: .controlBackgroundColor)))
-                
-                // Menüleisten-Anzeige Konfiguration
-                VStack(alignment: .leading, spacing: 14) {
-                    Text("Menüleisten-Anzeige konfigurieren")
-                        .font(.headline)
+                    // Live Snapshot Preview
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text("Aktuelle System-Auslastung")
+                            .font(.headline)
+                        
+                        HStack(spacing: 12) {
+                            MetricInfoBox(title: "CPU", value: "\(Int(provider.cpuUsagePercent))%", subtitle: "\(ProcessInfo.processInfo.processorCount) Cores", color: .blue)
+                            MetricInfoBox(title: "RAM", value: "\(Int(provider.memoryUsagePercent))%", subtitle: "\(String(format: "%.1f", provider.memoryUsedGB)) GB", color: .purple)
+                            MetricInfoBox(title: "GPU", value: "\(Int(provider.gpuUsagePercent))%", subtitle: "Metal Engine", color: .green)
+                        }
+                    }
+                    .padding()
+                    .background(RoundedRectangle(cornerRadius: 12).fill(Color(nsColor: .controlBackgroundColor)))
                     
-                    // Live Vorschau
-                    HStack {
-                        Text("Live-Vorschau:")
+                    // Process Management Information
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text("Laufende Prozesse & Task-Manager")
+                            .font(.headline)
+                        
+                        Text("Aktuell laufen \(provider.processes.count) Prozesse auf deinem Mac. Über das Menüleisten-Symbol kannst du nicht reagierende Apps direkt mit einem Klick beenden.")
                             .font(.subheadline)
                             .foregroundColor(.secondary)
-                        Spacer()
-                        MenuBarStatsWidgetView(isLiveMenuBar: false)
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 4)
-                            .background(RoundedRectangle(cornerRadius: 6).fill(Color(nsColor: .windowBackgroundColor)))
-                    }
-                    .padding(10)
-                    .background(RoundedRectangle(cornerRadius: 8).fill(Color(nsColor: .controlBackgroundColor)))
-                    
-                    Divider()
-                    
-                    Text("Aktive Messwerte in der Menüleiste:")
-                        .font(.subheadline)
-                        .fontWeight(.medium)
-                    
-                    HStack(spacing: 24) {
-                        Toggle("CPU", isOn: $module.showCPU)
-                        Toggle("RAM (Speicher)", isOn: $module.showRAM)
-                        Toggle("GPU (Grafik)", isOn: $module.showGPU)
-                    }
-                    
-                    Divider()
-                    
-                    Text("Layout & Text-Ausrichtung:")
-                        .font(.subheadline)
-                        .fontWeight(.medium)
-                    
-                    Picker("Layout-Stil:", selection: $module.layoutMode) {
-                        ForEach(StatsLayoutMode.allCases, id: \.self) { mode in
-                            Text(mode.rawValue).tag(mode)
+                        
+                        HStack {
+                            Button("Aktivitätsanzeige öffnen") {
+                                let url = URL(fileURLWithPath: "/System/Applications/Utilities/Activity Monitor.app")
+                                NSWorkspace.shared.openApplication(at: url, configuration: NSWorkspace.OpenConfiguration(), completionHandler: nil)
+                            }
+                            .buttonStyle(.bordered)
                         }
                     }
-                    .pickerStyle(.segmented)
-                    
-                    Picker("Graph-Typ:", selection: $module.graphStyle) {
-                        ForEach(StatsGraphStyle.allCases, id: \.self) { style in
-                            Text(style.rawValue).tag(style)
-                        }
-                    }
-                    .pickerStyle(.segmented)
-                    
-                    Divider()
-                    
-                    Text("Darstellungs-Optionen:")
-                        .font(.subheadline)
-                        .fontWeight(.medium)
-                    
-                    VStack(alignment: .leading, spacing: 10) {
-                        Toggle("Text-Bezeichnung anzeigen (z.B. „CPU“, „RAM“, „GPU“)", isOn: $module.showLabels)
-                        Toggle("Prozentwert als Text anzeigen (z.B. „10%“, „61%“)", isOn: $module.showPercentage)
-                        Toggle("Mini-Graphen & Balken anzeigen", isOn: $module.showGraphs)
-                        Toggle("Dezenter Kapsel-Hintergrund (Pill)", isOn: $module.useSubtleBackground)
-                    }
+                    .padding()
+                    .background(RoundedRectangle(cornerRadius: 12).fill(Color(nsColor: .controlBackgroundColor)))
                 }
-                .padding()
-                .background(RoundedRectangle(cornerRadius: 12).fill(Color(nsColor: .controlBackgroundColor)))
-                
-                // Live Snapshot Preview
-                VStack(alignment: .leading, spacing: 12) {
-                    Text("Aktuelle System-Auslastung")
-                        .font(.headline)
-                    
-                    HStack(spacing: 12) {
-                        MetricInfoBox(title: "CPU", value: "\(Int(provider.cpuUsagePercent))%", subtitle: "\(ProcessInfo.processInfo.processorCount) Cores", color: .blue)
-                        MetricInfoBox(title: "RAM", value: "\(Int(provider.memoryUsagePercent))%", subtitle: "\(String(format: "%.1f", provider.memoryUsedGB)) GB", color: .purple)
-                        MetricInfoBox(title: "GPU", value: "\(Int(provider.gpuUsagePercent))%", subtitle: "Metal Engine", color: .green)
-                    }
-                }
-                .padding()
-                .background(RoundedRectangle(cornerRadius: 12).fill(Color(nsColor: .controlBackgroundColor)))
-                
-                // Process Management Information
-                VStack(alignment: .leading, spacing: 12) {
-                    Text("Laufende Prozesse & Task-Manager")
-                        .font(.headline)
-                    
-                    Text("Aktuell laufen \(provider.processes.count) Prozesse auf deinem Mac. Über das Menüleisten-Symbol kannst du nicht reagierende Apps direkt mit einem Klick beenden.")
-                        .font(.subheadline)
-                        .foregroundColor(.secondary)
-                    
-                    HStack {
-                        Button("Aktivitätsanzeige öffnen") {
-                            let url = URL(fileURLWithPath: "/System/Applications/Utilities/Activity Monitor.app")
-                            NSWorkspace.shared.openApplication(at: url, configuration: NSWorkspace.OpenConfiguration(), completionHandler: nil)
-                        }
-                        .buttonStyle(.bordered)
-                    }
-                }
-                .padding()
-                .background(RoundedRectangle(cornerRadius: 12).fill(Color(nsColor: .controlBackgroundColor)))
+                .disabled(!module.isEnabled)
+                .opacity(module.isEnabled ? 1.0 : 0.6)
             }
             .padding(20)
         }

@@ -128,6 +128,8 @@ public final class WebPanelModule: NSObject, CustomizerModule, ObservableObject 
             } else {
                 stop()
             }
+            ModuleManager.shared.objectWillChange.send()
+            ModuleManager.shared.recreateAllStatusItems()
         }
     }
     

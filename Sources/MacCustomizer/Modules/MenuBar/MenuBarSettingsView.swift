@@ -26,19 +26,12 @@ public struct MenuBarSettingsView: View {
         VStack(spacing: 0) {
             // Module Header & Sub-Navigation Picker
             VStack(spacing: 12) {
-                HStack {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Menüleiste anpassen")
-                            .font(.title2)
-                            .fontWeight(.bold)
-                        Text("Verwalte Symbole, Sichtbarkeit und Abstände.")
-                            .font(.subheadline)
-                            .foregroundColor(.secondary)
-                    }
-                    Spacer()
-                    Toggle("Modul aktiv", isOn: $module.isEnabled)
-                        .toggleStyle(.switch)
-                }
+                ModuleHeaderView(
+                    title: "Menüleiste",
+                    subtitle: "Symbole kompakter anordnen, Abstände anpassen und Monitore verwalten.",
+                    icon: "menubar.rectangle",
+                    isEnabled: $module.isEnabled
+                )
                 
                 // Sub-menu switcher for this module
                 Picker("", selection: $selectedSubTab) {
@@ -52,7 +45,6 @@ public struct MenuBarSettingsView: View {
             .padding(.horizontal, 20)
             .padding(.top, 16)
             .padding(.bottom, 12)
-            .background(Color(nsColor: .controlBackgroundColor))
             
             Divider()
             
@@ -65,6 +57,8 @@ public struct MenuBarSettingsView: View {
                     MenuBarSpacingSectionView(module: module)
                 }
             }
+            .disabled(!module.isEnabled)
+            .opacity(module.isEnabled ? 1.0 : 0.6)
         }
     }
 }
