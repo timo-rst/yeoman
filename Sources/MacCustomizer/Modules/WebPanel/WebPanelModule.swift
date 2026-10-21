@@ -41,6 +41,7 @@ public struct WebWidgetItem: Identifiable, Codable, Equatable {
     public var title: String
     public var url: String
     public var iconName: String
+    public var useFavicon: Bool
     public var sizePreset: WebSizePreset
     public var customWidth: CGFloat
     public var customHeight: CGFloat
@@ -51,7 +52,7 @@ public struct WebWidgetItem: Identifiable, Codable, Equatable {
     public var showsAddressBar: Bool
     
     enum CodingKeys: String, CodingKey {
-        case id, title, url, iconName, sizePreset, customWidth, customHeight, userAgentMode, zoomScale, isEnabled, isPinned, showsAddressBar
+        case id, title, url, iconName, useFavicon, sizePreset, customWidth, customHeight, userAgentMode, zoomScale, isEnabled, isPinned, showsAddressBar
     }
     
     public init(
@@ -59,6 +60,7 @@ public struct WebWidgetItem: Identifiable, Codable, Equatable {
         title: String,
         url: String,
         iconName: String = "calendar",
+        useFavicon: Bool = true,
         sizePreset: WebSizePreset = .widget,
         customWidth: CGFloat = 320,
         customHeight: CGFloat = 400,
@@ -72,6 +74,7 @@ public struct WebWidgetItem: Identifiable, Codable, Equatable {
         self.title = title
         self.url = url
         self.iconName = iconName
+        self.useFavicon = useFavicon
         self.sizePreset = sizePreset
         self.customWidth = customWidth
         self.customHeight = customHeight
@@ -88,6 +91,7 @@ public struct WebWidgetItem: Identifiable, Codable, Equatable {
         self.title = try container.decode(String.self, forKey: .title)
         self.url = try container.decode(String.self, forKey: .url)
         self.iconName = try container.decodeIfPresent(String.self, forKey: .iconName) ?? "calendar"
+        self.useFavicon = try container.decodeIfPresent(Bool.self, forKey: .useFavicon) ?? true
         self.sizePreset = try container.decodeIfPresent(WebSizePreset.self, forKey: .sizePreset) ?? .widget
         self.customWidth = try container.decodeIfPresent(CGFloat.self, forKey: .customWidth) ?? 320
         self.customHeight = try container.decodeIfPresent(CGFloat.self, forKey: .customHeight) ?? 400
@@ -290,6 +294,42 @@ public final class WebWidgetInstanceController: NSObject, ObservableObject {
             zoomScale: item.zoomScale
         )
         super.init()
+        self.webController.associatedItem = item
+        
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(handleFaviconUpdate(_:)),
+            name: .webFaviconDidUpdate,
+            object: nil
+        )
+    }
+    
+    deinit {
+        NotificationCenter.default.removeObserver(self)
+    }
+    
+    @objc private func handleFaviconUpdate(_ notification: Notification) {
+        if let targetId = notification.userInfo?["widgetId"] as? UUID, targetId == item.id {
+            DispatchQueue.main.async { [weak self] in
+                self?.updateStatusItemIcon()
+            }
+        } else if let targetUrl = notification.userInfo?["url"] as? String, targetUrl == item.url {
+            DispatchQueue.main.async { [weak self] in
+                self?.updateStatusItemIcon()
+            }
+        }
+    }
+    
+    public func updateStatusItemIcon() {
+        guard let button = statusItem?.button else { return }
+        
+        if item.useFavicon, let webIcon = WebFaviconManager.shared.menuBarIcon(for: item) {
+            button.image = webIcon
+        } else {
+            let img = NSImage(systemSymbolName: item.iconName, accessibilityDescription: item.title)
+            img?.isTemplate = true
+            button.image = img
+        }
     }
     
     public func setup() {
@@ -300,16 +340,24 @@ public final class WebWidgetInstanceController: NSObject, ObservableObject {
             button.action = #selector(statusItemClicked(_:))
             button.sendAction(on: [.leftMouseUp, .rightMouseUp])
             button.toolTip = "\(item.title) (Klick zum Öffnen)"
-            
-            let img = NSImage(systemSymbolName: item.iconName, accessibilityDescription: item.title)
-            img?.isTemplate = true
-            button.image = img
         }
         self.statusItem = sItem
+        updateStatusItemIcon()
+        
+        if item.useFavicon {
+            WebFaviconManager.shared.fetchFavicon(for: item.url, widgetId: item.id) { [weak self] _ in
+                self?.updateStatusItemIcon()
+            }
+        }
     }
     
     public func update(with newItem: WebWidgetItem) {
+        let oldUrl = self.item.url
+        let oldUseFavicon = self.item.useFavicon
+        let oldIconName = self.item.iconName
+        
         self.item = newItem
+        webController.associatedItem = newItem
         webController.updateConfig(
             userAgentMode: newItem.userAgentMode,
             targetWidth: newItem.effectiveWidth,
@@ -319,9 +367,13 @@ public final class WebWidgetInstanceController: NSObject, ObservableObject {
         
         if let button = statusItem?.button {
             button.toolTip = "\(newItem.title) (Klick zum Öffnen)"
-            let img = NSImage(systemSymbolName: newItem.iconName, accessibilityDescription: newItem.title)
-            img?.isTemplate = true
-            button.image = img
+        }
+        updateStatusItemIcon()
+        
+        if (newItem.url != oldUrl || newItem.useFavicon != oldUseFavicon || newItem.iconName != oldIconName) && newItem.useFavicon {
+            WebFaviconManager.shared.fetchFavicon(for: newItem.url, widgetId: newItem.id) { [weak self] _ in
+                self?.updateStatusItemIcon()
+            }
         }
         
         let newSize = NSSize(width: newItem.effectiveWidth, height: newItem.effectiveHeight)
@@ -330,6 +382,7 @@ public final class WebWidgetInstanceController: NSObject, ObservableObject {
     }
     
     public func cleanup() {
+        NotificationCenter.default.removeObserver(self)
         if let item = statusItem {
             NSStatusBar.system.removeStatusItem(item)
             statusItem = nil

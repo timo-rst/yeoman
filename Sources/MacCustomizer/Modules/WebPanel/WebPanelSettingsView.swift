@@ -173,17 +173,31 @@ struct WebWidgetRowView: View {
     let onEdit: () -> Void
     let onDelete: () -> Void
     let onOpen: () -> Void
+    @ObservedObject private var faviconManager = WebFaviconManager.shared
     
     var body: some View {
         HStack(spacing: 14) {
             // Icon Badge
             ZStack {
                 RoundedRectangle(cornerRadius: 10)
-                    .fill(Color.accentColor.opacity(0.15))
+                    .fill(Color(nsColor: .controlBackgroundColor))
                     .frame(width: 38, height: 38)
-                Image(systemName: widget.iconName)
-                    .font(.system(size: 18))
-                    .foregroundColor(.accentColor)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 10)
+                            .stroke(Color.primary.opacity(0.12), lineWidth: 1)
+                    )
+                
+                if widget.useFavicon, let icon = faviconManager.previewIcon(for: widget.url, widgetId: widget.id) {
+                    Image(nsImage: icon)
+                        .resizable()
+                        .aspectRatio(contentMode: .fit)
+                        .frame(width: 24, height: 24)
+                        .clipShape(RoundedRectangle(cornerRadius: 4))
+                } else {
+                    Image(systemName: widget.iconName)
+                        .font(.system(size: 18))
+                        .foregroundColor(.accentColor)
+                }
             }
             
             // Info
@@ -191,6 +205,22 @@ struct WebWidgetRowView: View {
                 HStack(spacing: 8) {
                     Text(widget.title)
                         .font(.system(size: 14, weight: .semibold))
+                    
+                    if widget.useFavicon {
+                        Text("Web-Icon")
+                            .font(.caption2)
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2)
+                            .background(Capsule().fill(Color.purple.opacity(0.18)))
+                            .foregroundColor(.purple)
+                    } else {
+                        Text("Symbol")
+                            .font(.caption2)
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2)
+                            .background(Capsule().fill(Color.secondary.opacity(0.15)))
+                            .foregroundColor(.secondary)
+                    }
                     
                     Text("\(Int(widget.effectiveWidth)) × \(Int(widget.effectiveHeight)) pt")
                         .font(.caption2)
@@ -272,6 +302,7 @@ struct WebWidgetEditorSheet: View {
     @State private var title: String
     @State private var url: String
     @State private var iconName: String
+    @State private var useFavicon: Bool
     @State private var sizePreset: WebSizePreset
     @State private var customWidth: CGFloat
     @State private var customHeight: CGFloat
@@ -282,6 +313,7 @@ struct WebWidgetEditorSheet: View {
     @State private var showsAddressBar: Bool
     
     @StateObject private var previewController: WebPanelController
+    @ObservedObject private var faviconManager = WebFaviconManager.shared
     
     let isEditing: Bool
     let originalId: UUID?
@@ -299,6 +331,7 @@ struct WebWidgetEditorSheet: View {
         let initialTitle = initialWidget?.title ?? "Mein Kalender"
         let initialURL = initialWidget?.url ?? "https://calendar.proton.me"
         let initialIcon = initialWidget?.iconName ?? "calendar"
+        let initialUseFavicon = initialWidget?.useFavicon ?? true
         let initialPreset = initialWidget?.sizePreset ?? .widget
         let initialW = initialWidget?.customWidth ?? 320
         let initialH = initialWidget?.customHeight ?? 400
@@ -311,6 +344,7 @@ struct WebWidgetEditorSheet: View {
         _title = State(initialValue: initialTitle)
         _url = State(initialValue: initialURL)
         _iconName = State(initialValue: initialIcon)
+        _useFavicon = State(initialValue: initialUseFavicon)
         _sizePreset = State(initialValue: initialPreset)
         _customWidth = State(initialValue: initialW)
         _customHeight = State(initialValue: initialH)
@@ -366,43 +400,111 @@ struct WebWidgetEditorSheet: View {
                 // Left Column: Configuration Forms
                 ScrollView {
                     VStack(alignment: .leading, spacing: 18) {
-                        // 1. Name & Icon
-                        VStack(alignment: .leading, spacing: 10) {
+                        // 1. Name & Menüleisten-Symbol
+                        VStack(alignment: .leading, spacing: 12) {
                             Text("1. Name & Menüleisten-Symbol")
                                 .font(.headline)
                             
-                            HStack(spacing: 10) {
-                                Image(systemName: iconName)
-                                    .font(.title2)
-                                    .foregroundColor(.accentColor)
-                                    .frame(width: 32)
+                            HStack(spacing: 12) {
+                                // Live Icon Preview
+                                ZStack {
+                                    RoundedRectangle(cornerRadius: 8)
+                                        .fill(Color(nsColor: .controlBackgroundColor))
+                                        .frame(width: 36, height: 36)
+                                        .overlay(
+                                            RoundedRectangle(cornerRadius: 8)
+                                                .stroke(Color.primary.opacity(0.15), lineWidth: 1)
+                                        )
+                                    
+                                    if useFavicon, let favicon = faviconManager.previewIcon(for: url, widgetId: originalId) {
+                                        Image(nsImage: favicon)
+                                            .resizable()
+                                            .aspectRatio(contentMode: .fit)
+                                            .frame(width: 22, height: 22)
+                                            .clipShape(RoundedRectangle(cornerRadius: 3.5))
+                                    } else {
+                                        Image(systemName: iconName)
+                                            .font(.system(size: 18))
+                                            .foregroundColor(.accentColor)
+                                    }
+                                }
                                 
                                 TextField("Widget-Name (z.B. Proton Kalender)", text: $title)
                                     .textFieldStyle(.roundedBorder)
                             }
                             
-                            Text("Symbol auswählen:")
-                                .font(.caption2)
-                                .foregroundColor(.secondary)
+                            Divider()
                             
-                            LazyVGrid(columns: [GridItem(.adaptive(minimum: 32))], spacing: 6) {
-                                ForEach([
-                                    "calendar", "calendar.badge.clock", "note.text",
-                                    "bubble.left.and.bubble.right", "globe", "safari",
-                                    "checklist", "bookmark", "envelope", "bell",
-                                    "sparkles", "star", "music.note", "chart.bar"
-                                ], id: \.self) { icon in
-                                    Button(action: { iconName = icon }) {
-                                        Image(systemName: icon)
-                                            .font(.system(size: 14))
-                                            .foregroundColor(iconName == icon ? .white : .primary)
-                                            .frame(width: 30, height: 30)
-                                            .background(
-                                                RoundedRectangle(cornerRadius: 6)
-                                                    .fill(iconName == icon ? Color.accentColor : Color(nsColor: .controlColor))
-                                            )
+                            // Favicon Option (MenuBarX behavior)
+                            VStack(alignment: .leading, spacing: 6) {
+                                Toggle("Website-Icon (Favicon) automatisch laden (wie MenuBarX)", isOn: $useFavicon)
+                                    .fontWeight(.medium)
+                                
+                                Text("Verwendet das Original-Logo der Website (z.B. Proton, Google, Notion) in Farbe in der Menüleiste. Wenn deaktiviert oder offline, wird das SF-Symbol unten als Fallback genutzt.")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                                
+                                if useFavicon {
+                                    HStack(spacing: 8) {
+                                        if let favicon = faviconManager.previewIcon(for: url, widgetId: originalId) {
+                                            Image(nsImage: favicon)
+                                                .resizable()
+                                                .aspectRatio(contentMode: .fit)
+                                                .frame(width: 18, height: 18)
+                                                .clipShape(RoundedRectangle(cornerRadius: 3))
+                                            Text("Website-Favicon aktiv (farbig)")
+                                                .font(.caption2)
+                                                .foregroundColor(.green)
+                                                .fontWeight(.medium)
+                                        } else {
+                                            Image(systemName: "arrow.clockwise")
+                                                .font(.caption2)
+                                                .foregroundColor(.secondary)
+                                            Text("Favicon wird für URL geladen...")
+                                                .font(.caption2)
+                                                .foregroundColor(.secondary)
+                                        }
+                                        
+                                        Spacer()
+                                        
+                                        Button("Neu laden") {
+                                            faviconManager.fetchFavicon(for: url, widgetId: originalId)
+                                        }
+                                        .controlSize(.small)
                                     }
-                                    .buttonStyle(.plain)
+                                    .padding(8)
+                                    .background(RoundedRectangle(cornerRadius: 6).fill(Color.primary.opacity(0.04)))
+                                }
+                            }
+                            
+                            Divider()
+                            
+                            // Symbol Selection (Fallback or Manual)
+                            VStack(alignment: .leading, spacing: 6) {
+                                Text(useFavicon ? "Fallback-Symbol auswählen (wenn kein Web-Icon verfügbar):" : "Manuelles Menüleisten-Symbol auswählen (immer anzeigen):")
+                                    .font(.caption2)
+                                    .foregroundColor(.secondary)
+                                
+                                LazyVGrid(columns: [GridItem(.adaptive(minimum: 32))], spacing: 6) {
+                                    ForEach([
+                                        "calendar", "calendar.badge.clock", "note.text",
+                                        "bubble.left.and.bubble.right", "globe", "safari",
+                                        "checklist", "bookmark", "envelope", "bell",
+                                        "sparkles", "star", "music.note", "chart.bar",
+                                        "chevron.left.forwardslash.chevron.right", "tray.full", "cloud", "person"
+                                    ], id: \.self) { icon in
+                                        Button(action: { iconName = icon }) {
+                                            Image(systemName: icon)
+                                                .font(.system(size: 14))
+                                                .foregroundColor(iconName == icon ? .white : .primary)
+                                                .frame(width: 30, height: 30)
+                                                .background(
+                                                    RoundedRectangle(cornerRadius: 6)
+                                                        .fill(iconName == icon ? Color.accentColor : Color(nsColor: .controlColor))
+                                                )
+                                        }
+                                        .buttonStyle(.plain)
+                                    }
                                 }
                             }
                         }
@@ -634,6 +736,7 @@ struct WebWidgetEditorSheet: View {
                         title: title.isEmpty ? "Web-Widget" : title,
                         url: url.isEmpty ? "https://calendar.proton.me" : url,
                         iconName: iconName,
+                        useFavicon: useFavicon,
                         sizePreset: sizePreset,
                         customWidth: customWidth,
                         customHeight: customHeight,
@@ -655,6 +758,9 @@ struct WebWidgetEditorSheet: View {
         .frame(minWidth: 840, minHeight: 620)
         .onAppear {
             updateLivePreview()
+            if useFavicon {
+                faviconManager.fetchFavicon(for: url, widgetId: originalId)
+            }
         }
     }
     
@@ -671,6 +777,9 @@ struct WebWidgetEditorSheet: View {
         }
         url = str
         updateLivePreview()
+        if useFavicon {
+            faviconManager.fetchFavicon(for: str, widgetId: originalId)
+        }
     }
     
     private func setPreset(url newURL: String, name: String, icon: String, preset: WebSizePreset) {
@@ -682,6 +791,9 @@ struct WebWidgetEditorSheet: View {
             self.zoomScale = 0.85
         }
         updateLivePreview()
+        if useFavicon {
+            faviconManager.fetchFavicon(for: newURL, widgetId: originalId)
+        }
     }
     
     private func updateLivePreview() {

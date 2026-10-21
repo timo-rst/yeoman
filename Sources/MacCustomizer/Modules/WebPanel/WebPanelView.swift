@@ -12,6 +12,7 @@ public final class WebPanelController: ObservableObject {
     public var userAgentMode: WebUserAgentMode
     public var targetWidth: CGFloat
     public var homeURL: String
+    public var associatedItem: WebWidgetItem? = nil
     
     weak var webView: WKWebView?
     
@@ -160,6 +161,11 @@ public struct WebViewRepresentable: NSViewRepresentable {
                 }
                 // Ensure pageZoom stays applied after page finish
                 webView.pageZoom = CGFloat(self.controller.zoomScale)
+                
+                // Extract and update website favicon if configured
+                if let item = self.controller.associatedItem, item.useFavicon {
+                    WebFaviconManager.shared.extractFaviconFromWebView(webView, for: item)
+                }
             }
         }
         
