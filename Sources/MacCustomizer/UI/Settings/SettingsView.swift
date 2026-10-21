@@ -3,6 +3,7 @@ import SwiftUI
 public enum SettingsTab: String, CaseIterable, Identifiable {
     case general = "Allgemein"
     case menuBarItems = "Icons & Leiste"
+    case menuBarAppearance = "Design & Hintergrund"
     case menuBarSpacing = "Abstände (Ice)"
     case clipboard = "Zwischenablage"
     case systemStats = "System-Stats"
@@ -14,6 +15,7 @@ public enum SettingsTab: String, CaseIterable, Identifiable {
         switch self {
         case .general: return "gearshape"
         case .menuBarItems: return "list.bullet.rectangle"
+        case .menuBarAppearance: return "paintpalette"
         case .menuBarSpacing: return "menubar.rectangle"
         case .clipboard: return "doc.on.clipboard"
         case .systemStats: return "gauge.with.needle"
@@ -24,7 +26,7 @@ public enum SettingsTab: String, CaseIterable, Identifiable {
 
 public struct SettingsView: View {
     @ObservedObject var moduleManager = ModuleManager.shared
-    @State private var selectedTab: SettingsTab = .menuBarItems
+    @State private var selectedTab: SettingsTab = .menuBarAppearance
     
     public init() {}
     
@@ -38,7 +40,7 @@ public struct SettingsView: View {
                     Text(tab.rawValue)
                     Spacer()
                     
-                    if (tab == .menuBarItems || tab == .menuBarSpacing) && moduleManager.menuBarModule.isEnabled {
+                    if (tab == .menuBarItems || tab == .menuBarSpacing || tab == .menuBarAppearance) && moduleManager.menuBarModule.isEnabled {
                         Circle().fill(Color.green).frame(width: 6, height: 6)
                     } else if tab == .clipboard && moduleManager.clipboardModule.isEnabled {
                         Circle().fill(Color.green).frame(width: 6, height: 6)
@@ -56,6 +58,8 @@ public struct SettingsView: View {
                 GeneralSettingsView()
             case .menuBarItems:
                 MenuBarItemsView()
+            case .menuBarAppearance:
+                MenuBarAppearanceView()
             case .menuBarSpacing:
                 moduleManager.menuBarModule.settingsView()
             case .clipboard:
@@ -66,7 +70,7 @@ public struct SettingsView: View {
                 AboutView()
             }
         }
-        .frame(minWidth: 740, minHeight: 540)
+        .frame(minWidth: 760, minHeight: 560)
     }
 }
 
