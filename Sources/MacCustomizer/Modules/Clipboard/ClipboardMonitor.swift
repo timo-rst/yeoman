@@ -58,7 +58,33 @@ public final class ClipboardMonitor: ObservableObject {
             }
         }
         
-        // Extract string content
+        let frontmostApp = NSWorkspace.shared.frontmostApplication?.localizedName
+        
+        // 1. Check for direct image data on pasteboard (Screenshots, copied images from browsers/apps)
+        if pasteboard.canReadItem(withDataConformingToTypes: [NSPasteboard.PasteboardType.png.rawValue, NSPasteboard.PasteboardType.tiff.rawValue]) {
+            if let readImages = pasteboard.readObjects(forClasses: [NSImage.self], options: nil) as? [NSImage],
+               let image = readImages.first {
+                ClipboardHistoryStore.shared.addImageItem(image: image, sourceApp: frontmostApp)
+                return
+            } else if let data = pasteboard.data(forType: .png) ?? pasteboard.data(forType: .tiff),
+                      let image = NSImage(data: data) {
+                ClipboardHistoryStore.shared.addImageItem(image: image, sourceApp: frontmostApp)
+                return
+            }
+        }
+        
+        // 2. Check for copied image file in Finder
+        if let urls = pasteboard.readObjects(forClasses: [NSURL.self], options: nil) as? [URL],
+           let fileURL = urls.first, fileURL.isFileURL {
+            let ext = fileURL.pathExtension.lowercased()
+            let imageExtensions = ["png", "jpg", "jpeg", "heic", "webp", "gif", "tiff", "bmp", "ico", "svg"]
+            if imageExtensions.contains(ext), let img = NSImage(contentsOf: fileURL) {
+                ClipboardHistoryStore.shared.addImageItem(image: img, sourceApp: frontmostApp ?? "Finder")
+                return
+            }
+        }
+        
+        // 3. Extract text content
         if let text = pasteboard.string(forType: .string), !text.isEmpty {
             let type: ClipboardContentType
             if text.hasPrefix("http://") || text.hasPrefix("https://") {
@@ -69,9 +95,27 @@ public final class ClipboardMonitor: ObservableObject {
                 type = .text
             }
             
-            let frontmostApp = NSWorkspace.shared.frontmostApplication?.localizedName
             ClipboardHistoryStore.shared.addItem(content: text, type: type, sourceApp: frontmostApp)
         }
+    }
+    
+    public func copyItemToClipboard(_ item: ClipboardItem) {
+        let pasteboard = NSPasteboard.general
+        pasteboard.clearContents()
+        
+        if item.type == .image, let img = item.image {
+            if let tiff = img.tiffRepresentation {
+                pasteboard.setData(tiff, forType: .tiff)
+                if let rep = NSBitmapImageRep(data: tiff),
+                   let png = rep.representation(using: .png, properties: [:]) {
+                    pasteboard.setData(png, forType: .png)
+                }
+            }
+        } else {
+            pasteboard.setString(item.content, forType: .string)
+        }
+        
+        self.lastChangeCount = pasteboard.changeCount
     }
     
     public func copyToClipboard(_ content: String) {

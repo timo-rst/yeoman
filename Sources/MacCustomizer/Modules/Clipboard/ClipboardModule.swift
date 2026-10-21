@@ -96,7 +96,7 @@ public final class ClipboardModule: NSObject, CustomizerModule, ObservableObject
     private func togglePopover(_ sender: NSStatusBarButton) {
         if popover == nil {
             let p = NSPopover()
-            p.contentSize = NSSize(width: 360, height: 440)
+            p.contentSize = NSSize(width: 380, height: 480)
             p.behavior = .transient
             p.animates = true
             p.contentViewController = NSHostingController(rootView: ClipboardView(onCopy: { [weak self] in
