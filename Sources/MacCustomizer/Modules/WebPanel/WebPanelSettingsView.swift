@@ -205,7 +205,7 @@ struct WebWidgetRowView: View {
             ZStack {
                 RoundedRectangle(cornerRadius: 10)
                     .fill(Color(nsColor: .controlBackgroundColor))
-                    .frame(width: 38, height: 38)
+                    .frame(width: 40, height: 40)
                     .overlay(
                         RoundedRectangle(cornerRadius: 10)
                             .stroke(Color.primary.opacity(0.12), lineWidth: 1)
@@ -215,20 +215,21 @@ struct WebWidgetRowView: View {
                     Image(nsImage: icon)
                         .resizable()
                         .aspectRatio(contentMode: .fit)
-                        .frame(width: 24, height: 24)
+                        .frame(width: 26, height: 26)
                         .clipShape(RoundedRectangle(cornerRadius: 4))
                 } else {
                     Image(systemName: widget.iconName)
-                        .font(.system(size: 18))
+                        .font(.system(size: 20))
                         .foregroundColor(.accentColor)
                 }
             }
             
             // Info
-            VStack(alignment: .leading, spacing: 3) {
+            VStack(alignment: .leading, spacing: 4) {
                 HStack(spacing: 8) {
                     Text(widget.title)
                         .font(.system(size: 14, weight: .semibold))
+                        .lineLimit(1)
                     
                     if widget.useFavicon {
                         Text("Web-Icon")
@@ -269,11 +270,11 @@ struct WebWidgetRowView: View {
                     .lineLimit(1)
             }
             
-            Spacer()
+            Spacer(minLength: 12)
             
-            // Actions
-            HStack(spacing: 8) {
-                // Open Popover
+            // Actions: Elegantly arranged across 2 vertical tiers to fully utilize the row's height
+            VStack(alignment: .leading, spacing: 6) {
+                // Top Tier: Open Popover
                 Button(action: onOpen) {
                     HStack(spacing: 5) {
                         Image(systemName: "arrow.up.right.square")
@@ -282,44 +283,54 @@ struct WebWidgetRowView: View {
                 }
                 .buttonStyle(.bordered)
                 .controlSize(.regular)
+                .fixedSize(horizontal: true, vertical: false)
                 .help("Fenster in Menüleiste öffnen")
                 
-                // Edit
-                Button(action: onEdit) {
-                    HStack(spacing: 5) {
-                        Image(systemName: "pencil")
-                        Text("Bearbeiten")
+                // Bottom Tier: Edit & Delete
+                HStack(spacing: 8) {
+                    Button(action: onEdit) {
+                        HStack(spacing: 5) {
+                            Image(systemName: "pencil")
+                            Text("Bearbeiten")
+                        }
                     }
-                }
-                .buttonStyle(.bordered)
-                .controlSize(.regular)
-                .help("Widget bearbeiten")
-                
-                // Delete
-                Button(role: .destructive, action: onDelete) {
-                    HStack(spacing: 5) {
-                        Image(systemName: "trash")
-                        Text("Löschen")
+                    .buttonStyle(.bordered)
+                    .controlSize(.regular)
+                    .fixedSize(horizontal: true, vertical: false)
+                    .help("Widget bearbeiten")
+                    
+                    Button(role: .destructive, action: onDelete) {
+                        HStack(spacing: 5) {
+                            Image(systemName: "trash")
+                            Text("Löschen")
+                        }
+                        .foregroundColor(.red)
                     }
-                    .foregroundColor(.red)
+                    .buttonStyle(.bordered)
+                    .controlSize(.regular)
+                    .fixedSize(horizontal: true, vertical: false)
+                    .help("Widget löschen")
                 }
-                .buttonStyle(.bordered)
-                .controlSize(.regular)
-                .help("Widget löschen")
-                
-                Divider()
-                    .frame(height: 20)
-                    .padding(.horizontal, 4)
-                
-                // In Menu Bar Toggle
+            }
+            
+            Divider()
+                .frame(height: 38)
+                .padding(.horizontal, 4)
+            
+            // In Menu Bar Toggle
+            VStack(spacing: 3) {
                 Toggle("", isOn: Binding(
                     get: { widget.isEnabled },
                     set: { onToggleEnabled($0) }
                 ))
                 .toggleStyle(.switch)
                 .labelsHidden()
-                .help("In Menüleiste anzeigen")
+                
+                Text("Menüleiste")
+                    .font(.system(size: 9))
+                    .foregroundColor(.secondary)
             }
+            .help(widget.isEnabled ? "In Menüleiste aktiviert" : "In Menüleiste deaktiviert")
         }
         .padding(12)
         .background(RoundedRectangle(cornerRadius: 10).fill(Color(nsColor: .windowBackgroundColor)))
