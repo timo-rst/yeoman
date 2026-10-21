@@ -22,7 +22,7 @@ public struct MenuBarItemsView: View {
                             .foregroundColor(.secondary)
                     }
                     
-                    Spacer()
+                    Spacer(minLength: 16)
                     
                     HStack(spacing: 8) {
                         Button(action: {
@@ -49,6 +49,7 @@ public struct MenuBarItemsView: View {
                         .buttonStyle(.bordered)
                         .controlSize(.small)
                     }
+                    .fixedSize(horizontal: true, vertical: false)
                 }
                 
                 // Row 2: Filter Segmented Picker (left) + Spacer + Compact Search Bar (right)
@@ -61,7 +62,7 @@ public struct MenuBarItemsView: View {
                     .pickerStyle(.segmented)
                     .fixedSize(horizontal: true, vertical: false)
                     
-                    Spacer(minLength: 12)
+                    Spacer(minLength: 16)
                     
                     // Compact, native-feeling search bar
                     HStack(spacing: 6) {
@@ -84,7 +85,8 @@ public struct MenuBarItemsView: View {
                     }
                     .padding(.horizontal, 8)
                     .padding(.vertical, 5)
-                    .frame(width: 180, height: 28)
+                    .frame(minWidth: 160, idealWidth: 180, maxWidth: 220)
+                    .frame(height: 28)
                     .background(
                         RoundedRectangle(cornerRadius: 7)
                             .fill(Color(nsColor: .controlBackgroundColor))

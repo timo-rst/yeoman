@@ -200,25 +200,30 @@ public final class StatusItemController: NSObject, NSMenuDelegate {
     }
     
     @objc public func openSettingsWindow() {
+        let standardWidth: CGFloat = 1040
+        let standardHeight: CGFloat = 720
+        let minWidth: CGFloat = 980
+        let minHeight: CGFloat = 660
+        
         if settingsWindow == nil {
             let window = NSWindow(
-                contentRect: NSRect(x: 0, y: 0, width: 920, height: 640),
+                contentRect: NSRect(x: 0, y: 0, width: standardWidth, height: standardHeight),
                 styleMask: [.titled, .closable, .miniaturizable, .resizable],
                 backing: .buffered,
                 defer: false
             )
             window.title = "MacCustomizer Einstellungen"
-            window.minSize = NSSize(width: 880, height: 600)
+            window.minSize = NSSize(width: minWidth, height: minHeight)
             window.contentView = NSHostingView(rootView: SettingsView())
             window.center()
             window.isReleasedWhenClosed = false
             self.settingsWindow = window
         } else if let window = settingsWindow {
-            window.minSize = NSSize(width: 880, height: 600)
-            if window.frame.width < 880 || window.frame.height < 600 {
+            window.minSize = NSSize(width: minWidth, height: minHeight)
+            if window.frame.width < minWidth || window.frame.height < minHeight {
                 var frame = window.frame
-                frame.size.width = max(frame.size.width, 880)
-                frame.size.height = max(frame.size.height, 600)
+                frame.size.width = max(frame.size.width, standardWidth)
+                frame.size.height = max(frame.size.height, standardHeight)
                 window.setFrame(frame, display: true, animate: true)
             }
         }
