@@ -61,6 +61,23 @@ public struct MenuBarItemsView: View {
                     .pickerStyle(.segmented)
                     .frame(width: 320)
                 }
+                
+                if scanner.hasPendingSystemReload {
+                    HStack {
+                        Image(systemName: "checkmark.circle.fill")
+                            .foregroundColor(.accentColor)
+                        Text("System-Symbole geändert. Klicke auf 'Übernehmen', wenn du mit allen Einstellungen fertig bist:")
+                            .font(.caption)
+                        Spacer()
+                        Button("Jetzt übernehmen") {
+                            scanner.applySystemChanges()
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .controlSize(.small)
+                    }
+                    .padding(8)
+                    .background(RoundedRectangle(cornerRadius: 8).fill(Color.accentColor.opacity(0.12)))
+                }
             }
             .padding(20)
             

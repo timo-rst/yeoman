@@ -261,6 +261,8 @@ public final class MenuBarItemScanner: ObservableObject {
         objectWillChange.send()
     }
     
+    @Published public var hasPendingSystemReload: Bool = false
+    
     // MARK: - Helpers
     
     private func setSystemItemVisibility(key: String, enable: Bool) {
@@ -279,7 +281,26 @@ public final class MenuBarItemScanner: ObservableObject {
         try? process.run()
         process.waitUntilExit()
         
+        // Post distributed notifications to ControlCenter quietly
+        DistributedNotificationCenter.default().postNotificationName(
+            NSNotification.Name("com.apple.controlcenter.itemchanged"),
+            object: nil,
+            userInfo: nil,
+            deliverImmediately: true
+        )
+        DistributedNotificationCenter.default().postNotificationName(
+            NSNotification.Name("com.apple.systemuiserver.itemchanged"),
+            object: nil,
+            userInfo: nil,
+            deliverImmediately: true
+        )
+        
+        self.hasPendingSystemReload = true
+    }
+    
+    public func applySystemChanges() {
         MenuBarSpacingManager.shared.restartControlCenter()
+        self.hasPendingSystemReload = false
     }
     
     private func launchApp(bundleId: String, path: String?) {

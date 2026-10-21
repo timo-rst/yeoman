@@ -16,7 +16,7 @@ public final class MenuBarSpacingManager: ObservableObject {
     
     @Published public var currentSpacing: Int = 8
     @Published public var currentSelectionPadding: Int = 8
-    @Published public var autoRestartControlCenter: Bool = true
+    @Published public var autoRestartControlCenter: Bool = false
     @Published public var perDisplayProfilesEnabled: Bool = false
     
     private let spacingKey = "NSStatusItemSpacing"

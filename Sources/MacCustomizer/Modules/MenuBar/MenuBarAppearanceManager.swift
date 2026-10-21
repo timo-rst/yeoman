@@ -105,45 +105,16 @@ public final class MenuBarAppearanceManager: ObservableObject {
         }
     }
     
-    @Published public var shape: MenuBarShape = .floating {
-        didSet { updateOverlayPanels() }
-    }
-    
-    @Published public var style: MenuBarStyle = .glassBlur {
-        didSet { updateOverlayPanels() }
-    }
-    
-    @Published public var opacity: Double = 0.65 {
-        didSet { updateOverlayPanels() }
-    }
-    
-    @Published public var cornerRadius: CGFloat = 10 {
-        didSet { updateOverlayPanels() }
-    }
-    
-    @Published public var insetPadding: CGFloat = 4 {
-        didSet { updateOverlayPanels() }
-    }
-    
-    @Published public var hasBorder: Bool = true {
-        didSet { updateOverlayPanels() }
-    }
-    
-    @Published public var hasShadow: Bool = true {
-        didSet { updateOverlayPanels() }
-    }
-    
-    @Published public var tintColor: Color = Color.black.opacity(0.35) {
-        didSet { updateOverlayPanels() }
-    }
-    
-    @Published public var gradientStart: Color = Color.purple.opacity(0.6) {
-        didSet { updateOverlayPanels() }
-    }
-    
-    @Published public var gradientEnd: Color = Color.blue.opacity(0.6) {
-        didSet { updateOverlayPanels() }
-    }
+    @Published public var shape: MenuBarShape = .floating
+    @Published public var style: MenuBarStyle = .glassBlur
+    @Published public var opacity: Double = 0.65
+    @Published public var cornerRadius: CGFloat = 10
+    @Published public var insetPadding: CGFloat = 4
+    @Published public var hasBorder: Bool = true
+    @Published public var hasShadow: Bool = true
+    @Published public var tintColor: Color = Color.black.opacity(0.35)
+    @Published public var gradientStart: Color = Color.purple.opacity(0.6)
+    @Published public var gradientEnd: Color = Color.blue.opacity(0.6)
     
     private var overlayPanels: [NSPanel] = []
     private var cancellables = Set<AnyCancellable>()
@@ -177,8 +148,9 @@ public final class MenuBarAppearanceManager: ObservableObject {
         self.insetPadding = preset.insetPadding
         self.hasBorder = preset.hasBorder
         self.hasShadow = preset.hasShadow
-        self.isEnabled = true
-        updateOverlayPanels()
+        if !self.isEnabled {
+            self.isEnabled = true
+        }
     }
     
     public func updateOverlayPanels() {
