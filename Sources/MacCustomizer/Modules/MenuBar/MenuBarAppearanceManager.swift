@@ -227,6 +227,17 @@ public final class MenuBarAppearanceManager: ObservableObject {
             }
             .store(in: &cancellables)
             
+        // Keep overlay panels visible when user switches Spaces / Desktops
+        NSWorkspace.shared.notificationCenter.publisher(for: NSWorkspace.activeSpaceDidChangeNotification)
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] _ in
+                guard let self = self, self.isEnabled else { return }
+                for panel in self.overlayPanels {
+                    panel.orderFrontRegardless()
+                }
+            }
+            .store(in: &cancellables)
+            
         // Listen to active application changes to adapt left menu capsule smoothly
         NSWorkspace.shared.notificationCenter.publisher(for: NSWorkspace.didActivateApplicationNotification)
             .receive(on: DispatchQueue.main)
@@ -246,7 +257,7 @@ public final class MenuBarAppearanceManager: ObservableObject {
             .store(in: &cancellables)
             
         if isEnabled {
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
                 self.updateOverlayPanels()
             }
         }
@@ -265,6 +276,8 @@ public final class MenuBarAppearanceManager: ObservableObject {
         self.hasShadow = preset.hasShadow
         if !self.isEnabled {
             self.isEnabled = true
+        } else if overlayPanels.isEmpty {
+            updateOverlayPanels()
         }
         if self.shape == .split {
             updateDynamicMetrics()
@@ -375,18 +388,19 @@ public final class MenuBarAppearanceManager: ObservableObject {
     
     private func createOverlayPanel(for screen: NSScreen) -> MenuBarOverlayPanel {
         let mbHeight: CGFloat = {
-            if screen.safeAreaInsets.top > 0 {
-                return screen.safeAreaInsets.top
-            }
             let diff = screen.frame.maxY - screen.visibleFrame.maxY
-            return diff > 0 ? diff : 24.0
+            if diff > 0 { return diff }
+            if screen.safeAreaInsets.top > 0 { return screen.safeAreaInsets.top }
+            return 24.0
         }()
         
+        // Shadow padding allows shadows to render naturally downwards without clipping
+        let shadowPadding: CGFloat = 8.0
         let frame = NSRect(
             x: screen.frame.minX,
-            y: screen.frame.maxY - mbHeight,
+            y: screen.frame.maxY - mbHeight - shadowPadding,
             width: screen.frame.width,
-            height: mbHeight
+            height: mbHeight + shadowPadding
         )
         
         let panel = MenuBarOverlayPanel(
@@ -396,8 +410,9 @@ public final class MenuBarAppearanceManager: ObservableObject {
             defer: false
         )
         
-        // Layer 23: directly below system menu bar items (layer 24 / 25)
-        panel.level = NSWindow.Level(Int(CGWindowLevelForKey(.mainMenuWindow)) - 1)
+        // Layer 25 (.statusBar): Positioned directly in front of WindowServer Menubar background (Layer 24),
+        // ensuring high-DPI custom styling is rendered with crystal clarity while user clicks pass through.
+        panel.level = .statusBar
         panel.collectionBehavior = [.canJoinAllSpaces, .stationary, .ignoresCycle, .fullScreenAuxiliary]
         panel.backgroundColor = .clear
         panel.isOpaque = false
@@ -407,6 +422,8 @@ public final class MenuBarAppearanceManager: ObservableObject {
         let hostingView = NSHostingView(rootView: MenuBarOverlayRenderView(
             manager: self,
             screenFrame: frame,
+            mbHeight: mbHeight,
+            shadowPadding: shadowPadding,
             hasNotch: screen.safeAreaInsets.top > 0
         ))
         panel.contentView = hostingView
@@ -418,22 +435,33 @@ public final class MenuBarAppearanceManager: ObservableObject {
 public struct MenuBarOverlayRenderView: View {
     @ObservedObject var manager: MenuBarAppearanceManager
     let screenFrame: NSRect
+    let mbHeight: CGFloat
+    let shadowPadding: CGFloat
     let hasNotch: Bool
     
     public var body: some View {
         GeometryReader { geo in
             let w = geo.size.width
-            let h = geo.size.height
             
-            switch manager.shape {
-            case .full:
-                fullBackground(w: w, h: h)
+            VStack(spacing: 0) {
+                // The native menu bar overlay region
+                ZStack(alignment: .top) {
+                    switch manager.shape {
+                    case .full:
+                        fullBackground(w: w, h: mbHeight)
+                        
+                    case .floating:
+                        floatingBackground(w: w, h: mbHeight)
+                        
+                    case .split:
+                        splitBackground(w: w, h: mbHeight)
+                    }
+                }
+                .frame(width: w, height: mbHeight)
                 
-            case .floating:
-                floatingBackground(w: w, h: h)
-                
-            case .split:
-                splitBackground(w: w, h: h)
+                // Extra space reserved for drop shadow to render smoothly without clipping
+                Spacer()
+                    .frame(height: shadowPadding)
             }
         }
         .ignoresSafeArea()
@@ -443,25 +471,31 @@ public struct MenuBarOverlayRenderView: View {
     private func fullBackground(w: CGFloat, h: CGFloat) -> some View {
         styledSurface()
             .frame(width: w, height: h)
+            .shadow(color: manager.hasShadow ? Color.black.opacity(0.35) : .clear, radius: 4, x: 0, y: 3)
     }
     
     @ViewBuilder
     private func floatingBackground(w: CGFloat, h: CGFloat) -> some View {
         let p = manager.insetPadding
+        let barWidth = max(0, w - (max(6, p * 2) * 2))
+        let barHeight = max(0, h - (p * 2))
+        
         styledSurface()
+            .frame(width: barWidth, height: barHeight)
             .clipShape(RoundedRectangle(cornerRadius: manager.cornerRadius))
             .overlay(
                 RoundedRectangle(cornerRadius: manager.cornerRadius)
-                    .stroke(manager.hasBorder ? Color.white.opacity(0.2) : Color.clear, lineWidth: 1)
+                    .stroke(manager.hasBorder ? Color.white.opacity(0.3) : Color.clear, lineWidth: 1)
             )
-            .shadow(color: manager.hasShadow ? Color.black.opacity(0.35) : .clear, radius: 4, x: 0, y: 2)
-            .padding(.horizontal, max(4, p * 1.5))
-            .padding(.vertical, p)
+            .shadow(color: manager.hasShadow ? Color.black.opacity(0.4) : .clear, radius: 4, x: 0, y: 2)
+            .padding(.top, p)
     }
     
     @ViewBuilder
     private func splitBackground(w: CGFloat, h: CGFloat) -> some View {
         let p = manager.insetPadding
+        let barHeight = max(0, h - (p * 2))
+        
         let maxLeft = hasNotch ? (w * 0.42) : (w * 0.46)
         let maxRight = hasNotch ? (w * 0.42) : (w * 0.46)
         
@@ -471,28 +505,28 @@ public struct MenuBarOverlayRenderView: View {
         HStack(spacing: 0) {
             // Left App Menus Capsule
             styledSurface()
-                .frame(width: targetLeft)
+                .frame(width: targetLeft, height: barHeight)
                 .clipShape(RoundedRectangle(cornerRadius: manager.cornerRadius))
                 .overlay(
                     RoundedRectangle(cornerRadius: manager.cornerRadius)
-                        .stroke(manager.hasBorder ? Color.white.opacity(0.2) : Color.clear, lineWidth: 1)
+                        .stroke(manager.hasBorder ? Color.white.opacity(0.3) : Color.clear, lineWidth: 1)
                 )
-                .shadow(color: manager.hasShadow ? Color.black.opacity(0.35) : .clear, radius: 4, x: 0, y: 2)
+                .shadow(color: manager.hasShadow ? Color.black.opacity(0.4) : .clear, radius: 4, x: 0, y: 2)
             
             Spacer(minLength: hasNotch ? 160 : 30)
             
             // Right Status Items Capsule
             styledSurface()
-                .frame(width: targetRight)
+                .frame(width: targetRight, height: barHeight)
                 .clipShape(RoundedRectangle(cornerRadius: manager.cornerRadius))
                 .overlay(
                     RoundedRectangle(cornerRadius: manager.cornerRadius)
-                        .stroke(manager.hasBorder ? Color.white.opacity(0.2) : Color.clear, lineWidth: 1)
+                        .stroke(manager.hasBorder ? Color.white.opacity(0.3) : Color.clear, lineWidth: 1)
                 )
-                .shadow(color: manager.hasShadow ? Color.black.opacity(0.35) : .clear, radius: 4, x: 0, y: 2)
+                .shadow(color: manager.hasShadow ? Color.black.opacity(0.4) : .clear, radius: 4, x: 0, y: 2)
         }
-        .padding(.horizontal, max(4, p * 1.5))
-        .padding(.vertical, p)
+        .padding(.horizontal, max(6, p * 2))
+        .padding(.top, p)
         .animation(.spring(response: 0.38, dampingFraction: 0.82), value: manager.dynamicLeftWidth)
         .animation(.spring(response: 0.38, dampingFraction: 0.82), value: manager.dynamicRightWidth)
     }
@@ -504,16 +538,21 @@ public struct MenuBarOverlayRenderView: View {
             Color.clear
             
         case .glassBlur:
-            Rectangle()
-                .fill(.ultraThinMaterial)
-                .overlay(manager.tintColor.opacity(manager.opacity))
+            ZStack {
+                Rectangle()
+                    .fill(.ultraThinMaterial)
+                manager.tintColor.opacity(manager.opacity)
+            }
             
         case .solid:
             manager.tintColor.opacity(manager.opacity)
             
         case .gradient:
             LinearGradient(
-                colors: [manager.gradientStart.opacity(manager.opacity), manager.gradientEnd.opacity(manager.opacity)],
+                colors: [
+                    manager.gradientStart.opacity(manager.opacity),
+                    manager.gradientEnd.opacity(manager.opacity)
+                ],
                 startPoint: .leading,
                 endPoint: .trailing
             )
