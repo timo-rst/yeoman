@@ -2,7 +2,8 @@ import SwiftUI
 
 public enum SettingsTab: String, CaseIterable, Identifiable {
     case general = "Allgemein"
-    case menuBar = "Menüleiste"
+    case menuBarItems = "Icons & Leiste"
+    case menuBarSpacing = "Abstände (Ice)"
     case clipboard = "Zwischenablage"
     case systemStats = "System-Stats"
     case about = "Über MacCustomizer"
@@ -12,7 +13,8 @@ public enum SettingsTab: String, CaseIterable, Identifiable {
     public var iconName: String {
         switch self {
         case .general: return "gearshape"
-        case .menuBar: return "menubar.rectangle"
+        case .menuBarItems: return "list.bullet.rectangle"
+        case .menuBarSpacing: return "menubar.rectangle"
         case .clipboard: return "doc.on.clipboard"
         case .systemStats: return "gauge.with.needle"
         case .about: return "info.circle"
@@ -22,7 +24,7 @@ public enum SettingsTab: String, CaseIterable, Identifiable {
 
 public struct SettingsView: View {
     @ObservedObject var moduleManager = ModuleManager.shared
-    @State private var selectedTab: SettingsTab = .menuBar
+    @State private var selectedTab: SettingsTab = .menuBarItems
     
     public init() {}
     
@@ -36,7 +38,7 @@ public struct SettingsView: View {
                     Text(tab.rawValue)
                     Spacer()
                     
-                    if tab == .menuBar && moduleManager.menuBarModule.isEnabled {
+                    if (tab == .menuBarItems || tab == .menuBarSpacing) && moduleManager.menuBarModule.isEnabled {
                         Circle().fill(Color.green).frame(width: 6, height: 6)
                     } else if tab == .clipboard && moduleManager.clipboardModule.isEnabled {
                         Circle().fill(Color.green).frame(width: 6, height: 6)
@@ -52,7 +54,9 @@ public struct SettingsView: View {
             switch selectedTab {
             case .general:
                 GeneralSettingsView()
-            case .menuBar:
+            case .menuBarItems:
+                MenuBarItemsView()
+            case .menuBarSpacing:
                 moduleManager.menuBarModule.settingsView()
             case .clipboard:
                 moduleManager.clipboardModule.settingsView()
@@ -62,7 +66,7 @@ public struct SettingsView: View {
                 AboutView()
             }
         }
-        .frame(minWidth: 720, minHeight: 520)
+        .frame(minWidth: 740, minHeight: 540)
     }
 }
 
