@@ -93,8 +93,20 @@ public struct MenuBarSpacingSectionView: View {
                 
                 // Spacing Presets
                 VStack(alignment: .leading, spacing: 12) {
-                    Text("Abstand-Presets")
-                        .font(.headline)
+                    HStack {
+                        Text("Abstand-Presets")
+                            .font(.headline)
+                        Spacer()
+                        if spacingManager.isApplying {
+                            HStack(spacing: 4) {
+                                ProgressView()
+                                    .scaleEffect(0.6)
+                                Text("Wird angewendet...")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                            }
+                        }
+                    }
                     
                     HStack(spacing: 12) {
                         PresetButton(title: "Ultra-Kompakt", subtitle: "4 pt", isSelected: spacingManager.currentSpacing == 4) {
@@ -128,7 +140,7 @@ public struct MenuBarSpacingSectionView: View {
                         }
                         Slider(value: Binding(
                             get: { Double(spacingManager.currentSpacing) },
-                            set: { spacingManager.applySpacing(spacing: Int($0), selectionPadding: spacingManager.currentSelectionPadding) }
+                            set: { spacingManager.setSpacingDebounced(spacing: Int($0), selectionPadding: spacingManager.currentSelectionPadding) }
                         ), in: 0...24, step: 1)
                     }
                     
@@ -142,18 +154,26 @@ public struct MenuBarSpacingSectionView: View {
                         }
                         Slider(value: Binding(
                             get: { Double(spacingManager.currentSelectionPadding) },
-                            set: { spacingManager.applySpacing(spacing: spacingManager.currentSpacing, selectionPadding: Int($0)) }
+                            set: { spacingManager.setSpacingDebounced(spacing: spacingManager.currentSpacing, selectionPadding: Int($0)) }
                         ), in: 0...24, step: 1)
                     }
                     
+                    Divider()
+                    
+                    Toggle("ControlCenter nach Anpassung automatisch neu laden", isOn: Binding(
+                        get: { spacingManager.autoRestartControlCenter },
+                        set: { spacingManager.setAutoRestart($0) }
+                    ))
+                    .font(.subheadline)
+                    
                     HStack {
-                        Button("ControlCenter neu laden") {
+                        Button("ControlCenter jetzt neu laden") {
                             spacingManager.restartControlCenter()
                         }
                         
                         Spacer()
                         
-                        Button("Auf macOS Standard zurücksetzen") {
+                        Button("Auf macOS Standard zurücksetzen (16 pt)") {
                             spacingManager.resetToDefaults()
                         }
                     }
