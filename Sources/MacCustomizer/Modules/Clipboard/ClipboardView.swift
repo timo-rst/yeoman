@@ -22,8 +22,6 @@ public enum ClipboardTabFilter: String, CaseIterable, Identifiable {
 public struct ClipboardView: View {
     @ObservedObject var store = ClipboardHistoryStore.shared
     @State private var selectedTab: ClipboardTabFilter = .all
-    @State private var hoveredId: UUID?
-    @State private var copiedId: UUID?
     @State private var previewItem: ClipboardItem? = nil
     public var onCopy: (() -> Void)?
     
@@ -179,7 +177,6 @@ public struct ClipboardView: View {
         .sheet(item: $previewItem) { item in
             ImageDetailModalView(item: item) {
                 ClipboardMonitor.shared.copyItemToClipboard(item)
-                copiedId = item.id
                 onCopy?()
             }
         }
@@ -232,26 +229,16 @@ public struct ClipboardView: View {
                 ForEach(displayedItems) { item in
                     ClipboardImageCardView(
                         item: item,
-                        isHovered: hoveredId == item.id,
-                        isJustCopied: copiedId == item.id,
                         onSelect: {
                             ClipboardMonitor.shared.copyItemToClipboard(item)
-                            copiedId = item.id
                             DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
                                 onCopy?()
-                            }
-                            DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
-                                if copiedId == item.id { copiedId = nil }
                             }
                         },
                         onTogglePin: { store.togglePin(for: item) },
                         onDelete: { store.removeItem(id: item.id) },
                         onZoom: { previewItem = item }
                     )
-                    .onHover { isHovered in
-                        if isHovered { hoveredId = item.id }
-                        else if hoveredId == item.id { hoveredId = nil }
-                    }
                 }
             }
             .padding(10)
@@ -265,26 +252,16 @@ public struct ClipboardView: View {
                 ForEach(displayedItems) { item in
                     ClipboardRowView(
                         item: item,
-                        isHovered: hoveredId == item.id,
-                        isJustCopied: copiedId == item.id,
                         onSelect: {
                             ClipboardMonitor.shared.copyItemToClipboard(item)
-                            copiedId = item.id
                             DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
                                 onCopy?()
-                            }
-                            DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
-                                if copiedId == item.id { copiedId = nil }
                             }
                         },
                         onTogglePin: { store.togglePin(for: item) },
                         onDelete: { store.removeItem(id: item.id) },
                         onZoom: item.type == .image ? { previewItem = item } : nil
                     )
-                    .onHover { isHovered in
-                        if isHovered { hoveredId = item.id }
-                        else if hoveredId == item.id { hoveredId = nil }
-                    }
                 }
             }
             .padding(6)
@@ -292,29 +269,84 @@ public struct ClipboardView: View {
     }
 }
 
+// MARK: - Fast Thumbnail View
+struct ClipboardThumbnailView: View {
+    let item: ClipboardItem
+    let maxPixelSize: CGFloat
+    
+    @State private var thumbnail: NSImage?
+    
+    init(item: ClipboardItem, maxPixelSize: CGFloat = 200) {
+        self.item = item
+        self.maxPixelSize = maxPixelSize
+        // Immediate synchronous memory cache check: if already cached, 0ms latency, zero flicker!
+        _thumbnail = State(initialValue: ClipboardImageCache.shared.cachedThumbnail(for: item, maxPixelSize: maxPixelSize))
+    }
+    
+    var body: some View {
+        ZStack {
+            if let img = thumbnail {
+                Image(nsImage: img)
+                    .resizable()
+                    .aspectRatio(contentMode: .fill)
+            } else {
+                Rectangle()
+                    .fill(Color.black.opacity(0.08))
+                    .overlay(
+                        Image(systemName: "photo")
+                            .font(.system(size: 14))
+                            .foregroundColor(.secondary.opacity(0.4))
+                    )
+            }
+        }
+        .onAppear {
+            if thumbnail == nil {
+                ClipboardImageCache.shared.loadThumbnail(for: item, maxPixelSize: maxPixelSize) { img in
+                    self.thumbnail = img
+                }
+            }
+        }
+        .onChange(of: item.id) {
+            if let cached = ClipboardImageCache.shared.cachedThumbnail(for: item, maxPixelSize: maxPixelSize) {
+                self.thumbnail = cached
+            } else {
+                self.thumbnail = nil
+                ClipboardImageCache.shared.loadThumbnail(for: item, maxPixelSize: maxPixelSize) { img in
+                    self.thumbnail = img
+                }
+            }
+        }
+    }
+}
+
 // MARK: - Row View for List Mode
 struct ClipboardRowView: View {
     let item: ClipboardItem
-    let isHovered: Bool
-    let isJustCopied: Bool
     let onSelect: () -> Void
     let onTogglePin: () -> Void
     let onDelete: () -> Void
     var onZoom: (() -> Void)? = nil
     
+    @State private var isHovered: Bool = false
+    @State private var isJustCopied: Bool = false
+    
     var body: some View {
-        Button(action: onSelect) {
+        Button(action: {
+            isJustCopied = true
+            onSelect()
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
+                isJustCopied = false
+            }
+        }) {
             HStack(alignment: .center, spacing: 10) {
                 // If item is image, show miniature thumbnail
-                if item.type == .image, let img = item.image {
+                if item.type == .image {
                     ZStack {
                         RoundedRectangle(cornerRadius: 6)
                             .fill(Color.black.opacity(0.1))
                             .frame(width: 44, height: 44)
                         
-                        Image(nsImage: img)
-                            .resizable()
-                            .aspectRatio(contentMode: .fill)
+                        ClipboardThumbnailView(item: item, maxPixelSize: 120)
                             .frame(width: 44, height: 44)
                             .clipShape(RoundedRectangle(cornerRadius: 6))
                             .overlay(
@@ -428,6 +460,9 @@ struct ClipboardRowView: View {
             )
         }
         .buttonStyle(.plain)
+        .onHover { hovering in
+            isHovered = hovering
+        }
     }
     
     private func iconForType(_ type: ClipboardContentType) -> String {
@@ -460,36 +495,30 @@ struct ClipboardRowView: View {
 // MARK: - Image Card View for Photos Grid
 struct ClipboardImageCardView: View {
     let item: ClipboardItem
-    let isHovered: Bool
-    let isJustCopied: Bool
     let onSelect: () -> Void
     let onTogglePin: () -> Void
     let onDelete: () -> Void
     let onZoom: () -> Void
     
+    @State private var isHovered: Bool = false
+    @State private var isJustCopied: Bool = false
+    
     var body: some View {
-        Button(action: onSelect) {
+        Button(action: {
+            isJustCopied = true
+            onSelect()
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
+                isJustCopied = false
+            }
+        }) {
             VStack(alignment: .leading, spacing: 6) {
                 // Image preview with overlay actions
                 ZStack(alignment: .topTrailing) {
-                    if let img = item.image {
-                        Image(nsImage: img)
-                            .resizable()
-                            .aspectRatio(contentMode: .fill)
-                            .frame(height: 105)
-                            .frame(maxWidth: .infinity)
-                            .clipped()
-                            .background(Color.black.opacity(0.05))
-                    } else {
-                        Rectangle()
-                            .fill(Color.secondary.opacity(0.1))
-                            .frame(height: 105)
-                            .overlay(
-                                Image(systemName: "photo")
-                                    .font(.title2)
-                                    .foregroundColor(.secondary)
-                            )
-                    }
+                    ClipboardThumbnailView(item: item, maxPixelSize: 300)
+                        .frame(height: 105)
+                        .frame(maxWidth: .infinity)
+                        .clipped()
+                        .background(Color.black.opacity(0.05))
                     
                     // Pin badge
                     if item.isPinned {
@@ -594,6 +623,9 @@ struct ClipboardImageCardView: View {
             )
         }
         .buttonStyle(.plain)
+        .onHover { hovering in
+            isHovered = hovering
+        }
     }
     
     private func formatTime(_ date: Date) -> String {
@@ -608,6 +640,7 @@ struct ImageDetailModalView: View {
     let item: ClipboardItem
     let onCopy: () -> Void
     @Environment(\.dismiss) private var dismiss
+    @State private var fullImage: NSImage? = nil
     
     var body: some View {
         VStack(spacing: 16) {
@@ -634,18 +667,28 @@ struct ImageDetailModalView: View {
             .padding(.top, 14)
             
             // Image Canvas
-            if let img = item.image {
-                Image(nsImage: img)
-                    .resizable()
-                    .aspectRatio(contentMode: .fit)
-                    .frame(maxWidth: 480, maxHeight: 340)
-                    .clipShape(RoundedRectangle(cornerRadius: 10))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 10)
-                            .stroke(Color.secondary.opacity(0.2), lineWidth: 1)
-                    )
-                    .shadow(color: .black.opacity(0.2), radius: 6, y: 2)
-                    .padding(.horizontal, 16)
+            ZStack {
+                if let img = fullImage {
+                    Image(nsImage: img)
+                        .resizable()
+                        .aspectRatio(contentMode: .fit)
+                        .frame(maxWidth: 480, maxHeight: 340)
+                        .clipShape(RoundedRectangle(cornerRadius: 10))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 10)
+                                .stroke(Color.secondary.opacity(0.2), lineWidth: 1)
+                        )
+                        .shadow(color: .black.opacity(0.2), radius: 6, y: 2)
+                } else {
+                    ProgressView()
+                        .frame(maxWidth: 480, maxHeight: 340)
+                }
+            }
+            .padding(.horizontal, 16)
+            .onAppear {
+                ClipboardImageCache.shared.loadFullImage(for: item) { img in
+                    self.fullImage = img
+                }
             }
             
             // Info bar

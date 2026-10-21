@@ -273,13 +273,14 @@ public final class ClipboardMonitor: ObservableObject {
         let pasteboard = NSPasteboard.general
         pasteboard.clearContents()
         
-        if item.type == .image, let img = item.image {
-            if let tiff = img.tiffRepresentation {
-                pasteboard.setData(tiff, forType: .tiff)
-                if let rep = NSBitmapImageRep(data: tiff),
-                   let png = rep.representation(using: .png, properties: [:]) {
-                    pasteboard.setData(png, forType: .png)
+        if item.type == .image {
+            if let url = item.imageURL, let data = try? Data(contentsOf: url) {
+                pasteboard.setData(data, forType: .png)
+                if let img = NSImage(data: data), let tiff = img.tiffRepresentation {
+                    pasteboard.setData(tiff, forType: .tiff)
                 }
+            } else if let img = item.image, let tiff = img.tiffRepresentation {
+                pasteboard.setData(tiff, forType: .tiff)
             }
         } else {
             pasteboard.setString(item.content, forType: .string)

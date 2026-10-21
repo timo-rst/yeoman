@@ -94,6 +94,9 @@ public final class ClipboardHistoryStore: ObservableObject {
         items.insert(newItem, at: 0)
         trimExcessItems()
         save()
+        
+        ClipboardImageCache.shared.preheatThumbnail(for: fileName, originalURL: fileURL, maxPixelSize: 120)
+        ClipboardImageCache.shared.preheatThumbnail(for: fileName, originalURL: fileURL, maxPixelSize: 300)
     }
     
     public func togglePin(for item: ClipboardItem) {
@@ -143,6 +146,14 @@ public final class ClipboardHistoryStore: ObservableObject {
         guard let fileName = item.imageFileName else { return }
         let fileURL = imagesDirectory.appendingPathComponent(fileName)
         try? FileManager.default.removeItem(at: fileURL)
+        ClipboardImageCache.shared.evict(fileName: fileName)
+        
+        let prefix = fileName.replacingOccurrences(of: ".png", with: "")
+        if let files = try? FileManager.default.contentsOfDirectory(atPath: imagesDirectory.path) {
+            for f in files where f.hasPrefix(prefix) {
+                try? FileManager.default.removeItem(at: imagesDirectory.appendingPathComponent(f))
+            }
+        }
     }
     
     private func save() {
