@@ -325,7 +325,7 @@ public final class MenuBarAppearanceManager: ObservableObject {
         }
         
         // 2. Measure status bar items on the right
-        let options: CGWindowListOption = [.optionOnScreenOnly, .excludeDesktopElements]
+        let options: CGWindowListOption = [.optionAll]
         if let infoList = CGWindowListCopyWindowInfo(options, kCGNullWindowID) as? [[String: Any]] {
             var minStatusX: CGFloat = screenWidth
             var foundAny = false
@@ -335,6 +335,11 @@ public final class MenuBarAppearanceManager: ObservableObject {
             for win in infoList {
                 let winNumber = win[kCGWindowNumber as String] as? Int ?? -1
                 if myWinNumbers.contains(winNumber) { continue }
+                
+                let owner = win[kCGWindowOwnerName as String] as? String ?? ""
+                if owner == "Window Server" || owner == "MacCustomizer" || owner == "de.trst.MacCustomizer" {
+                    continue
+                }
                 
                 let layer = win[kCGWindowLayer as String] as? Int ?? -1
                 let bounds = win[kCGWindowBounds as String] as? [String: CGFloat] ?? [:]
@@ -352,15 +357,15 @@ public final class MenuBarAppearanceManager: ObservableObject {
             }
             
             if foundAny && minStatusX < screenWidth {
-                let calculated = (screenWidth - minStatusX) + 16.0
+                let calculated = (screenWidth - minStatusX) + 14.0
                 measuredRight = calculated
             }
         }
         
         // Clamp to guarantee neither capsule collides with notch or overlaps
         let hasNotch = screen.safeAreaInsets.top > 0
-        let maxLeftAllowed: CGFloat = hasNotch ? ((screen.auxiliaryTopLeftArea?.width ?? (screenWidth * 0.42)) - 12) : (screenWidth * 0.45)
-        let maxRightAllowed: CGFloat = hasNotch ? ((screenWidth - (screen.auxiliaryTopRightArea?.minX ?? (screenWidth * 0.58))) - 12) : (screenWidth * 0.45)
+        let maxLeftAllowed: CGFloat = hasNotch ? ((screen.auxiliaryTopLeftArea?.width ?? (screenWidth * 0.42)) - 10) : (screenWidth * 0.45)
+        let maxRightAllowed: CGFloat = hasNotch ? ((screenWidth - (screen.auxiliaryTopRightArea?.minX ?? (screenWidth * 0.58))) - 10) : (screenWidth * 0.45)
         
         let finalLeft = min(max(130, measuredLeft), maxLeftAllowed)
         let finalRight = min(max(130, measuredRight), maxRightAllowed)
@@ -384,7 +389,7 @@ public final class MenuBarAppearanceManager: ObservableObject {
         
         for screen in NSScreen.screens {
             let panel = createOverlayPanel(for: screen)
-            panel.orderBack(nil)
+            panel.orderFrontRegardless()
             overlayPanels.append(panel)
         }
         
@@ -415,9 +420,10 @@ public final class MenuBarAppearanceManager: ObservableObject {
             defer: false
         )
         
-        // Layer 25 (.statusBar): Positioned directly in front of WindowServer Menubar background (Layer 24),
-        // ensuring high-DPI custom styling is rendered with crystal clarity while user clicks pass through.
-        panel.level = .statusBar
+        // Layer 24 (.mainMenu): Positioned directly in front of WindowServer Menubar background (Layer 24),
+        // but strictly behind status items (Layer 25) and application menus (Layer 26).
+        // This ensures the custom styling acts as the actual background behind icons and text!
+        panel.level = .mainMenu
         panel.collectionBehavior = [.canJoinAllSpaces, .stationary, .ignoresCycle, .fullScreenAuxiliary]
         panel.backgroundColor = .clear
         panel.isOpaque = false
@@ -449,8 +455,8 @@ public struct MenuBarOverlayRenderView: View {
             let w = geo.size.width
             
             VStack(spacing: 0) {
-                // The native menu bar overlay region
-                ZStack(alignment: .top) {
+                // The native menu bar overlay region: vertically centered in mbHeight
+                ZStack(alignment: .center) {
                     switch manager.shape {
                     case .full:
                         fullBackground(w: w, h: mbHeight)
@@ -493,7 +499,6 @@ public struct MenuBarOverlayRenderView: View {
                     .stroke(manager.hasBorder ? Color.white.opacity(0.3) : Color.clear, lineWidth: 1)
             )
             .shadow(color: manager.hasShadow ? Color.black.opacity(0.4) : .clear, radius: 4, x: 0, y: 2)
-            .padding(.top, p)
     }
     
     @ViewBuilder
@@ -531,7 +536,6 @@ public struct MenuBarOverlayRenderView: View {
                 .shadow(color: manager.hasShadow ? Color.black.opacity(0.4) : .clear, radius: 4, x: 0, y: 2)
         }
         .padding(.horizontal, max(6, p * 2))
-        .padding(.top, p)
         .animation(.spring(response: 0.38, dampingFraction: 0.82), value: manager.dynamicLeftWidth)
         .animation(.spring(response: 0.38, dampingFraction: 0.82), value: manager.dynamicRightWidth)
     }
