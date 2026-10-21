@@ -346,6 +346,7 @@ struct WebWidgetEditorSheet: View {
     @State private var useFavicon: Bool
     @State private var selectedFaviconURL: String?
     @State private var removeWhiteBackground: Bool
+    @State private var isLogoSettingsExpanded: Bool = false
     @State private var sizePreset: WebSizePreset
     @State private var customWidth: CGFloat
     @State private var customHeight: CGFloat
@@ -371,9 +372,9 @@ struct WebWidgetEditorSheet: View {
         self.isEditing = (initialWidget != nil)
         self.originalId = initialWidget?.id
         
-        let initialTitle = initialWidget?.title ?? "Google Gemini"
-        let initialURL = initialWidget?.url ?? "https://gemini.google.com"
-        let initialIcon = initialWidget?.iconName ?? "sparkles"
+        let initialTitle = initialWidget?.title ?? ""
+        let initialURL = initialWidget?.url ?? ""
+        let initialIcon = initialWidget?.iconName ?? "globe"
         let initialUseFavicon = initialWidget?.useFavicon ?? true
         let initialSelectedFaviconURL = initialWidget?.selectedFaviconURL
         let initialRemoveWhite = initialWidget?.removeWhiteBackground ?? true
@@ -392,6 +393,7 @@ struct WebWidgetEditorSheet: View {
         _useFavicon = State(initialValue: initialUseFavicon)
         _selectedFaviconURL = State(initialValue: initialSelectedFaviconURL)
         _removeWhiteBackground = State(initialValue: initialRemoveWhite)
+        _isLogoSettingsExpanded = State(initialValue: false)
         _sizePreset = State(initialValue: initialPreset)
         _customWidth = State(initialValue: initialW)
         _customHeight = State(initialValue: initialH)
@@ -403,7 +405,7 @@ struct WebWidgetEditorSheet: View {
         
         let targetW = initialPreset == .custom ? initialW : initialPreset.dimensions.width
         _previewController = StateObject(wrappedValue: WebPanelController(
-            initialURL: initialURL,
+            initialURL: initialURL.isEmpty ? "about:blank" : initialURL,
             userAgentMode: initialUA,
             targetWidth: targetW,
             zoomScale: initialZoom
@@ -446,278 +448,311 @@ struct WebWidgetEditorSheet: View {
             HStack(spacing: 0) {
                 // Left Column: Configuration Forms
                 ScrollView {
-                    VStack(alignment: .leading, spacing: 18) {
-                        // 1. Name & Menüleisten-Symbol
-                        VStack(alignment: .leading, spacing: 12) {
-                            Text("1. Name & Menüleisten-Symbol")
+                    VStack(alignment: .leading, spacing: 16) {
+                        // 1. Name & Ziel-Webseite (URL)
+                        VStack(alignment: .leading, spacing: 14) {
+                            Text("1. Name & Ziel-Webseite (URL)")
                                 .font(.headline)
                             
-                            HStack(spacing: 12) {
-                                // Live Icon Preview
-                                ZStack {
-                                    RoundedRectangle(cornerRadius: 8)
-                                        .fill(Color(nsColor: .controlBackgroundColor))
-                                        .frame(width: 36, height: 36)
-                                        .overlay(
-                                            RoundedRectangle(cornerRadius: 8)
-                                                .stroke(Color.primary.opacity(0.15), lineWidth: 1)
-                                        )
-                                    
-                                    if useFavicon, let favicon = faviconManager.previewIcon(for: url, widgetId: originalId, selectedFaviconURL: selectedFaviconURL, removeWhite: removeWhiteBackground) {
-                                        Image(nsImage: favicon)
-                                            .resizable()
-                                            .aspectRatio(contentMode: .fit)
-                                            .frame(width: 22, height: 22)
-                                            .clipShape(RoundedRectangle(cornerRadius: 3.5))
-                                    } else {
-                                        Image(systemName: iconName)
-                                            .font(.system(size: 18))
-                                            .foregroundColor(.accentColor)
-                                    }
-                                }
-                                
-                                TextField("Widget-Name (z.B. Proton Kalender)", text: $title)
-                                    .textFieldStyle(.roundedBorder)
-                            }
-                            
-                            Divider()
-                            
-                            // Website Logo Option
-                            VStack(alignment: .leading, spacing: 10) {
-                                Toggle("Website-Logo verwenden", isOn: $useFavicon)
-                                    .fontWeight(.medium)
-                                
-                                Text("Verwendet das farbige Original-Logo der Website. Transparente Symbole werden automatisch bevorzugt.")
+                            // Name Row
+                            VStack(alignment: .leading, spacing: 5) {
+                                Text("Name des Web-Widgets:")
                                     .font(.caption)
                                     .foregroundColor(.secondary)
                                 
-                                if useFavicon {
-                                    // Status & Refresh
-                                    HStack(spacing: 8) {
-                                        if let favicon = faviconManager.previewIcon(for: url, widgetId: originalId, selectedFaviconURL: selectedFaviconURL, removeWhite: removeWhiteBackground) {
+                                HStack(spacing: 10) {
+                                    // Live Icon Preview Badge
+                                    ZStack {
+                                        RoundedRectangle(cornerRadius: 8)
+                                            .fill(Color(nsColor: .controlBackgroundColor))
+                                            .frame(width: 34, height: 34)
+                                            .overlay(
+                                                RoundedRectangle(cornerRadius: 8)
+                                                    .stroke(Color.primary.opacity(0.15), lineWidth: 1)
+                                            )
+                                        
+                                        if useFavicon, let favicon = faviconManager.previewIcon(for: url, widgetId: originalId, selectedFaviconURL: selectedFaviconURL, removeWhite: removeWhiteBackground) {
                                             Image(nsImage: favicon)
                                                 .resizable()
                                                 .aspectRatio(contentMode: .fit)
-                                                .frame(width: 18, height: 18)
-                                                .clipShape(RoundedRectangle(cornerRadius: 3))
-                                            Text(selectedFaviconURL != nil ? "Ausgewähltes Logo aktiv" : "Bestes transparentes Logo aktiv")
-                                                .font(.caption2)
-                                                .foregroundColor(.green)
-                                                .fontWeight(.medium)
+                                                .frame(width: 22, height: 22)
+                                                .clipShape(RoundedRectangle(cornerRadius: 3.5))
                                         } else {
-                                            Image(systemName: "arrow.clockwise")
-                                                .font(.caption2)
-                                                .foregroundColor(.secondary)
-                                            Text("Logos werden gesucht...")
-                                                .font(.caption2)
-                                                .foregroundColor(.secondary)
-                                        }
-                                        
-                                        Spacer()
-                                        
-                                        Button(action: {
-                                            faviconManager.discoverFavicons(for: url, widgetId: originalId)
-                                        }) {
-                                            HStack(spacing: 4) {
-                                                Image(systemName: "arrow.clockwise")
-                                                Text("Neu scannen")
-                                            }
-                                        }
-                                        .buttonStyle(.bordered)
-                                        .controlSize(.small)
-                                    }
-                                    .padding(8)
-                                    .background(RoundedRectangle(cornerRadius: 6).fill(Color.primary.opacity(0.04)))
-                                    
-                                    // Discovered Favicon Options Gallery
-                                    let options = faviconManager.options(for: url)
-                                    if !options.isEmpty {
-                                        VStack(alignment: .leading, spacing: 6) {
-                                            HStack {
-                                                Text("Verfügbare Favicons / Logos (\(options.count)):")
-                                                    .font(.caption)
-                                                    .fontWeight(.medium)
-                                                    .foregroundColor(.primary)
-                                                
-                                                Spacer()
-                                                
-                                                if selectedFaviconURL != nil {
-                                                    Button("Automatisch wählen") {
-                                                        selectedFaviconURL = nil
-                                                    }
-                                                    .font(.caption2)
-                                                    .buttonStyle(.link)
-                                                }
-                                            }
-                                            
-                                            ScrollView(.horizontal, showsIndicators: false) {
-                                                HStack(spacing: 8) {
-                                                    ForEach(options) { opt in
-                                                        let isAuto = (selectedFaviconURL == nil && opt == options.first)
-                                                        let isChosen = (selectedFaviconURL == opt.urlString)
-                                                        let isSelected = isChosen || isAuto
-                                                        
-                                                        Button(action: {
-                                                            selectedFaviconURL = opt.urlString
-                                                        }) {
-                                                            VStack(spacing: 4) {
-                                                                ZStack {
-                                                                    RoundedRectangle(cornerRadius: 6)
-                                                                        .fill(Color(nsColor: .controlBackgroundColor))
-                                                                        .frame(width: 36, height: 36)
-                                                                    
-                                                                    if let img = faviconManager.icon(forOption: opt.urlString, removeWhite: removeWhiteBackground) {
-                                                                        Image(nsImage: img)
-                                                                            .resizable()
-                                                                            .aspectRatio(contentMode: .fit)
-                                                                            .frame(width: 24, height: 24)
-                                                                            .clipShape(RoundedRectangle(cornerRadius: 3))
-                                                                    } else {
-                                                                        Image(systemName: "photo")
-                                                                            .foregroundColor(.secondary)
-                                                                    }
-                                                                }
-                                                                .overlay(
-                                                                    RoundedRectangle(cornerRadius: 6)
-                                                                        .stroke(isSelected ? Color.accentColor : Color.primary.opacity(0.12), lineWidth: isSelected ? 2 : 1)
-                                                                )
-                                                                .overlay(
-                                                                    Group {
-                                                                        if isSelected {
-                                                                            Image(systemName: "checkmark.circle.fill")
-                                                                                .font(.system(size: 11))
-                                                                                .foregroundColor(.accentColor)
-                                                                                .background(Circle().fill(Color.white))
-                                                                                .offset(x: 14, y: -14)
-                                                                        }
-                                                                    }
-                                                                )
-                                                                
-                                                                Text(opt.label)
-                                                                    .font(.system(size: 9, weight: isSelected ? .bold : .regular))
-                                                                    .foregroundColor(.primary)
-                                                                    .lineLimit(1)
-                                                                
-                                                                Text(opt.isTransparent ? "Transparent" : "Mit Hintergrund")
-                                                                    .font(.system(size: 8, weight: .medium))
-                                                                    .foregroundColor(opt.isTransparent ? .green : .secondary)
-                                                                    .padding(.horizontal, 4)
-                                                                    .padding(.vertical, 1)
-                                                                    .background(Capsule().fill(opt.isTransparent ? Color.green.opacity(0.15) : Color.primary.opacity(0.06)))
-                                                            }
-                                                            .frame(width: 86)
-                                                            .padding(6)
-                                                            .background(
-                                                                RoundedRectangle(cornerRadius: 8)
-                                                                    .fill(isSelected ? Color.accentColor.opacity(0.08) : Color.clear)
-                                                            )
-                                                        }
-                                                        .buttonStyle(.plain)
-                                                    }
-                                                }
-                                                .padding(.vertical, 4)
-                                                .padding(.horizontal, 2)
-                                            }
+                                            Image(systemName: iconName)
+                                                .font(.system(size: 17))
+                                                .foregroundColor(.accentColor)
                                         }
                                     }
                                     
-                                    // Remove White Background Toggle
-                                    VStack(alignment: .leading, spacing: 2) {
-                                        Toggle("Weißer Hintergrund transparent machen", isOn: $removeWhiteBackground)
-                                            .font(.caption)
-                                            .fontWeight(.medium)
-                                        
-                                        Text("Entfernt automatisch weiße Flächen aus Logos (z. B. bei quadratischen iOS-Kacheln), damit sie freigestellt wirken.")
-                                            .font(.caption2)
-                                            .foregroundColor(.secondary)
-                                    }
-                                    .padding(.top, 4)
+                                    TextField("z. B. Proton Kalender, Gemini, Notizen...", text: $title)
+                                        .textFieldStyle(.roundedBorder)
                                 }
                             }
                             
-                            Divider()
+                            // URL Row
+                            VStack(alignment: .leading, spacing: 5) {
+                                Text("Website-Adresse (URL):")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                                
+                                HStack(spacing: 8) {
+                                    TextField("https://...", text: $url, onCommit: {
+                                        applyURLChange()
+                                    })
+                                    .textFieldStyle(.roundedBorder)
+                                    
+                                    Button("Laden") {
+                                        applyURLChange()
+                                    }
+                                    .buttonStyle(.bordered)
+                                }
+                            }
                             
-                            // Symbol Selection
+                            // Schnellvorlagen
                             VStack(alignment: .leading, spacing: 6) {
-                                Text(useFavicon ? "Ersatz-Symbol auswählen (falls kein Logo verfügbar):" : "Symbol für die Menüleiste auswählen:")
+                                Text("Schnellvorlagen (Klick zum Ausfüllen):")
                                     .font(.caption2)
                                     .foregroundColor(.secondary)
                                 
-                                LazyVGrid(columns: [GridItem(.adaptive(minimum: 32))], spacing: 6) {
-                                    ForEach([
-                                        "calendar", "calendar.badge.clock", "note.text",
-                                        "bubble.left.and.bubble.right", "globe", "safari",
-                                        "checklist", "bookmark", "envelope", "bell",
-                                        "sparkles", "star", "music.note", "chart.bar",
-                                        "chevron.left.forwardslash.chevron.right", "tray.full", "cloud", "person"
-                                    ], id: \.self) { icon in
-                                        Button(action: { iconName = icon }) {
-                                            Image(systemName: icon)
-                                                .font(.system(size: 14))
-                                                .foregroundColor(iconName == icon ? .white : .primary)
-                                                .frame(width: 30, height: 30)
-                                                .background(
-                                                    RoundedRectangle(cornerRadius: 6)
-                                                        .fill(iconName == icon ? Color.accentColor : Color(nsColor: .controlColor))
-                                                )
-                                        }
-                                        .buttonStyle(.plain)
+                                LazyVGrid(columns: [GridItem(.adaptive(minimum: 120))], spacing: 6) {
+                                    QuickButton(name: "Google Gemini", icon: "sparkles") {
+                                        setPreset(url: "https://gemini.google.com", name: "Google Gemini", icon: "sparkles", preset: .iphone14)
+                                    }
+                                    QuickButton(name: "Proton Calendar", icon: "calendar") {
+                                        setPreset(url: "https://calendar.proton.me", name: "Proton Kalender", icon: "calendar", preset: .widget)
+                                    }
+                                    QuickButton(name: "Google Calendar", icon: "calendar") {
+                                        setPreset(url: "https://calendar.google.com", name: "Google Kalender", icon: "calendar", preset: .widget)
+                                    }
+                                    QuickButton(name: "Notion", icon: "note.text") {
+                                        setPreset(url: "https://www.notion.so", name: "Notion", icon: "note.text", preset: .iphone8)
+                                    }
+                                    QuickButton(name: "Todoist", icon: "checklist") {
+                                        setPreset(url: "https://app.todoist.com", name: "Todoist", icon: "checklist", preset: .iphoneSE)
+                                    }
+                                    QuickButton(name: "GitHub", icon: "chevron.left.forwardslash.chevron.right") {
+                                        setPreset(url: "https://github.com", name: "GitHub", icon: "chevron.left.forwardslash.chevron.right", preset: .iphone14)
                                     }
                                 }
                             }
                         }
+                        .frame(maxWidth: .infinity, alignment: .leading)
                         .padding()
                         .background(RoundedRectangle(cornerRadius: 10).fill(Color(nsColor: .controlBackgroundColor)))
                         
-                        // 2. Ziel-URL
-                        VStack(alignment: .leading, spacing: 10) {
-                            Text("2. Ziel-Webseite (URL)")
-                                .font(.headline)
-                            
-                            HStack {
-                                TextField("https://...", text: $url, onCommit: {
-                                    applyURLChange()
-                                })
-                                .textFieldStyle(.roundedBorder)
+                        // Menüleisten-Symbol & Logo (Als einklappbares Untermenü)
+                        DisclosureGroup(isExpanded: $isLogoSettingsExpanded) {
+                            VStack(alignment: .leading, spacing: 12) {
+                                Divider()
+                                    .padding(.vertical, 4)
                                 
-                                Button("Laden") {
-                                    applyURLChange()
+                                // Website Logo Option
+                                VStack(alignment: .leading, spacing: 8) {
+                                    Toggle("Website-Logo automatisch verwenden", isOn: $useFavicon)
+                                        .fontWeight(.medium)
+                                    
+                                    Text("Verwendet das farbige Original-Logo der Website. Transparente Symbole werden bevorzugt.")
+                                        .font(.caption2)
+                                        .foregroundColor(.secondary)
+                                    
+                                    if useFavicon {
+                                        // Status & Refresh
+                                        HStack(spacing: 8) {
+                                            if let favicon = faviconManager.previewIcon(for: url, widgetId: originalId, selectedFaviconURL: selectedFaviconURL, removeWhite: removeWhiteBackground) {
+                                                Image(nsImage: favicon)
+                                                    .resizable()
+                                                    .aspectRatio(contentMode: .fit)
+                                                    .frame(width: 18, height: 18)
+                                                    .clipShape(RoundedRectangle(cornerRadius: 3))
+                                                Text(selectedFaviconURL != nil ? "Ausgewähltes Logo aktiv" : "Bestes transparentes Logo aktiv")
+                                                    .font(.caption2)
+                                                    .foregroundColor(.green)
+                                                    .fontWeight(.medium)
+                                            } else {
+                                                Image(systemName: "arrow.clockwise")
+                                                    .font(.caption2)
+                                                    .foregroundColor(.secondary)
+                                                Text(url.isEmpty ? "Gib oben eine URL ein" : "Logos werden gesucht...")
+                                                    .font(.caption2)
+                                                    .foregroundColor(.secondary)
+                                            }
+                                            
+                                            Spacer()
+                                            
+                                            if !url.isEmpty {
+                                                Button(action: {
+                                                    faviconManager.discoverFavicons(for: url, widgetId: originalId)
+                                                }) {
+                                                    HStack(spacing: 4) {
+                                                        Image(systemName: "arrow.clockwise")
+                                                        Text("Neu scannen")
+                                                    }
+                                                }
+                                                .buttonStyle(.bordered)
+                                                .controlSize(.small)
+                                            }
+                                        }
+                                        .padding(8)
+                                        .background(RoundedRectangle(cornerRadius: 6).fill(Color.primary.opacity(0.04)))
+                                        
+                                        // Discovered Favicon Options Gallery
+                                        let options = faviconManager.options(for: url)
+                                        if !options.isEmpty {
+                                            VStack(alignment: .leading, spacing: 6) {
+                                                HStack {
+                                                    Text("Verfügbare Favicons / Logos (\(options.count)):")
+                                                        .font(.caption2)
+                                                        .fontWeight(.medium)
+                                                        .foregroundColor(.primary)
+                                                    
+                                                    Spacer()
+                                                    
+                                                    if selectedFaviconURL != nil {
+                                                        Button("Automatisch wählen") {
+                                                            selectedFaviconURL = nil
+                                                        }
+                                                        .font(.caption2)
+                                                        .buttonStyle(.link)
+                                                    }
+                                                }
+                                                
+                                                ScrollView(.horizontal, showsIndicators: false) {
+                                                    HStack(spacing: 8) {
+                                                        ForEach(options) { opt in
+                                                            let isAuto = (selectedFaviconURL == nil && opt == options.first)
+                                                            let isChosen = (selectedFaviconURL == opt.urlString)
+                                                            let isSelected = isChosen || isAuto
+                                                            
+                                                            Button(action: {
+                                                                selectedFaviconURL = opt.urlString
+                                                            }) {
+                                                                VStack(spacing: 4) {
+                                                                    ZStack {
+                                                                        RoundedRectangle(cornerRadius: 6)
+                                                                            .fill(Color(nsColor: .controlBackgroundColor))
+                                                                            .frame(width: 34, height: 34)
+                                                                        
+                                                                        if let img = faviconManager.icon(forOption: opt.urlString, removeWhite: removeWhiteBackground) {
+                                                                            Image(nsImage: img)
+                                                                                .resizable()
+                                                                                .aspectRatio(contentMode: .fit)
+                                                                                .frame(width: 22, height: 22)
+                                                                                .clipShape(RoundedRectangle(cornerRadius: 3))
+                                                                        } else {
+                                                                            Image(systemName: "photo")
+                                                                                .foregroundColor(.secondary)
+                                                                        }
+                                                                    }
+                                                                    .overlay(
+                                                                        RoundedRectangle(cornerRadius: 6)
+                                                                            .stroke(isSelected ? Color.accentColor : Color.primary.opacity(0.12), lineWidth: isSelected ? 2 : 1)
+                                                                    )
+                                                                    .overlay(
+                                                                        Group {
+                                                                            if isSelected {
+                                                                                Image(systemName: "checkmark.circle.fill")
+                                                                                    .font(.system(size: 11))
+                                                                                    .foregroundColor(.accentColor)
+                                                                                    .background(Circle().fill(Color.white))
+                                                                                    .offset(x: 13, y: -13)
+                                                                            }
+                                                                        }
+                                                                    )
+                                                                    
+                                                                    Text(opt.label)
+                                                                        .font(.system(size: 9, weight: isSelected ? .bold : .regular))
+                                                                        .foregroundColor(.primary)
+                                                                        .lineLimit(1)
+                                                                    
+                                                                    Text(opt.isTransparent ? "Transparent" : "Mit Hintergrund")
+                                                                        .font(.system(size: 8, weight: .medium))
+                                                                        .foregroundColor(opt.isTransparent ? .green : .secondary)
+                                                                        .padding(.horizontal, 4)
+                                                                        .padding(.vertical, 1)
+                                                                        .background(Capsule().fill(opt.isTransparent ? Color.green.opacity(0.15) : Color.primary.opacity(0.06)))
+                                                                }
+                                                                .frame(width: 82)
+                                                                .padding(5)
+                                                                .background(
+                                                                    RoundedRectangle(cornerRadius: 8)
+                                                                        .fill(isSelected ? Color.accentColor.opacity(0.08) : Color.clear)
+                                                                )
+                                                            }
+                                                            .buttonStyle(.plain)
+                                                        }
+                                                    }
+                                                    .padding(.vertical, 3)
+                                                    .padding(.horizontal, 1)
+                                                }
+                                            }
+                                        }
+                                        
+                                        // Remove White Background Toggle
+                                        VStack(alignment: .leading, spacing: 2) {
+                                            Toggle("Weißer Hintergrund transparent machen", isOn: $removeWhiteBackground)
+                                                .font(.caption)
+                                                .fontWeight(.medium)
+                                            
+                                            Text("Entfernt automatisch weiße Flächen aus Logos (z. B. bei quadratischen iOS-Kacheln).")
+                                                .font(.caption2)
+                                                .foregroundColor(.secondary)
+                                        }
+                                    }
                                 }
-                                .buttonStyle(.bordered)
+                                
+                                Divider()
+                                    .padding(.vertical, 2)
+                                
+                                // Symbol Selection
+                                VStack(alignment: .leading, spacing: 6) {
+                                    Text(useFavicon ? "Ersatz-Symbol auswählen (falls kein Logo verfügbar):" : "Symbol für die Menüleiste auswählen:")
+                                        .font(.caption2)
+                                        .foregroundColor(.secondary)
+                                    
+                                    LazyVGrid(columns: [GridItem(.adaptive(minimum: 32))], spacing: 6) {
+                                        ForEach([
+                                            "calendar", "calendar.badge.clock", "note.text",
+                                            "bubble.left.and.bubble.right", "globe", "safari",
+                                            "checklist", "bookmark", "envelope", "bell",
+                                            "sparkles", "star", "music.note", "chart.bar",
+                                            "chevron.left.forwardslash.chevron.right", "tray.full", "cloud", "person"
+                                        ], id: \.self) { icon in
+                                            Button(action: { iconName = icon }) {
+                                                Image(systemName: icon)
+                                                    .font(.system(size: 14))
+                                                    .foregroundColor(iconName == icon ? .white : .primary)
+                                                    .frame(width: 30, height: 30)
+                                                    .background(
+                                                        RoundedRectangle(cornerRadius: 6)
+                                                            .fill(iconName == icon ? Color.accentColor : Color(nsColor: .controlColor))
+                                                    )
+                                            }
+                                            .buttonStyle(.plain)
+                                        }
+                                    }
+                                }
                             }
-                            
-                            Text("Schnellvorlagen:")
-                                .font(.caption2)
-                                .foregroundColor(.secondary)
-                            
-                            LazyVGrid(columns: [GridItem(.adaptive(minimum: 120))], spacing: 6) {
-                                QuickButton(name: "Google Gemini", icon: "sparkles") {
-                                    setPreset(url: "https://gemini.google.com", name: "Google Gemini", icon: "sparkles", preset: .iphone14)
-                                }
-                                QuickButton(name: "Proton Calendar", icon: "calendar") {
-                                    setPreset(url: "https://calendar.proton.me", name: "Proton Kalender", icon: "calendar", preset: .widget)
-                                }
-                                QuickButton(name: "Google Calendar", icon: "calendar") {
-                                    setPreset(url: "https://calendar.google.com", name: "Google Kalender", icon: "calendar", preset: .widget)
-                                }
-                                QuickButton(name: "Notion", icon: "note.text") {
-                                    setPreset(url: "https://www.notion.so", name: "Notion", icon: "note.text", preset: .iphone8)
-                                }
-                                QuickButton(name: "Todoist", icon: "checklist") {
-                                    setPreset(url: "https://app.todoist.com", name: "Todoist", icon: "checklist", preset: .iphoneSE)
-                                }
-                                QuickButton(name: "GitHub", icon: "chevron.left.forwardslash.chevron.right") {
-                                    setPreset(url: "https://github.com", name: "GitHub", icon: "chevron.left.forwardslash.chevron.right", preset: .iphone14)
-                                }
+                        } label: {
+                            HStack(spacing: 8) {
+                                Image(systemName: "photo.badge.checkmark")
+                                    .foregroundColor(.accentColor)
+                                Text("Menüleisten-Symbol & Logo anpassen")
+                                    .font(.subheadline)
+                                    .fontWeight(.medium)
+                                Spacer()
+                                Text(useFavicon ? "Automatisch" : "Symbol")
+                                    .font(.caption2)
+                                    .foregroundColor(.secondary)
                             }
                         }
+                        .frame(maxWidth: .infinity, alignment: .leading)
                         .padding()
                         .background(RoundedRectangle(cornerRadius: 10).fill(Color(nsColor: .controlBackgroundColor)))
                         
-                        // 3. Fenstergröße & User-Agent
+                        // 2. Fenstergröße & Ansicht
                         VStack(alignment: .leading, spacing: 10) {
                             HStack {
-                                Text("3. Fenstergröße & Ansicht")
+                                Text("2. Fenstergröße & Ansicht")
                                     .font(.headline)
                                 Spacer()
                                 Text("\(Int(effectiveWidth)) × \(Int(effectiveHeight)) pt")
@@ -797,18 +832,20 @@ struct WebWidgetEditorSheet: View {
                                 updateLivePreview()
                             }
                         }
+                        .frame(maxWidth: .infinity, alignment: .leading)
                         .padding()
                         .background(RoundedRectangle(cornerRadius: 10).fill(Color(nsColor: .controlBackgroundColor)))
                         
-                        // 4. Optionen
+                        // 3. Weitere Optionen
                         VStack(alignment: .leading, spacing: 8) {
-                            Text("4. Optionen")
+                            Text("3. Weitere Optionen")
                                 .font(.headline)
                             
                             Toggle("In Menüleiste anzeigen", isOn: $isEnabled)
                             Toggle("Adressleiste standardmäßig einblenden", isOn: $showsAddressBar)
                             Toggle("Fenster anheften (Pin)", isOn: $isPinned)
                         }
+                        .frame(maxWidth: .infinity, alignment: .leading)
                         .padding()
                         .background(RoundedRectangle(cornerRadius: 10).fill(Color(nsColor: .controlBackgroundColor)))
                     }
@@ -838,6 +875,7 @@ struct WebWidgetEditorSheet: View {
                         }
                         .buttonStyle(.bordered)
                         .controlSize(.small)
+                        .disabled(url.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                     }
                     .padding(.horizontal, 16)
                     .padding(.top, 14)
@@ -857,7 +895,7 @@ struct WebWidgetEditorSheet: View {
                                     Circle().fill(Color.yellow.opacity(0.8)).frame(width: 8, height: 8)
                                     Circle().fill(Color.green.opacity(0.8)).frame(width: 8, height: 8)
                                     Spacer()
-                                    Text(title.isEmpty ? url : title)
+                                    Text(title.isEmpty ? (url.isEmpty ? "Vorschau" : url) : title)
                                         .font(.system(size: 10, weight: .medium))
                                         .foregroundColor(.secondary)
                                         .lineLimit(1)
@@ -875,9 +913,27 @@ struct WebWidgetEditorSheet: View {
                                 
                                 Divider()
                                 
-                                // Live WebView
-                                WebViewRepresentable(controller: previewController)
+                                // Live WebView or Placeholder when empty
+                                if url.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                                    VStack(spacing: 12) {
+                                        Image(systemName: "globe")
+                                            .font(.system(size: 40))
+                                            .foregroundColor(.secondary.opacity(0.35))
+                                        Text("Noch keine Webseite geladen")
+                                            .font(.headline)
+                                            .foregroundColor(.secondary)
+                                        Text("Gib links eine URL ein oder wähle eine Vorlage, um die Live-Vorschau zu starten.")
+                                            .font(.caption)
+                                            .foregroundColor(.secondary)
+                                            .multilineTextAlignment(.center)
+                                            .frame(maxWidth: 240)
+                                    }
                                     .frame(width: effectiveWidth, height: effectiveHeight)
+                                    .background(Color(nsColor: .windowBackgroundColor))
+                                } else {
+                                    WebViewRepresentable(controller: previewController)
+                                        .frame(width: effectiveWidth, height: effectiveHeight)
+                                }
                             }
                             .frame(width: deviceW, height: deviceH)
                             .background(Color(nsColor: .windowBackgroundColor))
@@ -904,10 +960,17 @@ struct WebWidgetEditorSheet: View {
                 Button("Abbrechen", action: onCancel)
                 Spacer()
                 Button(isEditing ? "Änderungen speichern" : "Web-Widget erstellen") {
+                    var finalURL = url.trimmingCharacters(in: .whitespacesAndNewlines)
+                    if !finalURL.isEmpty && !finalURL.hasPrefix("http://") && !finalURL.hasPrefix("https://") {
+                        finalURL = "https://" + finalURL
+                    }
+                    let defaultTitle = URL(string: finalURL)?.host ?? "Web-Widget"
+                    let finalTitle = title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? defaultTitle : title
+                    
                     let item = WebWidgetItem(
                         id: originalId ?? UUID(),
-                        title: title.isEmpty ? "Web-Widget" : title,
-                        url: url.isEmpty ? "https://gemini.google.com" : url,
+                        title: finalTitle,
+                        url: finalURL.isEmpty ? "https://calendar.proton.me" : finalURL,
                         iconName: iconName,
                         useFavicon: useFavicon,
                         selectedFaviconURL: selectedFaviconURL,
@@ -925,6 +988,7 @@ struct WebWidgetEditorSheet: View {
                 }
                 .buttonStyle(.borderedProminent)
                 .keyboardShortcut(.defaultAction)
+                .disabled(url.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
             }
             .padding(.horizontal, 20)
             .padding(.vertical, 12)
@@ -933,7 +997,7 @@ struct WebWidgetEditorSheet: View {
         .frame(minWidth: 880, idealWidth: 920, maxWidth: 1050, minHeight: 620, idealHeight: 660, maxHeight: 720)
         .onAppear {
             updateLivePreview()
-            if useFavicon {
+            if useFavicon && !url.isEmpty {
                 faviconManager.discoverFavicons(for: url, widgetId: originalId)
             }
         }
@@ -952,6 +1016,7 @@ struct WebWidgetEditorSheet: View {
     
     private func applyURLChange() {
         var str = url.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !str.isEmpty else { return }
         if !str.hasPrefix("http://") && !str.hasPrefix("https://") {
             str = "https://" + str
         }
@@ -980,7 +1045,9 @@ struct WebWidgetEditorSheet: View {
     
     private func updateLivePreview() {
         var str = url.trimmingCharacters(in: .whitespacesAndNewlines)
-        if !str.hasPrefix("http://") && !str.hasPrefix("https://") {
+        if str.isEmpty {
+            str = "about:blank"
+        } else if !str.hasPrefix("http://") && !str.hasPrefix("https://") {
             str = "https://" + str
         }
         previewController.updateConfig(
