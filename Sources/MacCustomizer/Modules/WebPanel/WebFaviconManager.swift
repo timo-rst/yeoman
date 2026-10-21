@@ -209,13 +209,13 @@ public final class WebFaviconManager: ObservableObject {
                 let isTransparent = Self.isImageTransparent(rawImage)
                 var label = isTransparent ? "Transparent" : "Mit Hintergrund"
                 if urlString.contains("apple-touch-icon") {
-                    label = isTransparent ? "App-Icon (Transparent)" : "App-Kachel (iOS)"
+                    label = "App-Kachel"
                 } else if urlString.contains("duckduckgo") {
-                    label = isTransparent ? "DuckDuckGo (Transparent)" : "DuckDuckGo"
+                    label = "DuckDuckGo"
                 } else if urlString.contains("google") {
-                    label = isTransparent ? "Google (Transparent)" : "Google"
+                    label = "Google"
                 } else if urlString.hasSuffix(".ico") {
-                    label = isTransparent ? "Favicon.ico (Transparent)" : "Favicon.ico"
+                    label = "Favicon.ico"
                 } else if urlString.hasSuffix(".svg") {
                     label = "Vektor (SVG)"
                 }

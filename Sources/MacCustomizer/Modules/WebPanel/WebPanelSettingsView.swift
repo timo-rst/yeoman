@@ -140,12 +140,11 @@ public struct WebPanelSettingsView: View {
                 
                 // Website Data & Cache
                 VStack(alignment: .leading, spacing: 10) {
-                    Text("Sitzungen & Cache")
-                        .font(.headline)
-                    
-                    Text("Cookies und Logins aller Widgets (z.B. Proton Calendar oder Google) werden dauerhaft im WebKit-Speicher gesichert.")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
+                    HStack(spacing: 6) {
+                        Text("Sitzungen & Cache")
+                            .font(.headline)
+                        InfoTooltip(text: "Cookies und Logins aller Widgets (z. B. Proton Calendar oder Google) werden dauerhaft im WebKit-Speicher gesichert.")
+                    }
                     
                     Button(role: .destructive, action: clearAllWebsiteData) {
                         HStack(spacing: 6) {
@@ -455,13 +454,11 @@ struct WebWidgetEditorSheet: View {
         VStack(spacing: 0) {
             // Wizard Header
             HStack {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(isEditing ? "Web-Widget bearbeiten" : "Neues Web-Widget einrichten")
+                HStack(spacing: 6) {
+                    Text(isEditing ? "Web-Widget bearbeiten" : "Neues Web-Widget")
                         .font(.title3)
                         .fontWeight(.bold)
-                    Text("Konfiguriere URL, Größe und Smartphone-Darstellung mit Live-Vorschau.")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
+                    InfoTooltip(text: "Konfiguriere URL, Größe und Ansicht mit interaktiver Live-Vorschau.")
                 }
                 Spacer()
                 Button("Abbrechen", action: onCancel)
@@ -567,9 +564,12 @@ struct WebWidgetEditorSheet: View {
                             
                             // Schnellvorlagen
                             VStack(alignment: .leading, spacing: 6) {
-                                Text("Schnellvorlagen (Klick zum Ausfüllen):")
-                                    .font(.caption2)
-                                    .foregroundColor(.secondary)
+                                HStack(spacing: 5) {
+                                    Text("Schnellvorlagen:")
+                                        .font(.caption2)
+                                        .foregroundColor(.secondary)
+                                    InfoTooltip(text: "Klicke auf eine Vorlage, um Name, Ziel-Adresse und optimale Fenstergröße sofort zu übernehmen.")
+                                }
                                 
                                 LazyVGrid(columns: [GridItem(.adaptive(minimum: 120))], spacing: 6) {
                                     QuickButton(name: "Google Gemini", icon: "sparkles") {
@@ -605,12 +605,11 @@ struct WebWidgetEditorSheet: View {
                                 
                                 // Website Logo Option
                                 VStack(alignment: .leading, spacing: 8) {
-                                    Toggle("Website-Logo automatisch verwenden", isOn: $useFavicon)
-                                        .fontWeight(.medium)
-                                    
-                                    Text("Verwendet das farbige Original-Logo der Website. Transparente Symbole werden bevorzugt.")
-                                        .font(.caption2)
-                                        .foregroundColor(.secondary)
+                                    HStack(spacing: 6) {
+                                        Toggle("Website-Logo automatisch verwenden", isOn: $useFavicon)
+                                            .fontWeight(.medium)
+                                        InfoTooltip(text: "Verwendet das farbige Original-Logo der Website. Transparente Symbole werden bevorzugt.")
+                                    }
                                     
                                     if useFavicon {
                                         // Status & Refresh
@@ -656,11 +655,12 @@ struct WebWidgetEditorSheet: View {
                                         let options = faviconManager.options(for: url)
                                         if !options.isEmpty {
                                             VStack(alignment: .leading, spacing: 6) {
-                                                HStack {
-                                                    Text("Verfügbare Favicons / Logos (\(options.count)):")
+                                                HStack(spacing: 5) {
+                                                    Text("Verfügbare Logos (\(options.count)):")
                                                         .font(.caption2)
                                                         .fontWeight(.medium)
                                                         .foregroundColor(.primary)
+                                                    InfoTooltip(text: "Gefundene Favicon- und App-Icon-Varianten. Klicke ein Logo an, um es festzulegen.")
                                                     
                                                     Spacer()
                                                     
@@ -736,6 +736,7 @@ struct WebWidgetEditorSheet: View {
                                                                 )
                                                             }
                                                             .buttonStyle(.plain)
+                                                            .help(opt.urlString)
                                                         }
                                                     }
                                                     .padding(.vertical, 3)
@@ -745,14 +746,11 @@ struct WebWidgetEditorSheet: View {
                                         }
                                         
                                         // Remove White Background Toggle
-                                        VStack(alignment: .leading, spacing: 2) {
+                                        HStack(spacing: 6) {
                                             Toggle("Weißer Hintergrund transparent machen", isOn: $removeWhiteBackground)
                                                 .font(.caption)
                                                 .fontWeight(.medium)
-                                            
-                                            Text("Entfernt automatisch weiße Flächen aus Logos (z. B. bei quadratischen iOS-Kacheln).")
-                                                .font(.caption2)
-                                                .foregroundColor(.secondary)
+                                            InfoTooltip(text: "Entfernt automatisch weiße Flächen aus Logos (z. B. bei quadratischen iOS-Kacheln).")
                                         }
                                     }
                                 }
@@ -762,9 +760,14 @@ struct WebWidgetEditorSheet: View {
                                 
                                 // Symbol Selection
                                 VStack(alignment: .leading, spacing: 6) {
-                                    Text(useFavicon ? "Ersatz-Symbol auswählen (falls kein Logo verfügbar):" : "Symbol für die Menüleiste auswählen:")
-                                        .font(.caption2)
-                                        .foregroundColor(.secondary)
+                                    HStack(spacing: 5) {
+                                        Text(useFavicon ? "Ersatz-Symbol:" : "Symbol für Menüleiste:")
+                                            .font(.caption2)
+                                            .foregroundColor(.secondary)
+                                        if useFavicon {
+                                            InfoTooltip(text: "Wird in der Menüleiste angezeigt, falls die Website kein Web-Logo liefert.")
+                                        }
+                                    }
                                     
                                     LazyVGrid(columns: [GridItem(.adaptive(minimum: 32))], spacing: 6) {
                                         ForEach([
@@ -856,10 +859,11 @@ struct WebWidgetEditorSheet: View {
                             Divider()
                             
                             VStack(alignment: .leading, spacing: 6) {
-                                HStack {
+                                HStack(spacing: 5) {
                                     Text("Seiten-Skalierung (Zoom):")
                                         .font(.subheadline)
                                         .fontWeight(.medium)
+                                    InfoTooltip(text: "Skaliert Webseiten herunter, damit sie im Widget optimal ohne horizontales Scrollen lesbar sind.")
                                     Spacer()
                                     Text("\(Int(zoomScale * 100))%").monospacedDigit()
                                         .foregroundColor(.accentColor)
@@ -868,16 +872,16 @@ struct WebWidgetEditorSheet: View {
                                 Slider(value: $zoomScale, in: 0.5...1.5, step: 0.05) { _ in
                                     updateLivePreview()
                                 }
-                                Text("Skaliert Webseiten herunter, damit sie im Widget optimal ohne horizontales Scrollen lesbar sind.")
-                                    .font(.caption2)
-                                    .foregroundColor(.secondary)
                             }
                             
                             Divider()
                             
-                            Text("Darstellung (Mobil / Desktop):")
-                                .font(.subheadline)
-                                .fontWeight(.medium)
+                            HStack(spacing: 5) {
+                                Text("Darstellung:")
+                                    .font(.subheadline)
+                                    .fontWeight(.medium)
+                                InfoTooltip(text: "Mobil erzwingt ein schmales Smartphone-Layout (ideal für Widgets). Desktop lädt die Standard-Website.")
+                            }
                             
                             Picker("", selection: $userAgentMode) {
                                 ForEach(WebUserAgentMode.allCases) { mode in
@@ -898,9 +902,20 @@ struct WebWidgetEditorSheet: View {
                             Text("3. Weitere Optionen")
                                 .font(.headline)
                             
-                            Toggle("In Menüleiste anzeigen", isOn: $isEnabled)
-                            Toggle("Adressleiste standardmäßig einblenden", isOn: $showsAddressBar)
-                            Toggle("Fenster anheften (Pin)", isOn: $isPinned)
+                            HStack(spacing: 6) {
+                                Toggle("In Menüleiste anzeigen", isOn: $isEnabled)
+                                InfoTooltip(text: "Zeigt das Widget als eigenständiges Symbol direkt in der macOS Menüleiste an.")
+                            }
+                            
+                            HStack(spacing: 6) {
+                                Toggle("Adressleiste standardmäßig einblenden", isOn: $showsAddressBar)
+                                InfoTooltip(text: "Zeigt im Popup eine Navigationsleiste mit Vor-, Zurück- und Neuladen-Buttons.")
+                            }
+                            
+                            HStack(spacing: 6) {
+                                Toggle("Fenster anheften (Pin)", isOn: $isPinned)
+                                InfoTooltip(text: "Hält das Widget-Fenster dauerhaft geöffnet, auch wenn du in eine andere App klickst.")
+                            }
                         }
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .padding()
@@ -1139,3 +1154,19 @@ struct QuickButton: View {
         .buttonStyle(.plain)
     }
 }
+
+struct InfoTooltip: View {
+    let text: String
+    @State private var isHovering = false
+    
+    var body: some View {
+        Image(systemName: "info.circle")
+            .font(.system(size: 11, weight: .medium))
+            .foregroundColor(isHovering ? .accentColor : .secondary)
+            .help(text)
+            .onHover { hovering in
+                isHovering = hovering
+            }
+    }
+}
+
