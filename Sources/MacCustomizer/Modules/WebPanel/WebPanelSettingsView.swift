@@ -1,10 +1,37 @@
 import SwiftUI
 import WebKit
 
+public enum WebWidgetEditorMode: Identifiable {
+    case create
+    case edit(WebWidgetItem)
+    
+    public var id: String {
+        switch self {
+        case .create:
+            return "create"
+        case .edit(let widget):
+            return "edit_\(widget.id.uuidString)"
+        }
+    }
+    
+    public var widget: WebWidgetItem? {
+        switch self {
+        case .create: return nil
+        case .edit(let widget): return widget
+        }
+    }
+    
+    public var isEditing: Bool {
+        switch self {
+        case .create: return false
+        case .edit: return true
+        }
+    }
+}
+
 public struct WebPanelSettingsView: View {
     @ObservedObject var module: WebPanelModule
-    @State private var isShowingEditor: Bool = false
-    @State private var editingWidget: WebWidgetItem? = nil
+    @State private var editorMode: WebWidgetEditorMode? = nil
     @State private var widgetToDelete: WebWidgetItem? = nil
     @State private var showingDeleteConfirm: Bool = false
     
@@ -29,8 +56,7 @@ public struct WebPanelSettingsView: View {
                             Spacer()
                             
                             Button(action: {
-                                editingWidget = nil
-                                isShowingEditor = true
+                                editorMode = .create
                             }) {
                                 HStack(spacing: 6) {
                                     Image(systemName: "plus.circle.fill")
@@ -68,8 +94,7 @@ public struct WebPanelSettingsView: View {
                                 .frame(maxWidth: 320)
                             
                             Button("Jetzt erstes Widget anlegen") {
-                                editingWidget = nil
-                                isShowingEditor = true
+                                editorMode = .create
                             }
                             .buttonStyle(.borderedProminent)
                             .padding(.top, 4)
@@ -84,8 +109,7 @@ public struct WebPanelSettingsView: View {
                                     module.toggleWidget(id: widget.id, isEnabled: enabled)
                                 },
                                 onEdit: {
-                                    editingWidget = widget
-                                    isShowingEditor = true
+                                    editorMode = .edit(widget)
                                 },
                                 onDelete: {
                                     widgetToDelete = widget
@@ -127,21 +151,22 @@ public struct WebPanelSettingsView: View {
             }
             .padding(20)
         }
-        .sheet(isPresented: $isShowingEditor) {
+        .sheet(item: $editorMode) { mode in
             WebWidgetEditorSheet(
-                initialWidget: editingWidget,
+                initialWidget: mode.widget,
                 onSave: { savedItem in
-                    if editingWidget != nil {
+                    if mode.isEditing {
                         module.updateWidget(savedItem)
                     } else {
                         module.addWidget(savedItem)
                     }
-                    isShowingEditor = false
+                    editorMode = nil
                 },
                 onCancel: {
-                    isShowingEditor = false
+                    editorMode = nil
                 }
             )
+            .id(mode.id)
         }
         .confirmationDialog(
             "Möchtest du das Web-Widget „\(widgetToDelete?.title ?? "")“ wirklich löschen?",
@@ -333,9 +358,9 @@ struct WebWidgetEditorSheet: View {
         self.isEditing = (initialWidget != nil)
         self.originalId = initialWidget?.id
         
-        let initialTitle = initialWidget?.title ?? "Mein Kalender"
-        let initialURL = initialWidget?.url ?? "https://calendar.proton.me"
-        let initialIcon = initialWidget?.iconName ?? "calendar"
+        let initialTitle = initialWidget?.title ?? "Google Gemini"
+        let initialURL = initialWidget?.url ?? "https://gemini.google.com"
+        let initialIcon = initialWidget?.iconName ?? "sparkles"
         let initialUseFavicon = initialWidget?.useFavicon ?? true
         let initialPreset = initialWidget?.sizePreset ?? .widget
         let initialW = initialWidget?.customWidth ?? 320
@@ -544,6 +569,9 @@ struct WebWidgetEditorSheet: View {
                                 .foregroundColor(.secondary)
                             
                             LazyVGrid(columns: [GridItem(.adaptive(minimum: 120))], spacing: 6) {
+                                QuickButton(name: "Google Gemini", icon: "sparkles") {
+                                    setPreset(url: "https://gemini.google.com", name: "Google Gemini", icon: "sparkles", preset: .iphone14)
+                                }
                                 QuickButton(name: "Proton Calendar", icon: "calendar") {
                                     setPreset(url: "https://calendar.proton.me", name: "Proton Kalender", icon: "calendar", preset: .widget)
                                 }
@@ -552,9 +580,6 @@ struct WebWidgetEditorSheet: View {
                                 }
                                 QuickButton(name: "Notion", icon: "note.text") {
                                     setPreset(url: "https://www.notion.so", name: "Notion", icon: "note.text", preset: .iphone8)
-                                }
-                                QuickButton(name: "ChatGPT", icon: "bubble.left.and.bubble.right") {
-                                    setPreset(url: "https://chatgpt.com", name: "ChatGPT", icon: "bubble.left.and.bubble.right", preset: .iphone14)
                                 }
                                 QuickButton(name: "Todoist", icon: "checklist") {
                                     setPreset(url: "https://app.todoist.com", name: "Todoist", icon: "checklist", preset: .iphoneSE)
@@ -760,7 +785,7 @@ struct WebWidgetEditorSheet: View {
                     let item = WebWidgetItem(
                         id: originalId ?? UUID(),
                         title: title.isEmpty ? "Web-Widget" : title,
-                        url: url.isEmpty ? "https://calendar.proton.me" : url,
+                        url: url.isEmpty ? "https://gemini.google.com" : url,
                         iconName: iconName,
                         useFavicon: useFavicon,
                         sizePreset: sizePreset,
