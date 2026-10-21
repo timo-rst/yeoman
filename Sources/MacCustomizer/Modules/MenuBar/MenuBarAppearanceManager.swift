@@ -95,6 +95,26 @@ public struct MenuBarAppearancePreset: Identifiable {
     )
 }
 
+final class MenuBarOverlayPanel: NSPanel {
+    override init(
+        contentRect: NSRect,
+        styleMask style: NSWindow.StyleMask,
+        backing backingStoreType: NSWindow.BackingStoreType,
+        defer flag: Bool
+    ) {
+        super.init(contentRect: contentRect, styleMask: style, backing: backingStoreType, defer: flag)
+    }
+
+    override func constrainFrameRect(_ frameRect: NSRect, to screen: NSScreen?) -> NSRect {
+        // Crucial fix: AppKit's default constrainFrameRect moves windows down below visibleFrame.maxY.
+        // Overriding this ensures the panel sits precisely at the menu bar frame.
+        return frameRect
+    }
+
+    override var canBecomeKey: Bool { false }
+    override var canBecomeMain: Bool { false }
+}
+
 public final class MenuBarAppearanceManager: ObservableObject {
     public static let shared = MenuBarAppearanceManager()
     
@@ -105,22 +125,99 @@ public final class MenuBarAppearanceManager: ObservableObject {
         }
     }
     
-    @Published public var shape: MenuBarShape = .floating
-    @Published public var style: MenuBarStyle = .glassBlur
-    @Published public var opacity: Double = 0.65
-    @Published public var cornerRadius: CGFloat = 10
-    @Published public var insetPadding: CGFloat = 4
-    @Published public var hasBorder: Bool = true
-    @Published public var hasShadow: Bool = true
+    @Published public var shape: MenuBarShape = .floating {
+        didSet {
+            UserDefaults.standard.set(shape.rawValue, forKey: "menu_bar_shape")
+            if shape == .split {
+                updateDynamicMetrics()
+            }
+        }
+    }
+    
+    @Published public var style: MenuBarStyle = .glassBlur {
+        didSet {
+            UserDefaults.standard.set(style.rawValue, forKey: "menu_bar_style")
+        }
+    }
+    
+    @Published public var opacity: Double = 0.65 {
+        didSet {
+            UserDefaults.standard.set(opacity, forKey: "menu_bar_opacity")
+        }
+    }
+    
+    @Published public var cornerRadius: CGFloat = 10 {
+        didSet {
+            UserDefaults.standard.set(cornerRadius, forKey: "menu_bar_corner_radius")
+        }
+    }
+    
+    @Published public var insetPadding: CGFloat = 4 {
+        didSet {
+            UserDefaults.standard.set(insetPadding, forKey: "menu_bar_inset_padding")
+        }
+    }
+    
+    @Published public var hasBorder: Bool = true {
+        didSet {
+            UserDefaults.standard.set(hasBorder, forKey: "menu_bar_has_border")
+        }
+    }
+    
+    @Published public var hasShadow: Bool = true {
+        didSet {
+            UserDefaults.standard.set(hasShadow, forKey: "menu_bar_has_shadow")
+        }
+    }
+    
+    @Published public var isDynamicSplitWidth: Bool = true {
+        didSet {
+            UserDefaults.standard.set(isDynamicSplitWidth, forKey: "menu_bar_dynamic_split_width")
+            if isDynamicSplitWidth {
+                updateDynamicMetrics()
+            }
+        }
+    }
+    
+    @Published public var dynamicLeftWidth: CGFloat = 380
+    @Published public var dynamicRightWidth: CGFloat = 430
+    
     @Published public var tintColor: Color = Color.black.opacity(0.35)
     @Published public var gradientStart: Color = Color.purple.opacity(0.6)
     @Published public var gradientEnd: Color = Color.blue.opacity(0.6)
     
-    private var overlayPanels: [NSPanel] = []
+    private var overlayPanels: [MenuBarOverlayPanel] = []
     private var cancellables = Set<AnyCancellable>()
     
     public init() {
         self.isEnabled = UserDefaults.standard.object(forKey: "menu_bar_appearance_enabled") as? Bool ?? false
+        
+        if let savedShape = UserDefaults.standard.string(forKey: "menu_bar_shape"),
+           let s = MenuBarShape(rawValue: savedShape) {
+            self.shape = s
+        }
+        if let savedStyle = UserDefaults.standard.string(forKey: "menu_bar_style"),
+           let s = MenuBarStyle(rawValue: savedStyle) {
+            self.style = s
+        }
+        if let savedOpacity = UserDefaults.standard.object(forKey: "menu_bar_opacity") as? Double {
+            self.opacity = savedOpacity
+        }
+        if let savedCornerRadius = UserDefaults.standard.object(forKey: "menu_bar_corner_radius") as? CGFloat {
+            self.cornerRadius = savedCornerRadius
+        }
+        if let savedInsetPadding = UserDefaults.standard.object(forKey: "menu_bar_inset_padding") as? CGFloat {
+            self.insetPadding = savedInsetPadding
+        }
+        if let savedBorder = UserDefaults.standard.object(forKey: "menu_bar_has_border") as? Bool {
+            self.hasBorder = savedBorder
+        }
+        if let savedShadow = UserDefaults.standard.object(forKey: "menu_bar_has_shadow") as? Bool {
+            self.hasShadow = savedShadow
+        }
+        if let savedDynamic = UserDefaults.standard.object(forKey: "menu_bar_dynamic_split_width") as? Bool {
+            self.isDynamicSplitWidth = savedDynamic
+        }
         
         // Listen to display changes
         NotificationCenter.default.publisher(for: NSApplication.didChangeScreenParametersNotification)
@@ -130,8 +227,26 @@ public final class MenuBarAppearanceManager: ObservableObject {
             }
             .store(in: &cancellables)
             
+        // Listen to active application changes to adapt left menu capsule smoothly
+        NSWorkspace.shared.notificationCenter.publisher(for: NSWorkspace.didActivateApplicationNotification)
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] _ in
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.08) {
+                    self?.updateDynamicMetrics()
+                }
+            }
+            .store(in: &cancellables)
+            
+        // Periodic lightweight polling (1.2s) to adapt right status capsule when items appear/disappear
+        Timer.publish(every: 1.2, on: .main, in: .common)
+            .autoconnect()
+            .sink { [weak self] _ in
+                self?.updateDynamicMetrics()
+            }
+            .store(in: &cancellables)
+            
         if isEnabled {
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
                 self.updateOverlayPanels()
             }
         }
@@ -151,6 +266,93 @@ public final class MenuBarAppearanceManager: ObservableObject {
         if !self.isEnabled {
             self.isEnabled = true
         }
+        if self.shape == .split {
+            updateDynamicMetrics()
+        }
+    }
+    
+    public func updateDynamicMetrics() {
+        guard isEnabled && shape == .split && isDynamicSplitWidth else { return }
+        
+        guard let screen = NSScreen.main else { return }
+        let screenWidth = screen.frame.width
+        let screenMidX = screen.frame.midX
+        
+        var measuredLeft: CGFloat = 340
+        var measuredRight: CGFloat = 400
+        
+        // 1. Measure active app menu items
+        if let frontApp = NSWorkspace.shared.frontmostApplication {
+            let axApp = AXUIElementCreateApplication(frontApp.processIdentifier)
+            var menuBarRef: CFTypeRef?
+            if AXUIElementCopyAttributeValue(axApp, kAXMenuBarAttribute as CFString, &menuBarRef) == .success,
+               let menuBar = menuBarRef {
+                var childrenRef: CFTypeRef?
+                if AXUIElementCopyAttributeValue(menuBar as! AXUIElement, kAXChildrenAttribute as CFString, &childrenRef) == .success,
+                   let items = childrenRef as? [AXUIElement] {
+                    var maxLeftX: CGFloat = 0
+                    for item in items {
+                        var posRef: CFTypeRef?
+                        var sizeRef: CFTypeRef?
+                        AXUIElementCopyAttributeValue(item, kAXPositionAttribute as CFString, &posRef)
+                        AXUIElementCopyAttributeValue(item, kAXSizeAttribute as CFString, &sizeRef)
+                        var p = CGPoint.zero
+                        var s = CGSize.zero
+                        if let pos = posRef { AXValueGetValue(pos as! AXValue, .cgPoint, &p) }
+                        if let size = sizeRef { AXValueGetValue(size as! AXValue, .cgSize, &s) }
+                        if p.x < screenMidX {
+                            maxLeftX = max(maxLeftX, p.x + s.width)
+                        }
+                    }
+                    if maxLeftX > 50 {
+                        measuredLeft = maxLeftX + 16.0
+                    }
+                }
+            }
+        }
+        
+        // 2. Measure status bar items on the right
+        let options: CGWindowListOption = [.optionOnScreenOnly, .excludeDesktopElements]
+        if let infoList = CGWindowListCopyWindowInfo(options, kCGNullWindowID) as? [[String: Any]] {
+            var minStatusX: CGFloat = screenWidth
+            var foundAny = false
+            
+            for win in infoList {
+                let layer = win[kCGWindowLayer as String] as? Int ?? -1
+                let bounds = win[kCGWindowBounds as String] as? [String: CGFloat] ?? [:]
+                
+                let y = bounds["Y"] ?? 999
+                let x = bounds["X"] ?? 0
+                let w = bounds["Width"] ?? 0
+                let h = bounds["Height"] ?? 0
+                
+                // Status items are on layer 25 (or 24), Y near 0, Height around 15-45, X on the right half
+                if (layer == 25 || layer == 24) && y <= 5 && h >= 15 && h <= 45 && x >= (screenMidX - 100) && w > 0 && w < 600 {
+                    minStatusX = min(minStatusX, x)
+                    foundAny = true
+                }
+            }
+            
+            if foundAny && minStatusX < screenWidth {
+                let calculated = (screenWidth - minStatusX) + 16.0
+                measuredRight = calculated
+            }
+        }
+        
+        // Clamp to guarantee neither capsule collides with notch or overlaps
+        let hasNotch = screen.safeAreaInsets.top > 0
+        let maxLeftAllowed: CGFloat = hasNotch ? ((screen.auxiliaryTopLeftArea?.width ?? (screenWidth * 0.42)) - 12) : (screenWidth * 0.45)
+        let maxRightAllowed: CGFloat = hasNotch ? ((screenWidth - (screen.auxiliaryTopRightArea?.minX ?? (screenWidth * 0.58))) - 12) : (screenWidth * 0.45)
+        
+        let finalLeft = min(max(130, measuredLeft), maxLeftAllowed)
+        let finalRight = min(max(130, measuredRight), maxRightAllowed)
+        
+        if abs(self.dynamicLeftWidth - finalLeft) > 1.5 || abs(self.dynamicRightWidth - finalRight) > 1.5 {
+            withAnimation(.spring(response: 0.38, dampingFraction: 0.82)) {
+                self.dynamicLeftWidth = finalLeft
+                self.dynamicRightWidth = finalRight
+            }
+        }
     }
     
     public func updateOverlayPanels() {
@@ -167,18 +369,27 @@ public final class MenuBarAppearanceManager: ObservableObject {
             panel.orderFrontRegardless()
             overlayPanels.append(panel)
         }
+        
+        updateDynamicMetrics()
     }
     
-    private func createOverlayPanel(for screen: NSScreen) -> NSPanel {
-        let menuBarHeight = screen.frame.maxY - screen.visibleFrame.maxY
+    private func createOverlayPanel(for screen: NSScreen) -> MenuBarOverlayPanel {
+        let mbHeight: CGFloat = {
+            if screen.safeAreaInsets.top > 0 {
+                return screen.safeAreaInsets.top
+            }
+            let diff = screen.frame.maxY - screen.visibleFrame.maxY
+            return diff > 0 ? diff : 24.0
+        }()
+        
         let frame = NSRect(
             x: screen.frame.minX,
-            y: screen.frame.maxY - menuBarHeight,
+            y: screen.frame.maxY - mbHeight,
             width: screen.frame.width,
-            height: menuBarHeight
+            height: mbHeight
         )
         
-        let panel = NSPanel(
+        let panel = MenuBarOverlayPanel(
             contentRect: frame,
             styleMask: [.borderless, .nonactivatingPanel],
             backing: .buffered,
@@ -243,39 +454,47 @@ public struct MenuBarOverlayRenderView: View {
                 RoundedRectangle(cornerRadius: manager.cornerRadius)
                     .stroke(manager.hasBorder ? Color.white.opacity(0.2) : Color.clear, lineWidth: 1)
             )
-            .shadow(color: manager.hasShadow ? Color.black.opacity(0.3) : .clear, radius: 4, x: 0, y: 2)
-            .padding(.horizontal, p * 2)
+            .shadow(color: manager.hasShadow ? Color.black.opacity(0.35) : .clear, radius: 4, x: 0, y: 2)
+            .padding(.horizontal, max(4, p * 1.5))
             .padding(.vertical, p)
     }
     
     @ViewBuilder
     private func splitBackground(w: CGFloat, h: CGFloat) -> some View {
         let p = manager.insetPadding
-        HStack(spacing: hasNotch ? 180 : 80) {
+        let maxLeft = hasNotch ? (w * 0.42) : (w * 0.46)
+        let maxRight = hasNotch ? (w * 0.42) : (w * 0.46)
+        
+        let targetLeft = manager.isDynamicSplitWidth ? min(max(130, manager.dynamicLeftWidth), maxLeft) : (w * 0.42)
+        let targetRight = manager.isDynamicSplitWidth ? min(max(130, manager.dynamicRightWidth), maxRight) : (w * 0.42)
+        
+        HStack(spacing: 0) {
             // Left App Menus Capsule
             styledSurface()
-                .frame(width: w * 0.42)
+                .frame(width: targetLeft)
                 .clipShape(RoundedRectangle(cornerRadius: manager.cornerRadius))
                 .overlay(
                     RoundedRectangle(cornerRadius: manager.cornerRadius)
                         .stroke(manager.hasBorder ? Color.white.opacity(0.2) : Color.clear, lineWidth: 1)
                 )
-                .shadow(color: manager.hasShadow ? Color.black.opacity(0.3) : .clear, radius: 4, x: 0, y: 2)
+                .shadow(color: manager.hasShadow ? Color.black.opacity(0.35) : .clear, radius: 4, x: 0, y: 2)
             
-            Spacer()
+            Spacer(minLength: hasNotch ? 160 : 30)
             
             // Right Status Items Capsule
             styledSurface()
-                .frame(width: w * 0.42)
+                .frame(width: targetRight)
                 .clipShape(RoundedRectangle(cornerRadius: manager.cornerRadius))
                 .overlay(
                     RoundedRectangle(cornerRadius: manager.cornerRadius)
                         .stroke(manager.hasBorder ? Color.white.opacity(0.2) : Color.clear, lineWidth: 1)
                 )
-                .shadow(color: manager.hasShadow ? Color.black.opacity(0.3) : .clear, radius: 4, x: 0, y: 2)
+                .shadow(color: manager.hasShadow ? Color.black.opacity(0.35) : .clear, radius: 4, x: 0, y: 2)
         }
-        .padding(.horizontal, p * 2)
+        .padding(.horizontal, max(4, p * 1.5))
         .padding(.vertical, p)
+        .animation(.spring(response: 0.38, dampingFraction: 0.82), value: manager.dynamicLeftWidth)
+        .animation(.spring(response: 0.38, dampingFraction: 0.82), value: manager.dynamicRightWidth)
     }
     
     @ViewBuilder

@@ -100,6 +100,17 @@ public struct MenuBarAppearanceView: View {
                         }
                     }
                     .pickerStyle(.segmented)
+                    
+                    if appearance.shape == .split {
+                        Divider()
+                        VStack(alignment: .leading, spacing: 6) {
+                            Toggle("Dynamische Kapsel-Anpassung (Feder-Animation)", isOn: $appearance.isDynamicSplitWidth)
+                                .fontWeight(.medium)
+                            Text("Passt die Kapselbreiten automatisch per Feder-Animation an die Menüeinträge der aktiven App (links: \(Int(appearance.dynamicLeftWidth)) pt) und an die Menüleisten-Icons (rechts: \(Int(appearance.dynamicRightWidth)) pt) an.")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
+                    }
                 }
                 .padding()
                 .background(RoundedRectangle(cornerRadius: 12).fill(Color(nsColor: .controlBackgroundColor)))
