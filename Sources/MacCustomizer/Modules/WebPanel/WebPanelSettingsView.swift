@@ -211,7 +211,7 @@ struct WebWidgetRowView: View {
                             .stroke(Color.primary.opacity(0.12), lineWidth: 1)
                     )
                 
-                if widget.useFavicon, let icon = faviconManager.previewIcon(for: widget.url, widgetId: widget.id) {
+                if widget.useFavicon, let icon = faviconManager.previewIcon(for: widget.url, widgetId: widget.id, selectedFaviconURL: widget.selectedFaviconURL, removeWhite: widget.removeWhiteBackground) {
                     Image(nsImage: icon)
                         .resizable()
                         .aspectRatio(contentMode: .fit)
@@ -333,6 +333,8 @@ struct WebWidgetEditorSheet: View {
     @State private var url: String
     @State private var iconName: String
     @State private var useFavicon: Bool
+    @State private var selectedFaviconURL: String?
+    @State private var removeWhiteBackground: Bool
     @State private var sizePreset: WebSizePreset
     @State private var customWidth: CGFloat
     @State private var customHeight: CGFloat
@@ -362,6 +364,8 @@ struct WebWidgetEditorSheet: View {
         let initialURL = initialWidget?.url ?? "https://gemini.google.com"
         let initialIcon = initialWidget?.iconName ?? "sparkles"
         let initialUseFavicon = initialWidget?.useFavicon ?? true
+        let initialSelectedFaviconURL = initialWidget?.selectedFaviconURL
+        let initialRemoveWhite = initialWidget?.removeWhiteBackground ?? true
         let initialPreset = initialWidget?.sizePreset ?? .widget
         let initialW = initialWidget?.customWidth ?? 320
         let initialH = initialWidget?.customHeight ?? 400
@@ -375,6 +379,8 @@ struct WebWidgetEditorSheet: View {
         _url = State(initialValue: initialURL)
         _iconName = State(initialValue: initialIcon)
         _useFavicon = State(initialValue: initialUseFavicon)
+        _selectedFaviconURL = State(initialValue: initialSelectedFaviconURL)
+        _removeWhiteBackground = State(initialValue: initialRemoveWhite)
         _sizePreset = State(initialValue: initialPreset)
         _customWidth = State(initialValue: initialW)
         _customHeight = State(initialValue: initialH)
@@ -446,7 +452,7 @@ struct WebWidgetEditorSheet: View {
                                                 .stroke(Color.primary.opacity(0.15), lineWidth: 1)
                                         )
                                     
-                                    if useFavicon, let favicon = faviconManager.previewIcon(for: url, widgetId: originalId) {
+                                    if useFavicon, let favicon = faviconManager.previewIcon(for: url, widgetId: originalId, selectedFaviconURL: selectedFaviconURL, removeWhite: removeWhiteBackground) {
                                         Image(nsImage: favicon)
                                             .resizable()
                                             .aspectRatio(contentMode: .fit)
@@ -466,23 +472,24 @@ struct WebWidgetEditorSheet: View {
                             Divider()
                             
                             // Website Logo Option
-                            VStack(alignment: .leading, spacing: 6) {
-                                Toggle("Website-Logo automatisch verwenden", isOn: $useFavicon)
+                            VStack(alignment: .leading, spacing: 10) {
+                                Toggle("Website-Logo verwenden", isOn: $useFavicon)
                                     .fontWeight(.medium)
                                 
-                                Text("Verwendet das farbige Original-Logo der Website für die Menüleiste. Falls nicht verfügbar oder offline, wird das unten gewählte Symbol verwendet.")
+                                Text("Verwendet das farbige Original-Logo der Website. Transparente Symbole werden automatisch bevorzugt.")
                                     .font(.caption)
                                     .foregroundColor(.secondary)
                                 
                                 if useFavicon {
+                                    // Status & Refresh
                                     HStack(spacing: 8) {
-                                        if let favicon = faviconManager.previewIcon(for: url, widgetId: originalId) {
+                                        if let favicon = faviconManager.previewIcon(for: url, widgetId: originalId, selectedFaviconURL: selectedFaviconURL, removeWhite: removeWhiteBackground) {
                                             Image(nsImage: favicon)
                                                 .resizable()
                                                 .aspectRatio(contentMode: .fit)
                                                 .frame(width: 18, height: 18)
                                                 .clipShape(RoundedRectangle(cornerRadius: 3))
-                                            Text("Website-Logo aktiv")
+                                            Text(selectedFaviconURL != nil ? "Ausgewähltes Logo aktiv" : "Bestes transparentes Logo aktiv")
                                                 .font(.caption2)
                                                 .foregroundColor(.green)
                                                 .fontWeight(.medium)
@@ -490,7 +497,7 @@ struct WebWidgetEditorSheet: View {
                                             Image(systemName: "arrow.clockwise")
                                                 .font(.caption2)
                                                 .foregroundColor(.secondary)
-                                            Text("Logo wird geladen...")
+                                            Text("Logos werden gesucht...")
                                                 .font(.caption2)
                                                 .foregroundColor(.secondary)
                                         }
@@ -498,11 +505,11 @@ struct WebWidgetEditorSheet: View {
                                         Spacer()
                                         
                                         Button(action: {
-                                            faviconManager.fetchFavicon(for: url, widgetId: originalId)
+                                            faviconManager.discoverFavicons(for: url, widgetId: originalId)
                                         }) {
                                             HStack(spacing: 4) {
                                                 Image(systemName: "arrow.clockwise")
-                                                Text("Neu laden")
+                                                Text("Neu scannen")
                                             }
                                         }
                                         .buttonStyle(.bordered)
@@ -510,6 +517,110 @@ struct WebWidgetEditorSheet: View {
                                     }
                                     .padding(8)
                                     .background(RoundedRectangle(cornerRadius: 6).fill(Color.primary.opacity(0.04)))
+                                    
+                                    // Discovered Favicon Options Gallery
+                                    let options = faviconManager.options(for: url)
+                                    if !options.isEmpty {
+                                        VStack(alignment: .leading, spacing: 6) {
+                                            HStack {
+                                                Text("Verfügbare Favicons / Logos (\(options.count)):")
+                                                    .font(.caption)
+                                                    .fontWeight(.medium)
+                                                    .foregroundColor(.primary)
+                                                
+                                                Spacer()
+                                                
+                                                if selectedFaviconURL != nil {
+                                                    Button("Automatisch wählen") {
+                                                        selectedFaviconURL = nil
+                                                    }
+                                                    .font(.caption2)
+                                                    .buttonStyle(.link)
+                                                }
+                                            }
+                                            
+                                            ScrollView(.horizontal, showsIndicators: false) {
+                                                HStack(spacing: 8) {
+                                                    ForEach(options) { opt in
+                                                        let isAuto = (selectedFaviconURL == nil && opt == options.first)
+                                                        let isChosen = (selectedFaviconURL == opt.urlString)
+                                                        let isSelected = isChosen || isAuto
+                                                        
+                                                        Button(action: {
+                                                            selectedFaviconURL = opt.urlString
+                                                        }) {
+                                                            VStack(spacing: 4) {
+                                                                ZStack {
+                                                                    RoundedRectangle(cornerRadius: 6)
+                                                                        .fill(Color(nsColor: .controlBackgroundColor))
+                                                                        .frame(width: 36, height: 36)
+                                                                    
+                                                                    if let img = faviconManager.icon(forOption: opt.urlString, removeWhite: removeWhiteBackground) {
+                                                                        Image(nsImage: img)
+                                                                            .resizable()
+                                                                            .aspectRatio(contentMode: .fit)
+                                                                            .frame(width: 24, height: 24)
+                                                                            .clipShape(RoundedRectangle(cornerRadius: 3))
+                                                                    } else {
+                                                                        Image(systemName: "photo")
+                                                                            .foregroundColor(.secondary)
+                                                                    }
+                                                                }
+                                                                .overlay(
+                                                                    RoundedRectangle(cornerRadius: 6)
+                                                                        .stroke(isSelected ? Color.accentColor : Color.primary.opacity(0.12), lineWidth: isSelected ? 2 : 1)
+                                                                )
+                                                                .overlay(
+                                                                    Group {
+                                                                        if isSelected {
+                                                                            Image(systemName: "checkmark.circle.fill")
+                                                                                .font(.system(size: 11))
+                                                                                .foregroundColor(.accentColor)
+                                                                                .background(Circle().fill(Color.white))
+                                                                                .offset(x: 14, y: -14)
+                                                                        }
+                                                                    }
+                                                                )
+                                                                
+                                                                Text(opt.label)
+                                                                    .font(.system(size: 9, weight: isSelected ? .bold : .regular))
+                                                                    .foregroundColor(.primary)
+                                                                    .lineLimit(1)
+                                                                
+                                                                Text(opt.isTransparent ? "Transparent" : "Mit Hintergrund")
+                                                                    .font(.system(size: 8, weight: .medium))
+                                                                    .foregroundColor(opt.isTransparent ? .green : .secondary)
+                                                                    .padding(.horizontal, 4)
+                                                                    .padding(.vertical, 1)
+                                                                    .background(Capsule().fill(opt.isTransparent ? Color.green.opacity(0.15) : Color.primary.opacity(0.06)))
+                                                            }
+                                                            .frame(width: 86)
+                                                            .padding(6)
+                                                            .background(
+                                                                RoundedRectangle(cornerRadius: 8)
+                                                                    .fill(isSelected ? Color.accentColor.opacity(0.08) : Color.clear)
+                                                            )
+                                                        }
+                                                        .buttonStyle(.plain)
+                                                    }
+                                                }
+                                                .padding(.vertical, 4)
+                                                .padding(.horizontal, 2)
+                                            }
+                                        }
+                                    }
+                                    
+                                    // Remove White Background Toggle
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        Toggle("Weißer Hintergrund transparent machen", isOn: $removeWhiteBackground)
+                                            .font(.caption)
+                                            .fontWeight(.medium)
+                                        
+                                        Text("Entfernt automatisch weiße Flächen aus Logos (z. B. bei quadratischen iOS-Kacheln), damit sie freigestellt wirken.")
+                                            .font(.caption2)
+                                            .foregroundColor(.secondary)
+                                    }
+                                    .padding(.top, 4)
                                 }
                             }
                             
@@ -788,6 +899,8 @@ struct WebWidgetEditorSheet: View {
                         url: url.isEmpty ? "https://gemini.google.com" : url,
                         iconName: iconName,
                         useFavicon: useFavicon,
+                        selectedFaviconURL: selectedFaviconURL,
+                        removeWhiteBackground: removeWhiteBackground,
                         sizePreset: sizePreset,
                         customWidth: customWidth,
                         customHeight: customHeight,
@@ -810,7 +923,7 @@ struct WebWidgetEditorSheet: View {
         .onAppear {
             updateLivePreview()
             if useFavicon {
-                faviconManager.fetchFavicon(for: url, widgetId: originalId)
+                faviconManager.discoverFavicons(for: url, widgetId: originalId)
             }
         }
     }
@@ -832,9 +945,10 @@ struct WebWidgetEditorSheet: View {
             str = "https://" + str
         }
         url = str
+        selectedFaviconURL = nil
         updateLivePreview()
         if useFavicon {
-            faviconManager.fetchFavicon(for: str, widgetId: originalId)
+            faviconManager.discoverFavicons(for: str, widgetId: originalId)
         }
     }
     
@@ -843,12 +957,13 @@ struct WebWidgetEditorSheet: View {
         self.title = name
         self.iconName = icon
         self.sizePreset = preset
+        self.selectedFaviconURL = nil
         if preset == .widget {
             self.zoomScale = 0.85
         }
         updateLivePreview()
         if useFavicon {
-            faviconManager.fetchFavicon(for: newURL, widgetId: originalId)
+            faviconManager.discoverFavicons(for: newURL, widgetId: originalId)
         }
     }
     

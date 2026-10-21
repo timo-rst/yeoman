@@ -42,6 +42,8 @@ public struct WebWidgetItem: Identifiable, Codable, Equatable {
     public var url: String
     public var iconName: String
     public var useFavicon: Bool
+    public var selectedFaviconURL: String?
+    public var removeWhiteBackground: Bool
     public var sizePreset: WebSizePreset
     public var customWidth: CGFloat
     public var customHeight: CGFloat
@@ -52,7 +54,7 @@ public struct WebWidgetItem: Identifiable, Codable, Equatable {
     public var showsAddressBar: Bool
     
     enum CodingKeys: String, CodingKey {
-        case id, title, url, iconName, useFavicon, sizePreset, customWidth, customHeight, userAgentMode, zoomScale, isEnabled, isPinned, showsAddressBar
+        case id, title, url, iconName, useFavicon, selectedFaviconURL, removeWhiteBackground, sizePreset, customWidth, customHeight, userAgentMode, zoomScale, isEnabled, isPinned, showsAddressBar
     }
     
     public init(
@@ -61,6 +63,8 @@ public struct WebWidgetItem: Identifiable, Codable, Equatable {
         url: String,
         iconName: String = "calendar",
         useFavicon: Bool = true,
+        selectedFaviconURL: String? = nil,
+        removeWhiteBackground: Bool = true,
         sizePreset: WebSizePreset = .widget,
         customWidth: CGFloat = 320,
         customHeight: CGFloat = 400,
@@ -75,6 +79,8 @@ public struct WebWidgetItem: Identifiable, Codable, Equatable {
         self.url = url
         self.iconName = iconName
         self.useFavicon = useFavicon
+        self.selectedFaviconURL = selectedFaviconURL
+        self.removeWhiteBackground = removeWhiteBackground
         self.sizePreset = sizePreset
         self.customWidth = customWidth
         self.customHeight = customHeight
@@ -92,6 +98,8 @@ public struct WebWidgetItem: Identifiable, Codable, Equatable {
         self.url = try container.decode(String.self, forKey: .url)
         self.iconName = try container.decodeIfPresent(String.self, forKey: .iconName) ?? "calendar"
         self.useFavicon = try container.decodeIfPresent(Bool.self, forKey: .useFavicon) ?? true
+        self.selectedFaviconURL = try container.decodeIfPresent(String.self, forKey: .selectedFaviconURL)
+        self.removeWhiteBackground = try container.decodeIfPresent(Bool.self, forKey: .removeWhiteBackground) ?? true
         self.sizePreset = try container.decodeIfPresent(WebSizePreset.self, forKey: .sizePreset) ?? .widget
         self.customWidth = try container.decodeIfPresent(CGFloat.self, forKey: .customWidth) ?? 320
         self.customHeight = try container.decodeIfPresent(CGFloat.self, forKey: .customHeight) ?? 400
@@ -424,6 +432,8 @@ public final class WebWidgetInstanceController: NSObject, ObservableObject {
         let oldUrl = self.item.url
         let oldUseFavicon = self.item.useFavicon
         let oldIconName = self.item.iconName
+        let oldFaviconURL = self.item.selectedFaviconURL
+        let oldRemoveWhite = self.item.removeWhiteBackground
         
         self.item = newItem
         webController.associatedItem = newItem
@@ -447,7 +457,9 @@ public final class WebWidgetInstanceController: NSObject, ObservableObject {
             removeStatusItem()
         }
         
-        if (newItem.url != oldUrl || newItem.useFavicon != oldUseFavicon || newItem.iconName != oldIconName) && newItem.useFavicon {
+        let faviconNeedsRefresh = (newItem.url != oldUrl || newItem.useFavicon != oldUseFavicon || newItem.iconName != oldIconName || newItem.selectedFaviconURL != oldFaviconURL || newItem.removeWhiteBackground != oldRemoveWhite)
+        
+        if faviconNeedsRefresh && newItem.useFavicon {
             WebFaviconManager.shared.fetchFavicon(for: newItem.url, widgetId: newItem.id) { [weak self] _ in
                 self?.updateStatusItemIcon()
             }
