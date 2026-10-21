@@ -6,63 +6,60 @@ public struct MenuBarStatsWidgetView: View {
     public init() {}
     
     public var body: some View {
-        HStack(spacing: 8) {
-            // GPU
-            HStack(spacing: 3) {
-                VStack(spacing: 0) {
-                    Text("G")
-                    Text("P")
-                    Text("U")
-                }
-                .font(.system(size: 6, weight: .bold))
-                .foregroundColor(.secondary)
-                
-                Text("\(Int(provider.gpuUsagePercent))%")
-                    .font(.system(size: 9, weight: .semibold))
-                    .monospacedDigit()
-                
+        HStack(spacing: 5) {
+            // GPU Pill
+            MetricPill(title: "GPU", value: "\(Int(provider.gpuUsagePercent))%", color: .green) {
                 MiniSparkline(data: provider.gpuHistory, color: .green)
-                    .frame(width: 20, height: 12)
+                    .frame(width: 20, height: 11)
             }
             
-            // RAM
-            HStack(spacing: 3) {
-                VStack(spacing: 0) {
-                    Text("R")
-                    Text("A")
-                    Text("M")
-                }
-                .font(.system(size: 6, weight: .bold))
-                .foregroundColor(.secondary)
-                
-                Text("\(Int(provider.memoryUsagePercent))%")
-                    .font(.system(size: 9, weight: .semibold))
-                    .monospacedDigit()
-                
+            // RAM Pill
+            MetricPill(title: "RAM", value: "\(Int(provider.memoryUsagePercent))%", color: .purple) {
                 MiniBarGauge(percent: provider.memoryUsagePercent, color: .purple)
-                    .frame(width: 22, height: 10)
+                    .frame(width: 20, height: 9)
             }
             
-            // CPU
-            HStack(spacing: 3) {
-                VStack(spacing: 0) {
-                    Text("C")
-                    Text("P")
-                    Text("U")
-                }
-                .font(.system(size: 6, weight: .bold))
-                .foregroundColor(.secondary)
-                
-                Text("\(Int(provider.cpuUsagePercent))%")
-                    .font(.system(size: 9, weight: .semibold))
-                    .monospacedDigit()
-                
+            // CPU Pill
+            MetricPill(title: "CPU", value: "\(Int(provider.cpuUsagePercent))%", color: .blue) {
                 MiniSparkline(data: provider.cpuHistory, color: .blue)
-                    .frame(width: 20, height: 12)
+                    .frame(width: 20, height: 11)
             }
         }
-        .padding(.horizontal, 4)
+        .padding(.horizontal, 3)
+        .padding(.vertical, 2)
         .frame(height: 22)
+    }
+}
+
+struct MetricPill<Content: View>: View {
+    let title: String
+    let value: String
+    let color: Color
+    @ViewBuilder let content: () -> Content
+    
+    var body: some View {
+        HStack(spacing: 4) {
+            VStack(alignment: .leading, spacing: -1) {
+                Text(title)
+                    .font(.system(size: 6.5, weight: .heavy))
+                    .foregroundColor(color)
+                Text(value)
+                    .font(.system(size: 7.5, weight: .bold))
+                    .monospacedDigit()
+                    .foregroundColor(.primary)
+            }
+            content()
+        }
+        .padding(.horizontal, 4)
+        .padding(.vertical, 2)
+        .background(
+            RoundedRectangle(cornerRadius: 5)
+                .fill(Color(nsColor: .controlBackgroundColor).opacity(0.92))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 5)
+                .stroke(Color.primary.opacity(0.2), lineWidth: 0.6)
+        )
     }
 }
 
@@ -75,19 +72,41 @@ struct MiniSparkline: View {
             let w = geo.size.width
             let h = geo.size.height
             if data.count > 1 {
-                Path { path in
-                    let step = w / CGFloat(data.count - 1)
-                    let firstY = h - (CGFloat(min(100.0, max(0.0, data[0])) / 100.0) * h)
-                    path.move(to: CGPoint(x: 0, y: firstY))
-                    for (i, val) in data.enumerated().dropFirst() {
-                        let y = h - (CGFloat(min(100.0, max(0.0, val)) / 100.0) * h)
-                        path.addLine(to: CGPoint(x: CGFloat(i) * step, y: y))
+                ZStack {
+                    // Shaded gradient under curve for high contrast
+                    Path { path in
+                        let step = w / CGFloat(data.count - 1)
+                        path.move(to: CGPoint(x: 0, y: h))
+                        let firstY = h - (CGFloat(min(100.0, max(0.0, data[0])) / 100.0) * h)
+                        path.addLine(to: CGPoint(x: 0, y: firstY))
+                        for (i, val) in data.enumerated().dropFirst() {
+                            let y = h - (CGFloat(min(100.0, max(0.0, val)) / 100.0) * h)
+                            path.addLine(to: CGPoint(x: CGFloat(i) * step, y: y))
+                        }
+                        path.addLine(to: CGPoint(x: w, y: h))
+                        path.closeSubpath()
                     }
+                    .fill(LinearGradient(colors: [color.opacity(0.45), color.opacity(0.08)], startPoint: .top, endPoint: .bottom))
+                    
+                    // Main line stroke
+                    Path { path in
+                        let step = w / CGFloat(data.count - 1)
+                        let firstY = h - (CGFloat(min(100.0, max(0.0, data[0])) / 100.0) * h)
+                        path.move(to: CGPoint(x: 0, y: firstY))
+                        for (i, val) in data.enumerated().dropFirst() {
+                            let y = h - (CGFloat(min(100.0, max(0.0, val)) / 100.0) * h)
+                            path.addLine(to: CGPoint(x: CGFloat(i) * step, y: y))
+                        }
+                    }
+                    .stroke(color, style: StrokeStyle(lineWidth: 1.3, lineCap: .round, lineJoin: .round))
                 }
-                .stroke(color, lineWidth: 1.2)
                 .background(
                     RoundedRectangle(cornerRadius: 2)
-                        .stroke(Color.secondary.opacity(0.3), lineWidth: 0.5)
+                        .fill(Color.primary.opacity(0.05))
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 2)
+                        .stroke(Color.primary.opacity(0.18), lineWidth: 0.5)
                 )
             }
         }
@@ -100,14 +119,19 @@ struct MiniBarGauge: View {
     
     var body: some View {
         GeometryReader { geo in
-            let fillW = max(2.0, geo.size.width * CGFloat(min(100.0, max(0.0, percent)) / 100.0))
+            let fillW = max(3.0, geo.size.width * CGFloat(min(100.0, max(0.0, percent)) / 100.0))
             ZStack(alignment: .leading) {
+                // Background track
                 RoundedRectangle(cornerRadius: 2)
-                    .stroke(Color.secondary.opacity(0.3), lineWidth: 0.5)
+                    .fill(Color.primary.opacity(0.12))
                 
+                RoundedRectangle(cornerRadius: 2)
+                    .stroke(Color.primary.opacity(0.18), lineWidth: 0.5)
+                
+                // Value Fill
                 RoundedRectangle(cornerRadius: 1.5)
-                    .fill(LinearGradient(colors: [color.opacity(0.7), color], startPoint: .leading, endPoint: .trailing))
-                    .frame(width: fillW, height: geo.size.height - 2)
+                    .fill(LinearGradient(colors: [color.opacity(0.75), color], startPoint: .leading, endPoint: .trailing))
+                    .frame(width: fillW, height: max(2, geo.size.height - 2))
                     .padding(.leading, 1)
             }
         }

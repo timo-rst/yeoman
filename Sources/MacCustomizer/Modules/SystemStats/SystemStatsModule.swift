@@ -105,7 +105,7 @@ public final class SystemStatsModule: NSObject, CustomizerModule, ObservableObje
     private func togglePopover(_ sender: NSStatusBarButton) {
         if popover == nil {
             let p = NSPopover()
-            p.contentSize = NSSize(width: 440, height: 490)
+            p.contentSize = NSSize(width: 460, height: 495)
             p.behavior = .transient
             p.animates = true
             p.contentViewController = NSHostingController(rootView: TaskManagerPopoverView())

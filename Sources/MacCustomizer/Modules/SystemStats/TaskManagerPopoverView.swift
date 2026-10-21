@@ -5,6 +5,8 @@ public struct TaskManagerPopoverView: View {
     @ObservedObject var provider = SystemMetricsProvider.shared
     @State private var hoveredPid: Int?
     @State private var killedPid: Int?
+    @State private var isSearchExpanded: Bool = false
+    @FocusState private var isSearchFocused: Bool
     
     public init() {}
     
@@ -44,36 +46,75 @@ public struct TaskManagerPopoverView: View {
             
             Divider()
             
-            // Search & Sort Bar
+            // Search & Sort Bar (Dynamic Expandable Search)
             HStack(spacing: 8) {
-                HStack(spacing: 6) {
-                    Image(systemName: "magnifyingglass")
-                        .foregroundColor(.secondary)
-                        .font(.system(size: 12))
-                    
-                    TextField("Task suchen (Name oder PID)...", text: $provider.searchQuery)
-                        .textFieldStyle(.plain)
-                        .font(.system(size: 12))
-                    
-                    if !provider.searchQuery.isEmpty {
-                        Button(action: { provider.searchQuery = "" }) {
+                if isSearchExpanded || !provider.searchQuery.isEmpty {
+                    // Expanded Search Bar
+                    HStack(spacing: 6) {
+                        Image(systemName: "magnifyingglass")
+                            .foregroundColor(.secondary)
+                            .font(.system(size: 11))
+                        
+                        TextField("Task suchen (Name oder PID)...", text: $provider.searchQuery)
+                            .textFieldStyle(.plain)
+                            .font(.system(size: 12))
+                            .focused($isSearchFocused)
+                        
+                        Button(action: {
+                            withAnimation(.spring(response: 0.3, dampingFraction: 0.75)) {
+                                provider.searchQuery = ""
+                                isSearchExpanded = false
+                                isSearchFocused = false
+                            }
+                        }) {
                             Image(systemName: "xmark.circle.fill")
                                 .foregroundColor(.secondary)
+                                .font(.system(size: 12))
                         }
                         .buttonStyle(.plain)
                     }
-                }
-                .padding(.horizontal, 8)
-                .padding(.vertical, 5)
-                .background(RoundedRectangle(cornerRadius: 6).fill(Color(nsColor: .windowBackgroundColor)))
-                
-                Picker("", selection: $provider.sortMode) {
-                    ForEach(SystemMetricsProvider.TaskSortMode.allCases, id: \.self) { mode in
-                        Text(mode.rawValue).tag(mode)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 5)
+                    .background(RoundedRectangle(cornerRadius: 6).fill(Color(nsColor: .windowBackgroundColor)))
+                    
+                    // Compact Sort Picker
+                    Picker("", selection: $provider.sortMode) {
+                        Text("CPU").tag(SystemMetricsProvider.TaskSortMode.cpu)
+                        Text("RAM").tag(SystemMetricsProvider.TaskSortMode.memory)
+                        Text("Name").tag(SystemMetricsProvider.TaskSortMode.name)
                     }
+                    .pickerStyle(.segmented)
+                    .frame(width: 140)
+                } else {
+                    // Collapsed: Compact Magnifying Glass Button
+                    Button(action: {
+                        withAnimation(.spring(response: 0.3, dampingFraction: 0.75)) {
+                            isSearchExpanded = true
+                            isSearchFocused = true
+                        }
+                    }) {
+                        HStack(spacing: 4) {
+                            Image(systemName: "magnifyingglass")
+                                .font(.system(size: 12, weight: .medium))
+                                .foregroundColor(.secondary)
+                        }
+                        .frame(width: 28, height: 26)
+                        .background(
+                            RoundedRectangle(cornerRadius: 6)
+                                .fill(Color(nsColor: .windowBackgroundColor))
+                        )
+                    }
+                    .buttonStyle(.plain)
+                    .help("Nach Prozessen suchen (Name oder PID)")
+                    
+                    // Full-width Sort Picker
+                    Picker("", selection: $provider.sortMode) {
+                        ForEach(SystemMetricsProvider.TaskSortMode.allCases, id: \.self) { mode in
+                            Text(mode.rawValue).tag(mode)
+                        }
+                    }
+                    .pickerStyle(.segmented)
                 }
-                .pickerStyle(.segmented)
-                .frame(width: 180)
             }
             .padding(.horizontal, 12)
             .padding(.vertical, 8)
@@ -84,14 +125,14 @@ public struct TaskManagerPopoverView: View {
             // Column Headers
             HStack {
                 Text("PROZESS")
-                    .frame(width: 170, alignment: .leading)
+                    .frame(minWidth: 160, alignment: .leading)
                 Spacer()
                 Text("CPU")
-                    .frame(width: 60, alignment: .trailing)
+                    .frame(width: 55, alignment: .trailing)
                 Text("RAM")
-                    .frame(width: 75, alignment: .trailing)
+                    .frame(width: 70, alignment: .trailing)
                 Text("AKTION")
-                    .frame(width: 75, alignment: .trailing)
+                    .frame(width: 40, alignment: .trailing)
             }
             .font(.system(size: 10, weight: .bold))
             .foregroundColor(.secondary)
@@ -136,7 +177,7 @@ public struct TaskManagerPopoverView: View {
             
             // Footer
             HStack {
-                Text("\(provider.processes.count) Tasks • Klick auf 'Beenden' schießt Prozess sofort ab")
+                Text("\(provider.processes.count) Tasks • Klick auf ✕ schießt Prozess sofort ab")
                     .font(.caption2)
                     .foregroundColor(.secondary)
                 
@@ -159,7 +200,7 @@ public struct TaskManagerPopoverView: View {
             .padding(.vertical, 8)
             .background(Color(nsColor: .controlBackgroundColor))
         }
-        .frame(width: 440, height: 490)
+        .frame(width: 460, height: 495)
     }
 }
 
@@ -280,7 +321,7 @@ struct TaskRowView: View {
                     .font(.system(size: 9))
                     .foregroundColor(.secondary)
             }
-            .frame(width: 140, alignment: .leading)
+            .frame(minWidth: 160, alignment: .leading)
             
             Spacer()
             
@@ -298,34 +339,29 @@ struct TaskRowView: View {
                 .foregroundColor(.secondary)
                 .frame(width: 70, alignment: .trailing)
             
-            // Kill Action Button ("Abschießen")
+            // Kill Action Button (Kompaktes X statt redundantem Text)
             Group {
                 if isJustKilled {
-                    Text("Beendet!")
-                        .font(.system(size: 10, weight: .bold))
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.system(size: 13, weight: .bold))
                         .foregroundColor(.green)
-                        .frame(width: 65, alignment: .trailing)
+                        .frame(width: 22, height: 22)
                 } else {
                     Button(action: onKill) {
-                        HStack(spacing: 3) {
-                            Image(systemName: "xmark")
-                                .font(.system(size: 9, weight: .bold))
-                            Text("Beenden")
-                                .font(.system(size: 10, weight: .semibold))
-                        }
-                        .padding(.horizontal, 6)
-                        .padding(.vertical, 3)
-                        .background(
-                            RoundedRectangle(cornerRadius: 4)
-                                .fill(isHovered ? Color.red.opacity(0.85) : Color.red.opacity(0.15))
-                        )
-                        .foregroundColor(isHovered ? .white : .red)
+                        Image(systemName: "xmark")
+                            .font(.system(size: 9, weight: .bold))
+                            .foregroundColor(isHovered ? .white : .red.opacity(0.9))
+                            .frame(width: 20, height: 20)
+                            .background(
+                                Circle()
+                                    .fill(isHovered ? Color.red : Color.red.opacity(0.15))
+                            )
                     }
                     .buttonStyle(.plain)
-                    .help("Prozess sofort abschießen (PID \(item.pid))")
-                    .frame(width: 70, alignment: .trailing)
+                    .help("Prozess '\(item.name)' (PID \(item.pid)) sofort beenden")
                 }
             }
+            .frame(width: 40, alignment: .trailing)
         }
         .padding(.horizontal, 8)
         .padding(.vertical, 4)
