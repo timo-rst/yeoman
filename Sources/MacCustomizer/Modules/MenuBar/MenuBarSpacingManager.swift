@@ -77,8 +77,16 @@ public final class MenuBarSpacingManager: ObservableObject {
                 self.restartControlCenterProcess()
             }
             
+            DistributedNotificationCenter.default().postNotificationName(
+                NSNotification.Name("com.apple.controlcenter.itemchanged"),
+                object: nil,
+                userInfo: nil,
+                deliverImmediately: true
+            )
+            
             DispatchQueue.main.async {
                 self.isApplying = false
+                self.refreshOwnStatusItems()
             }
         }
     }
@@ -94,10 +102,23 @@ public final class MenuBarSpacingManager: ObservableObject {
             self.deleteKeys()
             self.restartControlCenterProcess()
             
+            DistributedNotificationCenter.default().postNotificationName(
+                NSNotification.Name("com.apple.controlcenter.itemchanged"),
+                object: nil,
+                userInfo: nil,
+                deliverImmediately: true
+            )
+            
             DispatchQueue.main.async {
                 self.isApplying = false
+                self.refreshOwnStatusItems()
             }
         }
+    }
+    
+    private func refreshOwnStatusItems() {
+        ModuleManager.shared.systemStatsModule.updateStatusItemLength()
+        StatusItemController.shared.updateStatusItemVisibility()
     }
     
     public func restartControlCenter() {

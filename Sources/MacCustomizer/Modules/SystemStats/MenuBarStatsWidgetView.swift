@@ -10,6 +10,7 @@ public struct StatsWidgetWidthKey: PreferenceKey {
 public struct MenuBarStatsWidgetView: View {
     @ObservedObject var provider = SystemMetricsProvider.shared
     @ObservedObject var module = ModuleManager.shared.systemStatsModule
+    @ObservedObject var spacingManager = MenuBarSpacingManager.shared
     public let isLiveMenuBar: Bool
     
     public init(isLiveMenuBar: Bool = false) {
@@ -33,7 +34,7 @@ public struct MenuBarStatsWidgetView: View {
                 .padding(.horizontal, 4)
                 .frame(height: 22)
             } else {
-                HStack(spacing: module.useSubtleBackground ? 5 : 4) {
+                HStack(spacing: CGFloat(max(2, spacingManager.currentSpacing))) {
                     // CPU
                     if module.showCPU {
                         CompactMetricItemView(

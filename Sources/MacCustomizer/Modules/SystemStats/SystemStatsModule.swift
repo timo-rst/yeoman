@@ -1,5 +1,6 @@
 import SwiftUI
 import AppKit
+import Combine
 
 public enum StatsLayoutMode: String, CaseIterable, Codable {
     case vertical = "Vertikal gestapelt (wie Stats)"
@@ -94,6 +95,7 @@ public final class SystemStatsModule: NSObject, CustomizerModule, ObservableObje
     
     private var statusItem: NSStatusItem?
     private var popover: NSPopover?
+    private var spacingCancellable: AnyCancellable?
     
     public override init() {
         self.isEnabled = UserDefaults.standard.object(forKey: "system_stats_is_enabled") as? Bool ?? true
@@ -122,6 +124,13 @@ public final class SystemStatsModule: NSObject, CustomizerModule, ObservableObje
         self.useSubtleBackground = UserDefaults.standard.object(forKey: "stats_use_subtle_background") as? Bool ?? false
         
         super.init()
+        
+        // Dynamically adjust status item length when menu bar spacing changes
+        self.spacingCancellable = MenuBarSpacingManager.shared.$currentSpacing
+            .receive(on: RunLoop.main)
+            .sink { [weak self] _ in
+                self?.updateStatusItemLength()
+            }
         
         // Listen for system / window / space changes to automatically recover status item if needed
         NotificationCenter.default.addObserver(self, selector: #selector(handleEnvironmentChange), name: NSApplication.didBecomeActiveNotification, object: nil)
@@ -162,7 +171,7 @@ public final class SystemStatsModule: NSObject, CustomizerModule, ObservableObje
             return showLabels ? 46.0 : 24.0
         }
         
-        let interItemSpacing: CGFloat = useSubtleBackground ? 5.0 : 4.0
+        let interItemSpacing: CGFloat = CGFloat(max(2, MenuBarSpacingManager.shared.currentSpacing))
         let paddingPerItem: CGFloat = useSubtleBackground ? 8.0 : 4.0
         let outerPadding: CGFloat = 4.0
         
