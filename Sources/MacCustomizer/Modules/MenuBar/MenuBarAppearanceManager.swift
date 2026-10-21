@@ -115,6 +115,15 @@ final class MenuBarOverlayPanel: NSPanel {
     override var canBecomeMain: Bool { false }
 }
 
+@_silgen_name("CGSMainConnectionID")
+private func CGSMainConnectionID() -> Int32
+
+@_silgen_name("CGSGetActiveSpace")
+private func CGSGetActiveSpace(_ cid: Int32) -> size_t
+
+@_silgen_name("CGSSpaceGetType")
+private func CGSSpaceGetType(_ cid: Int32, _ space: size_t) -> Int32
+
 public final class MenuBarAppearanceManager: ObservableObject {
     public static let shared = MenuBarAppearanceManager()
     
@@ -227,32 +236,37 @@ public final class MenuBarAppearanceManager: ObservableObject {
             }
             .store(in: &cancellables)
             
-        // Keep overlay panels visible when user switches Spaces / Desktops
+        // React immediately when user switches Spaces / Desktops / Fullscreen
         NSWorkspace.shared.notificationCenter.publisher(for: NSWorkspace.activeSpaceDidChangeNotification)
             .receive(on: DispatchQueue.main)
             .sink { [weak self] _ in
-                guard let self = self, self.isEnabled else { return }
-                for panel in self.overlayPanels {
-                    panel.orderFrontRegardless()
-                }
+                self?.updateVisibilityForCurrentState()
             }
             .store(in: &cancellables)
             
-        // Listen to active application changes to adapt left menu capsule smoothly
+        // Monitor macOS System Presentation Options (hideMenuBar, autoHideMenuBar in fullscreen / presentation)
+        NSApp.publisher(for: \.currentSystemPresentationOptions)
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] _ in
+                self?.updateVisibilityForCurrentState()
+            }
+            .store(in: &cancellables)
+            
+        // Listen to active application changes to adapt visibility or capsule size
         NSWorkspace.shared.notificationCenter.publisher(for: NSWorkspace.didActivateApplicationNotification)
             .receive(on: DispatchQueue.main)
             .sink { [weak self] _ in
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.08) {
-                    self?.updateDynamicMetrics()
+                    self?.updateVisibilityForCurrentState()
                 }
             }
             .store(in: &cancellables)
             
-        // Periodic lightweight polling (1.2s) to adapt right status capsule when items appear/disappear
-        Timer.publish(every: 1.2, on: .main, in: .common)
+        // Periodic lightweight check (0.8s) to guarantee fast response to fullscreen changes and status icons
+        Timer.publish(every: 0.8, on: .main, in: .common)
             .autoconnect()
             .sink { [weak self] _ in
-                self?.updateDynamicMetrics()
+                self?.updateVisibilityForCurrentState()
             }
             .store(in: &cancellables)
             
@@ -260,6 +274,68 @@ public final class MenuBarAppearanceManager: ObservableObject {
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
                 self.updateOverlayPanels()
             }
+        }
+    }
+    
+    public var isCurrentSpaceFullscreen: Bool {
+        let cid = CGSMainConnectionID()
+        let space = CGSGetActiveSpace(cid)
+        return CGSSpaceGetType(cid, space) == 4
+    }
+    
+    public var isMenuBarHiddenBySystem: Bool {
+        let options = NSApp.currentSystemPresentationOptions
+        return options.contains(.hideMenuBar) || options.contains(.autoHideMenuBar)
+    }
+    
+    public var isFullScreenWindowActive: Bool {
+        guard let screen = NSScreen.main else { return false }
+        let sFrame = screen.frame
+        let options: CGWindowListOption = [.optionOnScreenOnly, .excludeDesktopElements]
+        guard let list = CGWindowListCopyWindowInfo(options, kCGNullWindowID) as? [[String: Any]] else { return false }
+        for w in list {
+            let layer = w[kCGWindowLayer as String] as? Int ?? -1
+            let owner = w[kCGWindowOwnerName as String] as? String ?? ""
+            if owner == "Window Server" || owner == "MacCustomizer" || owner == "de.trst.MacCustomizer" || owner == "Dock" {
+                continue
+            }
+            if layer == 0 {
+                let b = w[kCGWindowBounds as String] as? [String: CGFloat] ?? [:]
+                let wVal = b["Width"] ?? 0
+                let hVal = b["Height"] ?? 0
+                let yVal = b["Y"] ?? 999
+                if yVal <= 0 && wVal >= sFrame.width && hVal >= sFrame.height {
+                    return true
+                }
+            }
+        }
+        return false
+    }
+    
+    public var shouldShowOverlay: Bool {
+        guard isEnabled else { return false }
+        if isCurrentSpaceFullscreen { return false }
+        if isMenuBarHiddenBySystem { return false }
+        if isFullScreenWindowActive { return false }
+        return true
+    }
+    
+    public func updateVisibilityForCurrentState() {
+        let show = shouldShowOverlay
+        for panel in overlayPanels {
+            if show {
+                if panel.alphaValue < 1.0 {
+                    panel.animator().alphaValue = 1.0
+                }
+                panel.orderFrontRegardless()
+            } else {
+                if panel.alphaValue > 0.0 {
+                    panel.animator().alphaValue = 0.0
+                }
+            }
+        }
+        if show && shape == .split {
+            updateDynamicMetrics()
         }
     }
     
@@ -387,13 +463,21 @@ public final class MenuBarAppearanceManager: ObservableObject {
         
         guard isEnabled else { return }
         
+        let show = shouldShowOverlay
         for screen in NSScreen.screens {
             let panel = createOverlayPanel(for: screen)
-            panel.orderFrontRegardless()
+            if show {
+                panel.alphaValue = 1.0
+                panel.orderFrontRegardless()
+            } else {
+                panel.alphaValue = 0.0
+            }
             overlayPanels.append(panel)
         }
         
-        updateDynamicMetrics()
+        if show {
+            updateDynamicMetrics()
+        }
     }
     
     private func createOverlayPanel(for screen: NSScreen) -> MenuBarOverlayPanel {
@@ -424,7 +508,8 @@ public final class MenuBarAppearanceManager: ObservableObject {
         // but strictly behind status items (Layer 25) and application menus (Layer 26).
         // This ensures the custom styling acts as the actual background behind icons and text!
         panel.level = .mainMenu
-        panel.collectionBehavior = [.canJoinAllSpaces, .stationary, .ignoresCycle, .fullScreenAuxiliary]
+        // Use .fullScreenNone so the overlay is automatically excluded by WindowServer from fullscreen spaces (e.g. video livestreams, games, presentation modes)
+        panel.collectionBehavior = [.fullScreenNone, .ignoresCycle, .moveToActiveSpace]
         panel.backgroundColor = .clear
         panel.isOpaque = false
         panel.hasShadow = false
