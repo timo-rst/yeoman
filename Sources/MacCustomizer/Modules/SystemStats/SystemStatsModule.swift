@@ -216,9 +216,6 @@ public final class SystemStatsModule: NSObject, CustomizerModule, ObservableObje
         DispatchQueue.main.async {
             if abs(item.length - targetLength) > 0.5 {
                 item.length = targetLength
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                    MenuBarAppearanceManager.shared.updateDynamicMetrics()
-                }
             }
         }
     }

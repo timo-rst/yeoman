@@ -38,7 +38,6 @@ public final class MenuBarModule: NSObject, CustomizerModule, ObservableObject {
         guard isEnabled else { return }
         _ = MenuBarSpacingManager.shared
         _ = DisplayManager.shared
-        _ = MenuBarAppearanceManager.shared
         updateStatusItemVisibility()
     }
     

@@ -2,7 +2,6 @@ import SwiftUI
 
 public enum MenuBarSubTab: String, CaseIterable, Identifiable {
     case items = "Icons & Sichtbarkeit"
-    case appearance = "Design & Hintergrund"
     case spacing = "Abstände (Ice)"
     
     public var id: String { rawValue }
@@ -10,7 +9,6 @@ public enum MenuBarSubTab: String, CaseIterable, Identifiable {
     public var iconName: String {
         switch self {
         case .items: return "list.bullet.rectangle"
-        case .appearance: return "paintpalette"
         case .spacing: return "arrow.left.and.line.vertical.and.arrow.right"
         }
     }
@@ -33,7 +31,7 @@ public struct MenuBarSettingsView: View {
                         Text("Menüleisten-Optimizer (Ice-Modul)")
                             .font(.title2)
                             .fontWeight(.bold)
-                        Text("Verwalte Icons, visuelles Design, Transparenz und Menüleisten-Abstände.")
+                        Text("Verwalte Icons, Sichtbarkeit und Menüleisten-Abstände.")
                             .font(.subheadline)
                             .foregroundColor(.secondary)
                     }
@@ -62,8 +60,6 @@ public struct MenuBarSettingsView: View {
                 switch selectedSubTab {
                 case .items:
                     MenuBarItemsView()
-                case .appearance:
-                    MenuBarAppearanceView()
                 case .spacing:
                     MenuBarSpacingSectionView(module: module)
                 }
