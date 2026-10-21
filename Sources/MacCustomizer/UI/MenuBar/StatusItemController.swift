@@ -188,16 +188,25 @@ public final class StatusItemController: NSObject, NSMenuDelegate {
     @objc public func openSettingsWindow() {
         if settingsWindow == nil {
             let window = NSWindow(
-                contentRect: NSRect(x: 0, y: 0, width: 750, height: 550),
+                contentRect: NSRect(x: 0, y: 0, width: 920, height: 640),
                 styleMask: [.titled, .closable, .miniaturizable, .resizable],
                 backing: .buffered,
                 defer: false
             )
             window.title = "MacCustomizer Einstellungen"
+            window.minSize = NSSize(width: 880, height: 600)
             window.contentView = NSHostingView(rootView: SettingsView())
             window.center()
             window.isReleasedWhenClosed = false
             self.settingsWindow = window
+        } else if let window = settingsWindow {
+            window.minSize = NSSize(width: 880, height: 600)
+            if window.frame.width < 880 || window.frame.height < 600 {
+                var frame = window.frame
+                frame.size.width = max(frame.size.width, 880)
+                frame.size.height = max(frame.size.height, 600)
+                window.setFrame(frame, display: true, animate: true)
+            }
         }
         settingsWindow?.orderFrontRegardless()
         settingsWindow?.makeKeyAndOrderFront(nil)

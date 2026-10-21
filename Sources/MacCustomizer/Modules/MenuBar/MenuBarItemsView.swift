@@ -43,7 +43,7 @@ public struct MenuBarItemsView: View {
                         }) {
                             HStack(spacing: 4) {
                                 Image(systemName: "gearshape")
-                                Text("macOS Kontrollzentrum...")
+                                Text("Kontrollzentrum...")
                             }
                         }
                         .buttonStyle(.bordered)
@@ -61,7 +61,7 @@ public struct MenuBarItemsView: View {
                     .pickerStyle(.segmented)
                     .fixedSize(horizontal: true, vertical: false)
                     
-                    Spacer()
+                    Spacer(minLength: 12)
                     
                     // Compact, native-feeling search bar
                     HStack(spacing: 6) {
@@ -84,7 +84,7 @@ public struct MenuBarItemsView: View {
                     }
                     .padding(.horizontal, 8)
                     .padding(.vertical, 5)
-                    .frame(width: 200, height: 28)
+                    .frame(width: 180, height: 28)
                     .background(
                         RoundedRectangle(cornerRadius: 7)
                             .fill(Color(nsColor: .controlBackgroundColor))
