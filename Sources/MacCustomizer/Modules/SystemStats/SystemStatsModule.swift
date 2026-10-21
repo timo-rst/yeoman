@@ -242,7 +242,15 @@ public final class SystemStatsModule: NSObject, CustomizerModule, ObservableObje
         }
     }
     
-    private func setupStatusItem() {
+    public func recreateStatusItem() {
+        removeStatusItem()
+        if isEnabled && showsDedicatedStatusItem {
+            setupStatusItem()
+        }
+    }
+    
+    public func setupStatusItem() {
+        guard isEnabled && showsDedicatedStatusItem else { return }
         if let existing = statusItem {
             if existing.button?.window != nil && !(existing.button?.subviews.isEmpty ?? true) {
                 updateStatusItemLength()
@@ -269,7 +277,7 @@ public final class SystemStatsModule: NSObject, CustomizerModule, ObservableObje
         self.statusItem = item
     }
     
-    private func removeStatusItem() {
+    public func removeStatusItem() {
         if let item = statusItem {
             NSStatusBar.system.removeStatusItem(item)
             statusItem = nil

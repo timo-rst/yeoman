@@ -35,6 +35,20 @@ public final class StatusItemController: NSObject, NSMenuDelegate {
         updateMenu()
     }
     
+    public func removeStatusItem() {
+        if let item = statusItem {
+            NSStatusBar.system.removeStatusItem(item)
+            statusItem = nil
+        }
+    }
+    
+    public func recreateStatusItem() {
+        removeStatusItem()
+        if showsMainStatusItem {
+            setup()
+        }
+    }
+    
     public func updateStatusItemVisibility() {
         if showsMainStatusItem {
             if statusItem == nil {

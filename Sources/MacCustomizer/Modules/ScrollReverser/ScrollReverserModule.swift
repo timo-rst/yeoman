@@ -56,8 +56,16 @@ public final class ScrollReverserModule: NSObject, CustomizerModule, ObservableO
         }
     }
     
-    private func setupStatusItem() {
+    public func recreateStatusItem() {
+        removeStatusItem()
+        if isEnabled && showsDedicatedStatusItem {
+            setupStatusItem()
+        }
+    }
+    
+    public func setupStatusItem() {
         guard statusItem == nil else { return }
+        guard isEnabled && showsDedicatedStatusItem else { return }
         let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         
         if let button = item.button {
@@ -94,7 +102,7 @@ public final class ScrollReverserModule: NSObject, CustomizerModule, ObservableO
         self.statusItem = item
     }
     
-    private func removeStatusItem() {
+    public func removeStatusItem() {
         if let item = statusItem {
             NSStatusBar.system.removeStatusItem(item)
             statusItem = nil

@@ -27,6 +27,9 @@ public final class MenuBarSpacingManager: ObservableObject {
     public init() {
         self.autoRestartControlCenter = UserDefaults.standard.object(forKey: "spacing_auto_restart_cc") as? Bool ?? true
         readCurrentPreferences()
+        if currentSpacing != 16 || currentSelectionPadding != 16 {
+            applyInProcessPreferences(spacing: currentSpacing, padding: currentSelectionPadding)
+        }
     }
     
     public func setAutoRestart(_ enabled: Bool) {
@@ -37,11 +40,15 @@ public final class MenuBarSpacingManager: ObservableObject {
     public func readCurrentPreferences() {
         if let val = getGlobalInt(key: spacingKey) {
             self.currentSpacing = val
+        } else if let localVal = UserDefaults.standard.object(forKey: spacingKey) as? Int {
+            self.currentSpacing = localVal
         } else {
             self.currentSpacing = 16
         }
         if let val = getGlobalInt(key: paddingKey) {
             self.currentSelectionPadding = val
+        } else if let localVal = UserDefaults.standard.object(forKey: paddingKey) as? Int {
+            self.currentSelectionPadding = localVal
         } else {
             self.currentSelectionPadding = 16
         }
@@ -60,7 +67,7 @@ public final class MenuBarSpacingManager: ObservableObject {
         
         debounceTimer?.cancel()
         debounceTimer = Just(())
-            .delay(for: .milliseconds(450), scheduler: RunLoop.main)
+            .delay(for: .milliseconds(350), scheduler: RunLoop.main)
             .sink { [weak self] in
                 guard let self = self else { return }
                 self.commitSpacing(spacing: spacing, selectionPadding: selectionPadding, restartNow: self.autoRestartControlCenter)
@@ -69,6 +76,14 @@ public final class MenuBarSpacingManager: ObservableObject {
     
     public func commitSpacing(spacing: Int, selectionPadding: Int, restartNow: Bool) {
         isApplying = true
+        
+        // 1. Immediately apply to in-process CFPreferences and UserDefaults
+        applyInProcessPreferences(spacing: spacing, padding: selectionPadding)
+        
+        // 2. Immediately recreate all MacCustomizer menu bar status items live
+        ModuleManager.shared.recreateAllStatusItems()
+        
+        // 3. Persist system-wide and reload ControlCenter in background
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
             guard let self = self else { return }
             self.writeKeys(spacing: spacing, padding: selectionPadding)
@@ -86,7 +101,6 @@ public final class MenuBarSpacingManager: ObservableObject {
             
             DispatchQueue.main.async {
                 self.isApplying = false
-                self.refreshOwnStatusItems()
             }
         }
     }
@@ -97,6 +111,13 @@ public final class MenuBarSpacingManager: ObservableObject {
         self.currentSelectionPadding = 16
         isApplying = true
         
+        // 1. Clear in-process CFPreferences and UserDefaults immediately
+        clearInProcessPreferences()
+        
+        // 2. Immediately recreate all MacCustomizer menu bar status items
+        ModuleManager.shared.recreateAllStatusItems()
+        
+        // 3. Clear system-wide defaults and reload ControlCenter
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
             guard let self = self else { return }
             self.deleteKeys()
@@ -111,14 +132,57 @@ public final class MenuBarSpacingManager: ObservableObject {
             
             DispatchQueue.main.async {
                 self.isApplying = false
-                self.refreshOwnStatusItems()
             }
         }
     }
     
-    private func refreshOwnStatusItems() {
-        ModuleManager.shared.systemStatsModule.updateStatusItemLength()
-        StatusItemController.shared.updateStatusItemVisibility()
+    private func applyInProcessPreferences(spacing: Int, padding: Int) {
+        let cfSpacing = spacing as CFNumber
+        let cfPadding = padding as CFNumber
+        
+        CFPreferencesSetValue(spacingKey as CFString, cfSpacing, kCFPreferencesAnyApplication, kCFPreferencesCurrentUser, kCFPreferencesCurrentHost)
+        CFPreferencesSetValue(paddingKey as CFString, cfPadding, kCFPreferencesAnyApplication, kCFPreferencesCurrentUser, kCFPreferencesCurrentHost)
+        
+        CFPreferencesSetValue(spacingKey as CFString, cfSpacing, kCFPreferencesAnyApplication, kCFPreferencesCurrentUser, kCFPreferencesAnyHost)
+        CFPreferencesSetValue(paddingKey as CFString, cfPadding, kCFPreferencesAnyApplication, kCFPreferencesCurrentUser, kCFPreferencesAnyHost)
+        
+        CFPreferencesSetValue(spacingKey as CFString, cfSpacing, kCFPreferencesCurrentApplication, kCFPreferencesCurrentUser, kCFPreferencesCurrentHost)
+        CFPreferencesSetValue(paddingKey as CFString, cfPadding, kCFPreferencesCurrentApplication, kCFPreferencesCurrentUser, kCFPreferencesCurrentHost)
+        
+        CFPreferencesSetValue(spacingKey as CFString, cfSpacing, kCFPreferencesCurrentApplication, kCFPreferencesCurrentUser, kCFPreferencesAnyHost)
+        CFPreferencesSetValue(paddingKey as CFString, cfPadding, kCFPreferencesCurrentApplication, kCFPreferencesCurrentUser, kCFPreferencesAnyHost)
+        
+        CFPreferencesSynchronize(kCFPreferencesAnyApplication, kCFPreferencesCurrentUser, kCFPreferencesCurrentHost)
+        CFPreferencesSynchronize(kCFPreferencesAnyApplication, kCFPreferencesCurrentUser, kCFPreferencesAnyHost)
+        CFPreferencesSynchronize(kCFPreferencesCurrentApplication, kCFPreferencesCurrentUser, kCFPreferencesCurrentHost)
+        CFPreferencesSynchronize(kCFPreferencesCurrentApplication, kCFPreferencesCurrentUser, kCFPreferencesAnyHost)
+        
+        UserDefaults.standard.set(spacing, forKey: spacingKey)
+        UserDefaults.standard.set(padding, forKey: paddingKey)
+        UserDefaults.standard.synchronize()
+    }
+    
+    private func clearInProcessPreferences() {
+        CFPreferencesSetValue(spacingKey as CFString, nil, kCFPreferencesAnyApplication, kCFPreferencesCurrentUser, kCFPreferencesCurrentHost)
+        CFPreferencesSetValue(paddingKey as CFString, nil, kCFPreferencesAnyApplication, kCFPreferencesCurrentUser, kCFPreferencesCurrentHost)
+        
+        CFPreferencesSetValue(spacingKey as CFString, nil, kCFPreferencesAnyApplication, kCFPreferencesCurrentUser, kCFPreferencesAnyHost)
+        CFPreferencesSetValue(paddingKey as CFString, nil, kCFPreferencesAnyApplication, kCFPreferencesCurrentUser, kCFPreferencesAnyHost)
+        
+        CFPreferencesSetValue(spacingKey as CFString, nil, kCFPreferencesCurrentApplication, kCFPreferencesCurrentUser, kCFPreferencesCurrentHost)
+        CFPreferencesSetValue(paddingKey as CFString, nil, kCFPreferencesCurrentApplication, kCFPreferencesCurrentUser, kCFPreferencesCurrentHost)
+        
+        CFPreferencesSetValue(spacingKey as CFString, nil, kCFPreferencesCurrentApplication, kCFPreferencesCurrentUser, kCFPreferencesAnyHost)
+        CFPreferencesSetValue(paddingKey as CFString, nil, kCFPreferencesCurrentApplication, kCFPreferencesCurrentUser, kCFPreferencesAnyHost)
+        
+        CFPreferencesSynchronize(kCFPreferencesAnyApplication, kCFPreferencesCurrentUser, kCFPreferencesCurrentHost)
+        CFPreferencesSynchronize(kCFPreferencesAnyApplication, kCFPreferencesCurrentUser, kCFPreferencesAnyHost)
+        CFPreferencesSynchronize(kCFPreferencesCurrentApplication, kCFPreferencesCurrentUser, kCFPreferencesCurrentHost)
+        CFPreferencesSynchronize(kCFPreferencesCurrentApplication, kCFPreferencesCurrentUser, kCFPreferencesAnyHost)
+        
+        UserDefaults.standard.removeObject(forKey: spacingKey)
+        UserDefaults.standard.removeObject(forKey: paddingKey)
+        UserDefaults.standard.synchronize()
     }
     
     public func restartControlCenter() {

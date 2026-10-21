@@ -58,4 +58,31 @@ public final class ModuleManager: ObservableObject {
         scrollReverserModule.updateStatusItemVisibility()
         StatusItemController.shared.updateStatusItemVisibility()
     }
+    
+    public func recreateAllStatusItems() {
+        DispatchQueue.main.async { [weak self] in
+            guard let self = self else { return }
+            // 1. Remove all status items from menu bar
+            self.systemStatsModule.removeStatusItem()
+            self.scrollReverserModule.removeStatusItem()
+            self.clipboardModule.removeStatusItem()
+            self.webPanelModule.removeAllStatusItems()
+            self.menuBarModule.removeStatusItem()
+            StatusItemController.shared.removeStatusItem()
+            
+            // 2. Recreate from right to left (macOS inserts each new status item to the left of existing ones)
+            // Far right: System Stats (CPU, RAM, GPU)
+            self.systemStatsModule.setupStatusItem()
+            // Next: Scroll Reverser
+            self.scrollReverserModule.setupStatusItem()
+            // Next: Clipboard (Clippy)
+            self.clipboardModule.setupStatusItem()
+            // Next: Web Widgets (iframes)
+            self.webPanelModule.recreateStatusItems()
+            // Next: Menu Bar spacing quick-picker (if enabled)
+            self.menuBarModule.setupStatusItem()
+            // Leftmost: Main MacCustomizer launcher
+            StatusItemController.shared.setup()
+        }
+    }
 }

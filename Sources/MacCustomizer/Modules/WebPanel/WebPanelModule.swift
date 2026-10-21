@@ -269,6 +269,30 @@ public final class WebPanelModule: NSObject, CustomizerModule, ObservableObject 
         instanceControllers[id]?.openPopover()
     }
     
+    public func removeAllStatusItems() {
+        for controller in instanceControllers.values {
+            controller.removeStatusItem()
+        }
+    }
+    
+    public func recreateStatusItems() {
+        // First remove all status items
+        removeAllStatusItems()
+        
+        // Recreate in reverse order so the first widget appears on the left
+        for widget in widgets.reversed() {
+            if isEnabled && showsDedicatedStatusItem && widget.isEnabled {
+                if let controller = instanceControllers[widget.id] {
+                    controller.setup()
+                } else {
+                    let controller = WebWidgetInstanceController(item: widget, module: self)
+                    controller.setup()
+                    instanceControllers[widget.id] = controller
+                }
+            }
+        }
+    }
+    
     public func settingsView() -> AnyView {
         AnyView(WebPanelSettingsView(module: self))
     }
@@ -329,6 +353,23 @@ public final class WebWidgetInstanceController: NSObject, ObservableObject {
             let img = NSImage(systemSymbolName: item.iconName, accessibilityDescription: item.title)
             img?.isTemplate = true
             button.image = img
+        }
+    }
+    
+    public func removeStatusItem() {
+        if let s = statusItem {
+            NSStatusBar.system.removeStatusItem(s)
+            statusItem = nil
+        }
+        if let popover = popover, popover.isShown {
+            popover.performClose(nil)
+        }
+    }
+    
+    public func recreateStatusItem() {
+        removeStatusItem()
+        if module?.isEnabled == true && module?.showsDedicatedStatusItem == true && item.isEnabled {
+            setup()
         }
     }
     

@@ -26,7 +26,7 @@ public enum SettingsTab: String, CaseIterable, Identifiable {
 
 public struct SettingsView: View {
     @ObservedObject var moduleManager = ModuleManager.shared
-    @State private var selectedTab: SettingsTab = .menuBar
+    @State private var selectedTab: SettingsTab? = .menuBar
     
     public init() {}
     
@@ -57,7 +57,7 @@ public struct SettingsView: View {
             .listStyle(.sidebar)
             .navigationSplitViewColumnWidth(min: 220, ideal: 240, max: 280)
         } detail: {
-            switch selectedTab {
+            switch selectedTab ?? .menuBar {
             case .general:
                 GeneralSettingsView()
             case .menuBar:

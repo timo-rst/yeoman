@@ -56,8 +56,16 @@ public final class MenuBarModule: NSObject, CustomizerModule, ObservableObject {
         }
     }
     
-    private func setupStatusItem() {
+    public func recreateStatusItem() {
+        removeStatusItem()
+        if isEnabled && showsDedicatedStatusItem {
+            setupStatusItem()
+        }
+    }
+    
+    public func setupStatusItem() {
         guard statusItem == nil else { return }
+        guard isEnabled && showsDedicatedStatusItem else { return }
         let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         if let button = item.button {
             let image = NSImage(systemSymbolName: "arrow.left.and.line.vertical.and.arrow.right", accessibilityDescription: "Menüleisten-Abstand")
@@ -91,7 +99,7 @@ public final class MenuBarModule: NSObject, CustomizerModule, ObservableObject {
         self.statusItem = item
     }
     
-    private func removeStatusItem() {
+    public func removeStatusItem() {
         if let item = statusItem {
             NSStatusBar.system.removeStatusItem(item)
             statusItem = nil
