@@ -2,7 +2,7 @@ import SwiftUI
 import AppKit
 import WebKit
 
-public final class WebPanelController: ObservableObject {
+public final class WebPanelController: NSObject, ObservableObject, WKNavigationDelegate, WKUIDelegate {
     @Published public var currentURL: String = ""
     @Published public var isLoading: Bool = false
     @Published public var canGoBack: Bool = false
@@ -14,7 +14,9 @@ public final class WebPanelController: ObservableObject {
     public var homeURL: String
     public var associatedItem: WebWidgetItem? = nil
     
-    weak var webView: WKWebView?
+    // Persistent preloaded WKWebView instance
+    public private(set) var webView: WKWebView!
+    private var hasPreloaded = false
     
     // User Agents
     public static let iPhoneUserAgent = "Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1"
@@ -26,6 +28,47 @@ public final class WebPanelController: ObservableObject {
         self.userAgentMode = userAgentMode
         self.targetWidth = targetWidth
         self.zoomScale = zoomScale
+        super.init()
+        
+        setupWebView()
+        preload()
+    }
+    
+    private func setupWebView() {
+        let config = WKWebViewConfiguration()
+        config.websiteDataStore = WKWebsiteDataStore.default()
+        
+        let prefs = WKWebpagePreferences()
+        prefs.allowsContentJavaScript = true
+        config.defaultWebpagePreferences = prefs
+        config.preferences.javaScriptCanOpenWindowsAutomatically = true
+        config.preferences.isElementFullscreenEnabled = true
+        
+        // Inject responsive viewport script so web content scales properly to widget bounds
+        let viewportScript = """
+        var meta = document.querySelector('meta[name="viewport"]');
+        if (!meta) {
+            meta = document.createElement('meta');
+            meta.name = 'viewport';
+            document.getElementsByTagName('head')[0].appendChild(meta);
+        }
+        meta.content = 'width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes';
+        """
+        let userScript = WKUserScript(source: viewportScript, injectionTime: .atDocumentEnd, forMainFrameOnly: true)
+        config.userContentController.addUserScript(userScript)
+        
+        let wv = WKWebView(frame: NSRect(x: 0, y: 0, width: targetWidth, height: 400), configuration: config)
+        wv.navigationDelegate = self
+        wv.uiDelegate = self
+        wv.customUserAgent = resolvedUserAgent()
+        wv.pageZoom = CGFloat(zoomScale)
+        self.webView = wv
+    }
+    
+    public func preload() {
+        guard !hasPreloaded else { return }
+        hasPreloaded = true
+        loadURL(homeURL)
     }
     
     public func updateConfig(userAgentMode: WebUserAgentMode, targetWidth: CGFloat, zoomScale: Double = 1.0, newURL: String? = nil) {
@@ -52,7 +95,8 @@ public final class WebPanelController: ObservableObject {
         let str = urlString ?? currentURL
         guard let url = URL(string: str.hasPrefix("http") ? str : "https://" + str) else { return }
         currentURL = url.absoluteString
-        let request = URLRequest(url: url)
+        var request = URLRequest(url: url, cachePolicy: .useProtocolCachePolicy, timeoutInterval: 30.0)
+        request.attribution = .developer
         webView?.load(request)
     }
     
@@ -70,6 +114,10 @@ public final class WebPanelController: ObservableObject {
     
     public func goHome() {
         loadURL(homeURL)
+    }
+    
+    public func stopLoading() {
+        webView?.stopLoading()
     }
     
     public func resolvedUserAgent() -> String {
@@ -95,84 +143,68 @@ public final class WebPanelController: ObservableObject {
     public func applyUserAgent(to wv: WKWebView) {
         wv.customUserAgent = resolvedUserAgent()
     }
+    
+    // MARK: - WKNavigationDelegate
+    
+    public func webView(_ webView: WKWebView, didStartProvisionalNavigation navigation: WKNavigation!) {
+        DispatchQueue.main.async { [weak self] in
+            self?.isLoading = true
+        }
+    }
+    
+    public func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
+        DispatchQueue.main.async { [weak self] in
+            guard let self = self else { return }
+            self.isLoading = false
+            self.canGoBack = webView.canGoBack
+            self.canGoForward = webView.canGoForward
+            if let url = webView.url?.absoluteString {
+                self.currentURL = url
+            }
+            webView.pageZoom = CGFloat(self.zoomScale)
+            
+            if let item = self.associatedItem, item.useFavicon {
+                WebFaviconManager.shared.extractFaviconFromWebView(webView, for: item)
+            }
+        }
+    }
+    
+    public func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) {
+        DispatchQueue.main.async { [weak self] in
+            self?.isLoading = false
+        }
+    }
+    
+    public func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) {
+        DispatchQueue.main.async { [weak self] in
+            self?.isLoading = false
+        }
+    }
+    
+    // MARK: - WKUIDelegate
+    
+    public func webView(_ webView: WKWebView, createWebViewWith configuration: WKWebViewConfiguration, for navigationAction: WKNavigationAction, windowFeatures: WKWindowFeatures) -> WKWebView? {
+        if navigationAction.targetFrame == nil {
+            webView.load(navigationAction.request)
+        }
+        return nil
+    }
 }
 
 public struct WebViewRepresentable: NSViewRepresentable {
     @ObservedObject var controller: WebPanelController
     
     public func makeNSView(context: Context) -> WKWebView {
-        let config = WKWebViewConfiguration()
-        config.websiteDataStore = WKWebsiteDataStore.default()
-        
-        // Inject responsive viewport script so web content scales properly to widget bounds
-        let viewportScript = """
-        var meta = document.querySelector('meta[name="viewport"]');
-        if (!meta) {
-            meta = document.createElement('meta');
-            meta.name = 'viewport';
-            document.getElementsByTagName('head')[0].appendChild(meta);
+        let wv = controller.webView!
+        if wv.superview != nil {
+            wv.removeFromSuperview()
         }
-        meta.content = 'width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes';
-        """
-        let userScript = WKUserScript(source: viewportScript, injectionTime: .atDocumentEnd, forMainFrameOnly: true)
-        config.userContentController.addUserScript(userScript)
-        
-        let webView = WKWebView(frame: .zero, configuration: config)
-        webView.navigationDelegate = context.coordinator
-        controller.webView = webView
-        
-        controller.applyUserAgent(to: webView)
-        webView.pageZoom = CGFloat(controller.zoomScale)
-        controller.loadURL()
-        
-        return webView
+        return wv
     }
     
     public func updateNSView(_ nsView: WKWebView, context: Context) {
         if abs(nsView.pageZoom - CGFloat(controller.zoomScale)) > 0.01 {
             nsView.pageZoom = CGFloat(controller.zoomScale)
-        }
-    }
-    
-    public func makeCoordinator() -> Coordinator {
-        Coordinator(controller: controller)
-    }
-    
-    public class Coordinator: NSObject, WKNavigationDelegate {
-        var controller: WebPanelController
-        
-        init(controller: WebPanelController) {
-            self.controller = controller
-        }
-        
-        public func webView(_ webView: WKWebView, didStartProvisionalNavigation navigation: WKNavigation!) {
-            DispatchQueue.main.async {
-                self.controller.isLoading = true
-            }
-        }
-        
-        public func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
-            DispatchQueue.main.async {
-                self.controller.isLoading = false
-                self.controller.canGoBack = webView.canGoBack
-                self.controller.canGoForward = webView.canGoForward
-                if let url = webView.url?.absoluteString {
-                    self.controller.currentURL = url
-                }
-                // Ensure pageZoom stays applied after page finish
-                webView.pageZoom = CGFloat(self.controller.zoomScale)
-                
-                // Extract and update website favicon if configured
-                if let item = self.controller.associatedItem, item.useFavicon {
-                    WebFaviconManager.shared.extractFaviconFromWebView(webView, for: item)
-                }
-            }
-        }
-        
-        public func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) {
-            DispatchQueue.main.async {
-                self.controller.isLoading = false
-            }
         }
     }
 }

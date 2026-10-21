@@ -344,10 +344,32 @@ public final class WebWidgetInstanceController: NSObject, ObservableObject {
         self.statusItem = sItem
         updateStatusItemIcon()
         
+        // Pre-create popover for instant zero-latency opening
+        preparePopover()
+        
         if item.useFavicon {
             WebFaviconManager.shared.fetchFavicon(for: item.url, widgetId: item.id) { [weak self] _ in
                 self?.updateStatusItemIcon()
             }
+        }
+    }
+    
+    public func preparePopover() {
+        if popover == nil {
+            let p = NSPopover()
+            p.contentSize = NSSize(width: item.effectiveWidth, height: item.effectiveHeight)
+            p.behavior = item.isPinned ? .applicationDefined : .transient
+            p.animates = true
+            p.contentViewController = NSHostingController(
+                rootView: WebPanelView(
+                    instance: self,
+                    controller: webController,
+                    onUpdateItem: { [weak self] updated in
+                        self?.module?.updateWidget(updated)
+                    }
+                )
+            )
+            self.popover = p
         }
     }
     
@@ -391,6 +413,7 @@ public final class WebWidgetInstanceController: NSObject, ObservableObject {
             p.performClose(nil)
         }
         popover = nil
+        webController.stopLoading()
     }
     
     @objc private func statusItemClicked(_ sender: NSStatusBarButton) {
@@ -409,22 +432,7 @@ public final class WebWidgetInstanceController: NSObject, ObservableObject {
     }
     
     private func togglePopover(_ sender: NSStatusBarButton) {
-        if popover == nil {
-            let p = NSPopover()
-            p.contentSize = NSSize(width: item.effectiveWidth, height: item.effectiveHeight)
-            p.behavior = item.isPinned ? .applicationDefined : .transient
-            p.animates = true
-            p.contentViewController = NSHostingController(
-                rootView: WebPanelView(
-                    instance: self,
-                    controller: webController,
-                    onUpdateItem: { [weak self] updated in
-                        self?.module?.updateWidget(updated)
-                    }
-                )
-            )
-            self.popover = p
-        }
+        preparePopover()
         
         guard let p = popover else { return }
         if p.isShown {
