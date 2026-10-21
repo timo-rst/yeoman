@@ -8,15 +8,32 @@ public final class WebPanelController: ObservableObject {
     @Published public var canGoBack: Bool = false
     @Published public var canGoForward: Bool = false
     
+    public var userAgentMode: WebUserAgentMode
+    public var targetWidth: CGFloat
+    public var homeURL: String
+    
     weak var webView: WKWebView?
-    weak var module: WebPanelModule?
     
     // User Agents
     public static let iPhoneUserAgent = "Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1"
     public static let desktopUserAgent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Safari/605.1.15"
     
-    public init(initialURL: String) {
+    public init(initialURL: String, userAgentMode: WebUserAgentMode = .auto, targetWidth: CGFloat = 320) {
         self.currentURL = initialURL
+        self.homeURL = initialURL
+        self.userAgentMode = userAgentMode
+        self.targetWidth = targetWidth
+    }
+    
+    public func updateConfig(userAgentMode: WebUserAgentMode, targetWidth: CGFloat, newURL: String? = nil) {
+        self.userAgentMode = userAgentMode
+        self.targetWidth = targetWidth
+        if let u = newURL, u != currentURL && !u.isEmpty {
+            self.homeURL = u
+            loadURL(u)
+        } else {
+            updateUserAgent()
+        }
     }
     
     public func loadURL(_ urlString: String? = nil) {
@@ -40,29 +57,27 @@ public final class WebPanelController: ObservableObject {
     }
     
     public func goHome() {
-        if let home = module?.targetURL {
-            loadURL(home)
-        }
+        loadURL(homeURL)
     }
     
     public func resolvedUserAgent() -> String {
-        guard let mod = module else { return Self.iPhoneUserAgent }
-        switch mod.userAgentMode {
+        switch userAgentMode {
         case .mobile:
             return Self.iPhoneUserAgent
         case .desktop:
             return Self.desktopUserAgent
         case .auto:
-            // If window width <= 480pt, simulate iPhone / mobile web app
-            return mod.panelWidth <= 480 ? Self.iPhoneUserAgent : Self.desktopUserAgent
+            return targetWidth <= 480 ? Self.iPhoneUserAgent : Self.desktopUserAgent
         }
     }
     
     public func updateUserAgent() {
         guard let wv = webView else { return }
         let ua = resolvedUserAgent()
-        wv.customUserAgent = ua
-        wv.reload()
+        if wv.customUserAgent != ua {
+            wv.customUserAgent = ua
+            wv.reload()
+        }
     }
     
     public func applyUserAgent(to wv: WKWebView) {
@@ -101,7 +116,7 @@ public struct WebViewRepresentable: NSViewRepresentable {
     }
     
     public func updateNSView(_ nsView: WKWebView, context: Context) {
-        // Keeps user agent and state in sync
+        // Keeps state in sync
     }
     
     public func makeCoordinator() -> Coordinator {
@@ -141,20 +156,27 @@ public struct WebViewRepresentable: NSViewRepresentable {
 }
 
 public struct WebPanelView: View {
-    @ObservedObject var module: WebPanelModule
+    public let item: WebWidgetItem
     @ObservedObject var controller: WebPanelController
+    public var onUpdateItem: ((WebWidgetItem) -> Void)?
+    
     @State private var inputURL: String = ""
     @State private var isShowingAddressInput: Bool = false
     
-    public init(module: WebPanelModule) {
-        self.module = module
-        self.controller = module.controller
+    public init(
+        item: WebWidgetItem,
+        controller: WebPanelController,
+        onUpdateItem: ((WebWidgetItem) -> Void)? = nil
+    ) {
+        self.item = item
+        self.controller = controller
+        self.onUpdateItem = onUpdateItem
     }
     
     public var body: some View {
         VStack(spacing: 0) {
             // Optional Address / Input Bar
-            if module.showsAddressBar || isShowingAddressInput {
+            if item.showsAddressBar || isShowingAddressInput {
                 HStack(spacing: 6) {
                     Image(systemName: "globe")
                         .font(.system(size: 11))
@@ -209,7 +231,7 @@ public struct WebPanelView: View {
                         .font(.system(size: 11))
                 }
                 .buttonStyle(.plain)
-                .help("Zur Startseite")
+                .help("Zur Startseite (\(item.title))")
                 
                 // Back
                 Button(action: { controller.goBack() }) {
@@ -239,16 +261,18 @@ public struct WebPanelView: View {
                 
                 Spacer()
                 
-                // Current Size & Mode Display / Menu (like in MenuBarX screenshot: 320 x 400 | Mobil)
+                // Current Size & Mode Display / Quick Menu (e.g. 320 x 400 | Mobil)
                 Menu {
                     Section("Fenstergröße") {
                         ForEach(WebSizePreset.allCases) { preset in
                             Button(action: {
-                                module.sizePreset = preset
+                                var updated = item
+                                updated.sizePreset = preset
+                                onUpdateItem?(updated)
                             }) {
                                 HStack {
                                     Text(preset.rawValue)
-                                    if module.sizePreset == preset {
+                                    if item.sizePreset == preset {
                                         Image(systemName: "checkmark")
                                     }
                                 }
@@ -259,11 +283,13 @@ public struct WebPanelView: View {
                     Section("User Agent (Smartphone / Desktop)") {
                         ForEach(WebUserAgentMode.allCases) { mode in
                             Button(action: {
-                                module.userAgentMode = mode
+                                var updated = item
+                                updated.userAgentMode = mode
+                                onUpdateItem?(updated)
                             }) {
                                 HStack {
                                     Text(mode.rawValue)
-                                    if module.userAgentMode == mode {
+                                    if item.userAgentMode == mode {
                                         Image(systemName: "checkmark")
                                     }
                                 }
@@ -273,8 +299,10 @@ public struct WebPanelView: View {
                     
                     Divider()
                     
-                    Button(module.showsAddressBar ? "Adressleiste verstecken" : "Adressleiste anzeigen") {
-                        module.showsAddressBar.toggle()
+                    Button(item.showsAddressBar ? "Adressleiste verstecken" : "Adressleiste anzeigen") {
+                        var updated = item
+                        updated.showsAddressBar.toggle()
+                        onUpdateItem?(updated)
                     }
                     
                     Button("Im Browser öffnen") {
@@ -288,7 +316,7 @@ public struct WebPanelView: View {
                     }
                 } label: {
                     HStack(spacing: 4) {
-                        Text("\(Int(module.panelWidth)) × \(Int(module.panelHeight)) | \(module.userAgentMode == .desktop ? "Desktop" : "Mobil")")
+                        Text("\(Int(item.effectiveWidth)) × \(Int(item.effectiveHeight)) | \(item.userAgentMode == .desktop ? "Desktop" : "Mobil")")
                             .font(.system(size: 10, weight: .medium))
                             .foregroundColor(.secondary)
                         Image(systemName: "chevron.up.chevron.down")
@@ -307,7 +335,7 @@ public struct WebPanelView: View {
                     inputURL = controller.currentURL
                     isShowingAddressInput.toggle()
                 }) {
-                    Image(systemName: isShowingAddressInput || module.showsAddressBar ? "link.circle.fill" : "link")
+                    Image(systemName: isShowingAddressInput || item.showsAddressBar ? "link.circle.fill" : "link")
                         .font(.system(size: 11))
                         .foregroundColor(isShowingAddressInput ? .accentColor : .primary)
                 }
@@ -315,13 +343,17 @@ public struct WebPanelView: View {
                 .help("URL bearbeiten")
                 
                 // Pin Window
-                Button(action: { module.isPinned.toggle() }) {
-                    Image(systemName: module.isPinned ? "pin.fill" : "pin")
+                Button(action: {
+                    var updated = item
+                    updated.isPinned.toggle()
+                    onUpdateItem?(updated)
+                }) {
+                    Image(systemName: item.isPinned ? "pin.fill" : "pin")
                         .font(.system(size: 11))
-                        .foregroundColor(module.isPinned ? .accentColor : .primary)
+                        .foregroundColor(item.isPinned ? .accentColor : .primary)
                 }
                 .buttonStyle(.plain)
-                .help(module.isPinned ? "Fenster lösen" : "Fenster anheften (offen halten)")
+                .help(item.isPinned ? "Fenster lösen" : "Fenster anheften (offen halten)")
                 
                 // Open in External Browser
                 Button(action: {
@@ -339,6 +371,6 @@ public struct WebPanelView: View {
             .padding(.vertical, 6)
             .background(Color(nsColor: .controlBackgroundColor))
         }
-        .frame(width: module.panelWidth, height: module.panelHeight)
+        .frame(width: item.effectiveWidth, height: item.effectiveHeight)
     }
 }

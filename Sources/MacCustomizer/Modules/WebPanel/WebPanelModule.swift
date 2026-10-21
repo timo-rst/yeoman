@@ -2,7 +2,7 @@ import SwiftUI
 import AppKit
 import WebKit
 
-public enum WebUserAgentMode: String, CaseIterable, Identifiable {
+public enum WebUserAgentMode: String, CaseIterable, Identifiable, Codable {
     case auto = "Automatisch (nach Größe)"
     case mobile = "Immer Mobil (iPhone)"
     case desktop = "Immer Desktop"
@@ -10,7 +10,7 @@ public enum WebUserAgentMode: String, CaseIterable, Identifiable {
     public var id: String { rawValue }
 }
 
-public enum WebSizePreset: String, CaseIterable, Identifiable {
+public enum WebSizePreset: String, CaseIterable, Identifiable, Codable {
     case widget = "320 × 400 (Widget)"
     case iphoneSE = "320 × 568 (iPhone SE)"
     case nexus = "360 × 640 (Mobil Standard)"
@@ -36,11 +36,61 @@ public enum WebSizePreset: String, CaseIterable, Identifiable {
     }
 }
 
+public struct WebWidgetItem: Identifiable, Codable, Equatable {
+    public var id: UUID
+    public var title: String
+    public var url: String
+    public var iconName: String
+    public var sizePreset: WebSizePreset
+    public var customWidth: CGFloat
+    public var customHeight: CGFloat
+    public var userAgentMode: WebUserAgentMode
+    public var isEnabled: Bool
+    public var isPinned: Bool
+    public var showsAddressBar: Bool
+    
+    public init(
+        id: UUID = UUID(),
+        title: String,
+        url: String,
+        iconName: String = "calendar",
+        sizePreset: WebSizePreset = .widget,
+        customWidth: CGFloat = 320,
+        customHeight: CGFloat = 400,
+        userAgentMode: WebUserAgentMode = .auto,
+        isEnabled: Bool = true,
+        isPinned: Bool = false,
+        showsAddressBar: Bool = false
+    ) {
+        self.id = id
+        self.title = title
+        self.url = url
+        self.iconName = iconName
+        self.sizePreset = sizePreset
+        self.customWidth = customWidth
+        self.customHeight = customHeight
+        self.userAgentMode = userAgentMode
+        self.isEnabled = isEnabled
+        self.isPinned = isPinned
+        self.showsAddressBar = showsAddressBar
+    }
+    
+    public var effectiveWidth: CGFloat {
+        if sizePreset == .custom { return customWidth }
+        return sizePreset.dimensions.width
+    }
+    
+    public var effectiveHeight: CGFloat {
+        if sizePreset == .custom { return customHeight }
+        return sizePreset.dimensions.height
+    }
+}
+
 public final class WebPanelModule: NSObject, CustomizerModule, ObservableObject {
     public let id = "web_panel"
-    public let name = "Web-Widget (MenuBarX)"
-    public let moduleDescription = "Eigenes Web-Fenster (z.B. Proton Calendar, Notion, ChatGPT) direkt in der Menüleiste mit anpassbarer Fenstergröße & Smartphone-Ansicht."
-    public let iconName = "calendar"
+    public let name = "Web-Widgets (iFrames)"
+    public let moduleDescription = "Verwalte deine Web-Widgets & iFrames (wie in MenuBarX). Erstelle, bearbeite und lösche mehrere Web-Apps mit anpassbaren Größen und Smartphone-Vorschau."
+    public let iconName = "globe"
     public let category = ModuleCategory.productivity
     
     @Published public var isEnabled: Bool {
@@ -57,153 +107,211 @@ public final class WebPanelModule: NSObject, CustomizerModule, ObservableObject 
     @Published public var showsDedicatedStatusItem: Bool {
         didSet {
             UserDefaults.standard.set(showsDedicatedStatusItem, forKey: "web_panel_shows_status_item")
-            updateStatusItemVisibility()
+            syncAllInstances()
         }
     }
     
-    @Published public var targetURL: String {
+    @Published public var widgets: [WebWidgetItem] = [] {
         didSet {
-            UserDefaults.standard.set(targetURL, forKey: "web_panel_target_url")
-            controller.loadURL(targetURL)
+            saveWidgets()
+            syncAllInstances()
         }
     }
     
-    @Published public var sizePreset: WebSizePreset {
-        didSet {
-            UserDefaults.standard.set(sizePreset.rawValue, forKey: "web_panel_size_preset")
-            if sizePreset != .custom {
-                let dims = sizePreset.dimensions
-                panelWidth = dims.width
-                panelHeight = dims.height
-            }
-            updatePopoverSize()
-        }
-    }
-    
-    @Published public var panelWidth: CGFloat {
-        didSet {
-            UserDefaults.standard.set(Double(panelWidth), forKey: "web_panel_width")
-            updatePopoverSize()
-        }
-    }
-    
-    @Published public var panelHeight: CGFloat {
-        didSet {
-            UserDefaults.standard.set(Double(panelHeight), forKey: "web_panel_height")
-            updatePopoverSize()
-        }
-    }
-    
-    @Published public var userAgentMode: WebUserAgentMode {
-        didSet {
-            UserDefaults.standard.set(userAgentMode.rawValue, forKey: "web_panel_user_agent_mode")
-            controller.updateUserAgent()
-        }
-    }
-    
-    @Published public var statusIconName: String {
-        didSet {
-            UserDefaults.standard.set(statusIconName, forKey: "web_panel_icon_name")
-            updateStatusItemIcon()
-        }
-    }
-    
-    @Published public var isPinned: Bool {
-        didSet {
-            UserDefaults.standard.set(isPinned, forKey: "web_panel_is_pinned")
-            popover?.behavior = isPinned ? .applicationDefined : .transient
-        }
-    }
-    
-    @Published public var showsAddressBar: Bool {
-        didSet {
-            UserDefaults.standard.set(showsAddressBar, forKey: "web_panel_shows_address_bar")
-        }
-    }
-    
-    public let controller: WebPanelController
-    private var statusItem: NSStatusItem?
-    private var popover: NSPopover?
+    private var instanceControllers: [UUID: WebWidgetInstanceController] = [:]
+    private let widgetsStorageKey = "web_panel_widgets_list_json"
     
     public override init() {
         self.isEnabled = UserDefaults.standard.object(forKey: "web_panel_is_enabled") as? Bool ?? true
         self.showsDedicatedStatusItem = UserDefaults.standard.object(forKey: "web_panel_shows_status_item") as? Bool ?? true
-        
-        let savedURL = UserDefaults.standard.string(forKey: "web_panel_target_url") ?? "https://calendar.proton.me"
-        self.targetURL = savedURL
-        
-        let presetRaw = UserDefaults.standard.string(forKey: "web_panel_size_preset") ?? WebSizePreset.widget.rawValue
-        let preset = WebSizePreset(rawValue: presetRaw) ?? .widget
-        self.sizePreset = preset
-        
-        let savedWidth = CGFloat(UserDefaults.standard.double(forKey: "web_panel_width"))
-        let savedHeight = CGFloat(UserDefaults.standard.double(forKey: "web_panel_height"))
-        self.panelWidth = savedWidth > 0 ? savedWidth : preset.dimensions.width
-        self.panelHeight = savedHeight > 0 ? savedHeight : preset.dimensions.height
-        
-        let uaRaw = UserDefaults.standard.string(forKey: "web_panel_user_agent_mode") ?? WebUserAgentMode.auto.rawValue
-        self.userAgentMode = WebUserAgentMode(rawValue: uaRaw) ?? .auto
-        
-        self.statusIconName = UserDefaults.standard.string(forKey: "web_panel_icon_name") ?? "calendar"
-        self.isPinned = UserDefaults.standard.bool(forKey: "web_panel_is_pinned")
-        self.showsAddressBar = UserDefaults.standard.object(forKey: "web_panel_shows_address_bar") as? Bool ?? false
-        
-        self.controller = WebPanelController(initialURL: savedURL)
-        
         super.init()
-        self.controller.module = self
+        
+        loadWidgets()
     }
     
     public func start() {
         guard isEnabled else { return }
-        updateStatusItemVisibility()
+        syncAllInstances()
     }
     
     public func stop() {
-        removeStatusItem()
+        for controller in instanceControllers.values {
+            controller.cleanup()
+        }
+        instanceControllers.removeAll()
     }
     
     public func updateStatusItemVisibility() {
-        DispatchQueue.main.async { [weak self] in
-            guard let self = self else { return }
-            if self.isEnabled && self.showsDedicatedStatusItem {
-                self.setupStatusItem()
-            } else {
-                self.removeStatusItem()
+        syncAllInstances()
+    }
+    
+    // MARK: - CRUD Operations
+    
+    public func addWidget(_ item: WebWidgetItem) {
+        widgets.append(item)
+    }
+    
+    public func updateWidget(_ item: WebWidgetItem) {
+        if let idx = widgets.firstIndex(where: { $0.id == item.id }) {
+            widgets[idx] = item
+            if let controller = instanceControllers[item.id] {
+                controller.update(with: item)
             }
         }
     }
     
-    private func setupStatusItem() {
+    public func deleteWidget(id: UUID) {
+        if let controller = instanceControllers.removeValue(forKey: id) {
+            controller.cleanup()
+        }
+        widgets.removeAll(where: { $0.id == id })
+    }
+    
+    public func toggleWidget(id: UUID, isEnabled: Bool) {
+        if let idx = widgets.firstIndex(where: { $0.id == id }) {
+            widgets[idx].isEnabled = isEnabled
+        }
+    }
+    
+    // MARK: - Instance Synchronization
+    
+    private func syncAllInstances() {
+        DispatchQueue.main.async { [weak self] in
+            guard let self = self else { return }
+            
+            let activeIds = Set(self.widgets.map { $0.id })
+            
+            // Remove controllers for deleted widgets
+            for (id, controller) in self.instanceControllers where !activeIds.contains(id) {
+                controller.cleanup()
+                self.instanceControllers.removeValue(forKey: id)
+            }
+            
+            // Setup or update controllers
+            for widget in self.widgets {
+                if self.isEnabled && self.showsDedicatedStatusItem && widget.isEnabled {
+                    if let existing = self.instanceControllers[widget.id] {
+                        existing.update(with: widget)
+                    } else {
+                        let newController = WebWidgetInstanceController(item: widget, module: self)
+                        newController.setup()
+                        self.instanceControllers[widget.id] = newController
+                    }
+                } else {
+                    if let existing = self.instanceControllers[widget.id] {
+                        existing.cleanup()
+                        self.instanceControllers.removeValue(forKey: widget.id)
+                    }
+                }
+            }
+        }
+    }
+    
+    // MARK: - Persistence
+    
+    private func saveWidgets() {
+        if let data = try? JSONEncoder().encode(widgets) {
+            UserDefaults.standard.set(data, forKey: widgetsStorageKey)
+        }
+    }
+    
+    private func loadWidgets() {
+        if let data = UserDefaults.standard.data(forKey: widgetsStorageKey),
+           let loaded = try? JSONDecoder().decode([WebWidgetItem].self, from: data),
+           !loaded.isEmpty {
+            self.widgets = loaded
+        } else {
+            // Default first item: Proton Calendar (matching user's setup!)
+            self.widgets = [
+                WebWidgetItem(
+                    title: "Proton Kalender",
+                    url: "https://calendar.proton.me",
+                    iconName: "calendar",
+                    sizePreset: .widget,
+                    customWidth: 320,
+                    customHeight: 400,
+                    userAgentMode: .auto,
+                    isEnabled: true
+                )
+            ]
+            saveWidgets()
+        }
+    }
+    
+    public func openWidgetPopover(id: UUID) {
+        instanceControllers[id]?.openPopover()
+    }
+    
+    public func settingsView() -> AnyView {
+        AnyView(WebPanelSettingsView(module: self))
+    }
+}
+
+// MARK: - Individual Instance Controller
+
+public final class WebWidgetInstanceController: NSObject, ObservableObject {
+    public var item: WebWidgetItem
+    public let webController: WebPanelController
+    weak var module: WebPanelModule?
+    
+    private var statusItem: NSStatusItem?
+    private var popover: NSPopover?
+    
+    public init(item: WebWidgetItem, module: WebPanelModule) {
+        self.item = item
+        self.module = module
+        self.webController = WebPanelController(
+            initialURL: item.url,
+            userAgentMode: item.userAgentMode,
+            targetWidth: item.effectiveWidth
+        )
+        super.init()
+    }
+    
+    public func setup() {
         guard statusItem == nil else { return }
-        
-        let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
-        if let button = item.button {
+        let sItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
+        if let button = sItem.button {
             button.target = self
             button.action = #selector(statusItemClicked(_:))
             button.sendAction(on: [.leftMouseUp, .rightMouseUp])
-            button.toolTip = "Web-Widget (Klick zum Öffnen)"
+            button.toolTip = "\(item.title) (Klick zum Öffnen)"
             
-            updateStatusItemIcon()
+            let img = NSImage(systemSymbolName: item.iconName, accessibilityDescription: item.title)
+            img?.isTemplate = true
+            button.image = img
         }
-        self.statusItem = item
+        self.statusItem = sItem
     }
     
-    private func updateStatusItemIcon() {
-        guard let button = statusItem?.button else { return }
-        let image = NSImage(systemSymbolName: statusIconName, accessibilityDescription: "Web Widget")
-        image?.isTemplate = true
-        button.image = image
+    public func update(with newItem: WebWidgetItem) {
+        self.item = newItem
+        webController.updateConfig(
+            userAgentMode: newItem.userAgentMode,
+            targetWidth: newItem.effectiveWidth,
+            newURL: newItem.url
+        )
+        
+        if let button = statusItem?.button {
+            button.toolTip = "\(newItem.title) (Klick zum Öffnen)"
+            let img = NSImage(systemSymbolName: newItem.iconName, accessibilityDescription: newItem.title)
+            img?.isTemplate = true
+            button.image = img
+        }
+        
+        popover?.contentSize = NSSize(width: newItem.effectiveWidth, height: newItem.effectiveHeight)
+        popover?.behavior = newItem.isPinned ? .applicationDefined : .transient
     }
     
-    private func removeStatusItem() {
+    public func cleanup() {
         if let item = statusItem {
             NSStatusBar.system.removeStatusItem(item)
             statusItem = nil
         }
-        if let popover = popover, popover.isShown {
-            popover.performClose(nil)
+        if let p = popover, p.isShown {
+            p.performClose(nil)
         }
+        popover = nil
     }
     
     @objc private func statusItemClicked(_ sender: NSStatusBarButton) {
@@ -215,13 +323,27 @@ public final class WebPanelModule: NSObject, CustomizerModule, ObservableObject 
         }
     }
     
-    public func togglePopover(_ sender: NSStatusBarButton) {
+    public func openPopover() {
+        if let button = statusItem?.button {
+            togglePopover(button)
+        }
+    }
+    
+    private func togglePopover(_ sender: NSStatusBarButton) {
         if popover == nil {
             let p = NSPopover()
-            p.contentSize = NSSize(width: panelWidth, height: panelHeight)
-            p.behavior = isPinned ? .applicationDefined : .transient
+            p.contentSize = NSSize(width: item.effectiveWidth, height: item.effectiveHeight)
+            p.behavior = item.isPinned ? .applicationDefined : .transient
             p.animates = true
-            p.contentViewController = NSHostingController(rootView: WebPanelView(module: self))
+            p.contentViewController = NSHostingController(
+                rootView: WebPanelView(
+                    item: item,
+                    controller: webController,
+                    onUpdateItem: { [weak self] updated in
+                        self?.module?.updateWidget(updated)
+                    }
+                )
+            )
             self.popover = p
         }
         
@@ -229,29 +351,25 @@ public final class WebPanelModule: NSObject, CustomizerModule, ObservableObject 
         if p.isShown {
             p.performClose(sender)
         } else {
-            updatePopoverSize()
+            p.contentSize = NSSize(width: item.effectiveWidth, height: item.effectiveHeight)
             p.show(relativeTo: sender.bounds, of: sender, preferredEdge: .minY)
             p.contentViewController?.view.window?.makeKey()
             NSApp.activate(ignoringOtherApps: true)
         }
     }
     
-    public func updatePopoverSize() {
-        popover?.contentSize = NSSize(width: panelWidth, height: panelHeight)
-    }
-    
     private func showContextMenu(for sender: NSStatusBarButton) {
         let menu = NSMenu()
-        menu.addItem(NSMenuItem(title: "Web-Fenster öffnen", action: #selector(openPopoverAction), keyEquivalent: ""))
+        menu.addItem(NSMenuItem(title: "\(item.title) öffnen", action: #selector(openPopoverAction), keyEquivalent: ""))
         menu.addItem(NSMenuItem(title: "Neu laden", action: #selector(reloadAction), keyEquivalent: "r"))
         menu.addItem(NSMenuItem(title: "Im Standardbrowser öffnen", action: #selector(openInBrowserAction), keyEquivalent: "b"))
         menu.addItem(NSMenuItem.separator())
-        menu.addItem(NSMenuItem(title: isPinned ? "Fenster lösen" : "Fenster anheften (Pin)", action: #selector(togglePinAction), keyEquivalent: "p"))
+        menu.addItem(NSMenuItem(title: item.isPinned ? "Fenster lösen" : "Fenster anheften (Pin)", action: #selector(togglePinAction), keyEquivalent: "p"))
         menu.addItem(NSMenuItem.separator())
         menu.addItem(NSMenuItem(title: "Einstellungen...", action: #selector(openSettingsAction), keyEquivalent: ","))
         
-        for item in menu.items {
-            item.target = self
+        for mItem in menu.items {
+            mItem.target = self
         }
         
         statusItem?.menu = menu
@@ -266,24 +384,22 @@ public final class WebPanelModule: NSObject, CustomizerModule, ObservableObject 
     }
     
     @objc private func reloadAction() {
-        controller.reload()
+        webController.reload()
     }
     
     @objc private func openInBrowserAction() {
-        if let url = URL(string: controller.currentURL) {
+        if let url = URL(string: webController.currentURL) {
             NSWorkspace.shared.open(url)
         }
     }
     
     @objc private func togglePinAction() {
-        isPinned.toggle()
+        var updated = item
+        updated.isPinned.toggle()
+        module?.updateWidget(updated)
     }
     
     @objc private func openSettingsAction() {
         StatusItemController.shared.openSettingsWindow()
-    }
-    
-    public func settingsView() -> AnyView {
-        AnyView(WebPanelSettingsView(module: self))
     }
 }

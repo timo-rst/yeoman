@@ -3,25 +3,26 @@ import WebKit
 
 public struct WebPanelSettingsView: View {
     @ObservedObject var module: WebPanelModule
-    @State private var urlInput: String = ""
-    @State private var showingResetAlert: Bool = false
+    @State private var isShowingEditor: Bool = false
+    @State private var editingWidget: WebWidgetItem? = nil
+    @State private var widgetToDelete: WebWidgetItem? = nil
+    @State private var showingDeleteConfirm: Bool = false
     
     public init(module: WebPanelModule) {
         self.module = module
-        _urlInput = State(initialValue: module.targetURL)
     }
     
     public var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
                 // Header
-                VStack(alignment: .leading, spacing: 4) {
+                VStack(alignment: .leading, spacing: 8) {
                     HStack {
                         VStack(alignment: .leading, spacing: 2) {
-                            Text("Web-Widget (MenuBarX-Modul)")
+                            Text("Web-Widgets & iFrames (MenuBarX-Modul)")
                                 .font(.title2)
                                 .fontWeight(.bold)
-                            Text("Binde Web-Apps wie Proton Calendar, Notion oder ChatGPT als schlankes Popover direkt in die Menüleiste ein.")
+                            Text("Erstelle und verwalte mehrere Web-Apps (z.B. Proton Calendar, Notion, ChatGPT) als eigene Menüleisten-Icons.")
                                 .font(.subheadline)
                                 .foregroundColor(.secondary)
                         }
@@ -29,169 +30,96 @@ public struct WebPanelSettingsView: View {
                         Toggle("Modul aktiv", isOn: $module.isEnabled)
                             .toggleStyle(.switch)
                     }
-                }
-                
-                Divider()
-                
-                // Ziel-URL & Vorlagen
-                VStack(alignment: .leading, spacing: 14) {
-                    Text("Ziel-Webseite (URL)")
-                        .font(.headline)
                     
-                    HStack(spacing: 8) {
-                        Image(systemName: "link")
+                    HStack {
+                        Text("\(module.widgets.count) Web-Widget(s) eingerichtet • \(module.widgets.filter { $0.isEnabled }.count) aktiv in der Menüleiste")
+                            .font(.caption)
                             .foregroundColor(.secondary)
+                        Spacer()
                         
-                        TextField("https://calendar.proton.me", text: $urlInput, onCommit: {
-                            applyURL()
-                        })
-                        .textFieldStyle(.roundedBorder)
-                        
-                        Button("Übernehmen") {
-                            applyURL()
+                        Button(action: {
+                            editingWidget = nil
+                            isShowingEditor = true
+                        }) {
+                            HStack(spacing: 6) {
+                                Image(systemName: "plus.circle.fill")
+                                Text("Neues Web-Widget hinzufügen")
+                            }
+                            .fontWeight(.medium)
                         }
-                        .keyboardShortcut(.defaultAction)
-                    }
-                    
-                    Text("Beliebte Schnellvorlagen:")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                    
-                    LazyVGrid(columns: [GridItem(.adaptive(minimum: 140))], spacing: 8) {
-                        QuickURLButton(title: "Proton Calendar", icon: "calendar", url: "https://calendar.proton.me") {
-                            selectURL("https://calendar.proton.me", icon: "calendar")
-                        }
-                        QuickURLButton(title: "Google Calendar", icon: "calendar", url: "https://calendar.google.com") {
-                            selectURL("https://calendar.google.com", icon: "calendar")
-                        }
-                        QuickURLButton(title: "Notion", icon: "note.text", url: "https://www.notion.so") {
-                            selectURL("https://www.notion.so", icon: "note.text")
-                        }
-                        QuickURLButton(title: "ChatGPT", icon: "bubble.left.and.bubble.right", url: "https://chatgpt.com") {
-                            selectURL("https://chatgpt.com", icon: "bubble.left.and.bubble.right")
-                        }
-                        QuickURLButton(title: "Todoist", icon: "checklist", url: "https://app.todoist.com") {
-                            selectURL("https://app.todoist.com", icon: "checklist")
-                        }
-                        QuickURLButton(title: "GitHub", icon: "chevron.left.forwardslash.chevron.right", url: "https://github.com") {
-                            selectURL("https://github.com", icon: "chevron.left.forwardslash.chevron.right")
-                        }
+                        .buttonStyle(.borderedProminent)
                     }
                 }
                 .padding()
                 .background(RoundedRectangle(cornerRadius: 12).fill(Color(nsColor: .controlBackgroundColor)))
                 
-                // Fenstergröße (Größen-Vorlagen)
+                // Widgets List
                 VStack(alignment: .leading, spacing: 14) {
                     HStack {
-                        Text("Fenstergröße & Display-Format")
+                        Text("Deine aktiven Web-Widgets")
                             .font(.headline)
                         Spacer()
-                        Text("\(Int(module.panelWidth)) × \(Int(module.panelHeight)) pt")
-                            .font(.subheadline)
-                            .fontWeight(.semibold)
-                            .monospacedDigit()
-                            .foregroundColor(.accentColor)
                     }
                     
-                    Picker("Vorlage wählen:", selection: $module.sizePreset) {
-                        ForEach(WebSizePreset.allCases) { preset in
-                            Text(preset.rawValue).tag(preset)
+                    if module.widgets.isEmpty {
+                        VStack(spacing: 12) {
+                            Image(systemName: "globe")
+                                .font(.system(size: 44))
+                                .foregroundColor(.secondary.opacity(0.5))
+                            Text("Noch keine Web-Widgets erstellt")
+                                .font(.headline)
+                                .foregroundColor(.secondary)
+                            Text("Klicke auf den Button oben, um dein erstes Web-Widget (wie deinen Kalender oder Notion) anzulegen.")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                                .multilineTextAlignment(.center)
+                                .frame(maxWidth: 320)
+                            
+                            Button("Jetzt erstes Widget anlegen") {
+                                editingWidget = nil
+                                isShowingEditor = true
+                            }
+                            .buttonStyle(.borderedProminent)
+                            .padding(.top, 4)
                         }
-                    }
-                    .pickerStyle(.menu)
-                    
-                    Divider()
-                    
-                    // Sliders for custom fine-tuning
-                    VStack(alignment: .leading, spacing: 8) {
-                        HStack {
-                            Text("Breite:")
-                            Spacer()
-                            Text("\(Int(module.panelWidth)) pt").monospacedDigit()
-                        }
-                        Slider(value: $module.panelWidth, in: 280...1200, step: 10) { _ in
-                            module.sizePreset = .custom
-                        }
-                        
-                        HStack {
-                            Text("Höhe:")
-                            Spacer()
-                            Text("\(Int(module.panelHeight)) pt").monospacedDigit()
-                        }
-                        Slider(value: $module.panelHeight, in: 300...1000, step: 10) { _ in
-                            module.sizePreset = .custom
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 36)
+                    } else {
+                        ForEach(module.widgets) { widget in
+                            WebWidgetRowView(
+                                widget: widget,
+                                onToggleEnabled: { enabled in
+                                    module.toggleWidget(id: widget.id, isEnabled: enabled)
+                                },
+                                onEdit: {
+                                    editingWidget = widget
+                                    isShowingEditor = true
+                                },
+                                onDelete: {
+                                    widgetToDelete = widget
+                                    showingDeleteConfirm = true
+                                },
+                                onOpen: {
+                                    module.openWidgetPopover(id: widget.id)
+                                }
+                            )
                         }
                     }
                 }
                 .padding()
                 .background(RoundedRectangle(cornerRadius: 12).fill(Color(nsColor: .controlBackgroundColor)))
                 
-                // Smartphone / User Agent Modus
-                VStack(alignment: .leading, spacing: 14) {
-                    Text("Darstellungsmodus & User-Agent")
-                        .font(.headline)
-                    
-                    Text("Damit Webseiten wie dein Kalender bei kompakten Breiten automatisch die optimale Smartphone-App-Ansicht darstellen:")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                    
-                    Picker("User-Agent:", selection: $module.userAgentMode) {
-                        ForEach(WebUserAgentMode.allCases) { mode in
-                            Text(mode.rawValue).tag(mode)
-                        }
-                    }
-                    .pickerStyle(.radioGroup)
-                    
-                    Text(userAgentExplanation)
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                        .padding(.top, 2)
-                }
-                .padding()
-                .background(RoundedRectangle(cornerRadius: 12).fill(Color(nsColor: .controlBackgroundColor)))
-                
-                // Menüleisten-Symbol & Optionen
-                VStack(alignment: .leading, spacing: 14) {
-                    Text("Menüleisten-Symbol")
-                        .font(.headline)
-                    
-                    Toggle("Eigenes Symbol in der Menüleiste anzeigen", isOn: $module.showsDedicatedStatusItem)
-                    
-                    HStack(spacing: 12) {
-                        Text("Symbol-Icon:")
-                            .font(.subheadline)
-                        
-                        HStack(spacing: 8) {
-                            IconChoiceButton(icon: "calendar", current: module.statusIconName) { module.statusIconName = "calendar" }
-                            IconChoiceButton(icon: "calendar.badge.clock", current: module.statusIconName) { module.statusIconName = "calendar.badge.clock" }
-                            IconChoiceButton(icon: "globe", current: module.statusIconName) { module.statusIconName = "globe" }
-                            IconChoiceButton(icon: "safari", current: module.statusIconName) { module.statusIconName = "safari" }
-                            IconChoiceButton(icon: "note.text", current: module.statusIconName) { module.statusIconName = "note.text" }
-                            IconChoiceButton(icon: "bubble.left.and.bubble.right", current: module.statusIconName) { module.statusIconName = "bubble.left.and.bubble.right" }
-                            IconChoiceButton(icon: "checklist", current: module.statusIconName) { module.statusIconName = "checklist" }
-                        }
-                    }
-                    
-                    Divider()
-                    
-                    Toggle("Adressleiste standardmäßig im Fenster einblenden", isOn: $module.showsAddressBar)
-                    Toggle("Fenster angeheftet halten (bleibt offen beim Klick auf andere Apps)", isOn: $module.isPinned)
-                }
-                .padding()
-                .background(RoundedRectangle(cornerRadius: 12).fill(Color(nsColor: .controlBackgroundColor)))
-                
-                // Cache & Login Daten
+                // Website Data & Cache
                 VStack(alignment: .leading, spacing: 10) {
-                    Text("Webseite-Daten & Cache")
+                    Text("Sitzungen & Cache")
                         .font(.headline)
                     
-                    Text("Login-Cookies und lokale Sitzungen (z.B. für Proton Calendar) werden sicher im macOS WebKit-Speicher gesichert.")
+                    Text("Cookies und Logins aller Widgets (z.B. Proton Calendar oder Google) werden dauerhaft im WebKit-Speicher gesichert.")
                         .font(.caption)
                         .foregroundColor(.secondary)
                     
-                    Button("Cache & Website-Daten löschen") {
-                        clearWebsiteData()
+                    Button("Alle Cache- und Website-Daten löschen") {
+                        clearAllWebsiteData()
                     }
                     .foregroundColor(.red)
                 }
@@ -200,84 +128,563 @@ public struct WebPanelSettingsView: View {
             }
             .padding(20)
         }
-    }
-    
-    private var userAgentExplanation: String {
-        switch module.userAgentMode {
-        case .auto:
-            return "💡 Bei Fenstern bis 480pt Breite wird automatisch der iPhone-Header gesendet, damit responsive Web-Apps direkt die Smartphone-Ansicht laden."
-        case .mobile:
-            return "📱 Sendet immer den iPhone Safari User-Agent, wodurch alle Seiten als Touch-/Mobile-Web-App gerendert werden."
-        case .desktop:
-            return "💻 Sendet den regulären macOS Safari User-Agent."
+        .sheet(isPresented: $isShowingEditor) {
+            WebWidgetEditorSheet(
+                initialWidget: editingWidget,
+                onSave: { savedItem in
+                    if editingWidget != nil {
+                        module.updateWidget(savedItem)
+                    } else {
+                        module.addWidget(savedItem)
+                    }
+                    isShowingEditor = false
+                },
+                onCancel: {
+                    isShowingEditor = false
+                }
+            )
+        }
+        .confirmationDialog(
+            "Möchtest du das Web-Widget „\(widgetToDelete?.title ?? "")“ wirklich löschen?",
+            isPresented: $showingDeleteConfirm,
+            titleVisibility: .visible
+        ) {
+            Button("Löschen", role: .destructive) {
+                if let id = widgetToDelete?.id {
+                    module.deleteWidget(id: id)
+                }
+            }
+            Button("Abbrechen", role: .cancel) {}
         }
     }
     
-    private func applyURL() {
-        var str = urlInput.trimmingCharacters(in: .whitespacesAndNewlines)
+    private func clearAllWebsiteData() {
+        let store = WKWebsiteDataStore.default()
+        let types = WKWebsiteDataStore.allWebsiteDataTypes()
+        store.removeData(ofTypes: types, modifiedSince: Date(timeIntervalSince1970: 0)) {}
+    }
+}
+
+// MARK: - Row View
+
+struct WebWidgetRowView: View {
+    let widget: WebWidgetItem
+    let onToggleEnabled: (Bool) -> Void
+    let onEdit: () -> Void
+    let onDelete: () -> Void
+    let onOpen: () -> Void
+    
+    var body: some View {
+        HStack(spacing: 14) {
+            // Icon Badge
+            ZStack {
+                RoundedRectangle(cornerRadius: 10)
+                    .fill(Color.accentColor.opacity(0.15))
+                    .frame(width: 38, height: 38)
+                Image(systemName: widget.iconName)
+                    .font(.system(size: 18))
+                    .foregroundColor(.accentColor)
+            }
+            
+            // Info
+            VStack(alignment: .leading, spacing: 3) {
+                HStack(spacing: 8) {
+                    Text(widget.title)
+                        .font(.system(size: 14, weight: .semibold))
+                    
+                    Text("\(Int(widget.effectiveWidth)) × \(Int(widget.effectiveHeight)) pt")
+                        .font(.caption2)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
+                        .background(Capsule().fill(Color.primary.opacity(0.08)))
+                        .foregroundColor(.secondary)
+                    
+                    if widget.userAgentMode == .mobile {
+                        Text("Smartphone")
+                            .font(.caption2)
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2)
+                            .background(Capsule().fill(Color.blue.opacity(0.18)))
+                            .foregroundColor(.blue)
+                    }
+                }
+                
+                Text(widget.url)
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                    .lineLimit(1)
+            }
+            
+            Spacer()
+            
+            // Actions
+            HStack(spacing: 12) {
+                // Open Popover
+                Button(action: onOpen) {
+                    HStack(spacing: 4) {
+                        Image(systemName: "arrow.up.right.square")
+                        Text("Öffnen")
+                    }
+                    .font(.caption)
+                }
+                .buttonStyle(.plain)
+                .foregroundColor(.accentColor)
+                .help("Fenster in Menüleiste öffnen")
+                
+                // Edit
+                Button(action: onEdit) {
+                    Image(systemName: "pencil")
+                        .font(.system(size: 13))
+                        .foregroundColor(.primary)
+                }
+                .buttonStyle(.plain)
+                .help("Widget bearbeiten")
+                
+                // Delete
+                Button(action: onDelete) {
+                    Image(systemName: "trash")
+                        .font(.system(size: 13))
+                        .foregroundColor(.red)
+                }
+                .buttonStyle(.plain)
+                .help("Widget löschen")
+                
+                Divider().frame(height: 18)
+                
+                // In Menu Bar Toggle
+                Toggle("", isOn: Binding(
+                    get: { widget.isEnabled },
+                    set: { onToggleEnabled($0) }
+                ))
+                .toggleStyle(.switch)
+                .labelsHidden()
+                .help("In Menüleiste anzeigen")
+            }
+        }
+        .padding(12)
+        .background(RoundedRectangle(cornerRadius: 10).fill(Color(nsColor: .windowBackgroundColor)))
+    }
+}
+
+// MARK: - Guided Setup / Edit Wizard with Live Preview
+
+struct WebWidgetEditorSheet: View {
+    @State private var title: String
+    @State private var url: String
+    @State private var iconName: String
+    @State private var sizePreset: WebSizePreset
+    @State private var customWidth: CGFloat
+    @State private var customHeight: CGFloat
+    @State private var userAgentMode: WebUserAgentMode
+    @State private var isEnabled: Bool
+    @State private var isPinned: Bool
+    @State private var showsAddressBar: Bool
+    
+    @StateObject private var previewController: WebPanelController
+    
+    let isEditing: Bool
+    let originalId: UUID?
+    let onSave: (WebWidgetItem) -> Void
+    let onCancel: () -> Void
+    
+    public init(
+        initialWidget: WebWidgetItem?,
+        onSave: @escaping (WebWidgetItem) -> Void,
+        onCancel: @escaping () -> Void
+    ) {
+        self.isEditing = (initialWidget != nil)
+        self.originalId = initialWidget?.id
+        
+        let initialTitle = initialWidget?.title ?? "Mein Kalender"
+        let initialURL = initialWidget?.url ?? "https://calendar.proton.me"
+        let initialIcon = initialWidget?.iconName ?? "calendar"
+        let initialPreset = initialWidget?.sizePreset ?? .widget
+        let initialW = initialWidget?.customWidth ?? 320
+        let initialH = initialWidget?.customHeight ?? 400
+        let initialUA = initialWidget?.userAgentMode ?? .auto
+        let initialEnabled = initialWidget?.isEnabled ?? true
+        let initialPinned = initialWidget?.isPinned ?? false
+        let initialBar = initialWidget?.showsAddressBar ?? false
+        
+        _title = State(initialValue: initialTitle)
+        _url = State(initialValue: initialURL)
+        _iconName = State(initialValue: initialIcon)
+        _sizePreset = State(initialValue: initialPreset)
+        _customWidth = State(initialValue: initialW)
+        _customHeight = State(initialValue: initialH)
+        _userAgentMode = State(initialValue: initialUA)
+        _isEnabled = State(initialValue: initialEnabled)
+        _isPinned = State(initialValue: initialPinned)
+        _showsAddressBar = State(initialValue: initialBar)
+        
+        let targetW = initialPreset == .custom ? initialW : initialPreset.dimensions.width
+        _previewController = StateObject(wrappedValue: WebPanelController(
+            initialURL: initialURL,
+            userAgentMode: initialUA,
+            targetWidth: targetW
+        ))
+        
+        self.onSave = onSave
+        self.onCancel = onCancel
+    }
+    
+    var effectiveWidth: CGFloat {
+        sizePreset == .custom ? customWidth : sizePreset.dimensions.width
+    }
+    
+    var effectiveHeight: CGFloat {
+        sizePreset == .custom ? customHeight : sizePreset.dimensions.height
+    }
+    
+    var body: some View {
+        VStack(spacing: 0) {
+            // Wizard Header
+            HStack {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(isEditing ? "Web-Widget bearbeiten" : "Neues Web-Widget einrichten")
+                        .font(.title3)
+                        .fontWeight(.bold)
+                    Text("Konfiguriere URL, Größe und Smartphone-Darstellung mit Live-Vorschau.")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+                Spacer()
+                Button("Abbrechen", action: onCancel)
+            }
+            .padding(.horizontal, 20)
+            .padding(.vertical, 14)
+            .background(Color(nsColor: .controlBackgroundColor))
+            
+            Divider()
+            
+            // Main Content: Split into Settings (Left) and Live-Preview (Right)
+            HStack(spacing: 0) {
+                // Left Column: Configuration Forms
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 18) {
+                        // 1. Name & Icon
+                        VStack(alignment: .leading, spacing: 10) {
+                            Text("1. Name & Menüleisten-Symbol")
+                                .font(.headline)
+                            
+                            HStack(spacing: 10) {
+                                Image(systemName: iconName)
+                                    .font(.title2)
+                                    .foregroundColor(.accentColor)
+                                    .frame(width: 32)
+                                
+                                TextField("Widget-Name (z.B. Proton Kalender)", text: $title)
+                                    .textFieldStyle(.roundedBorder)
+                            }
+                            
+                            Text("Symbol auswählen:")
+                                .font(.caption2)
+                                .foregroundColor(.secondary)
+                            
+                            LazyVGrid(columns: [GridItem(.adaptive(minimum: 32))], spacing: 6) {
+                                ForEach([
+                                    "calendar", "calendar.badge.clock", "note.text",
+                                    "bubble.left.and.bubble.right", "globe", "safari",
+                                    "checklist", "bookmark", "envelope", "bell",
+                                    "sparkles", "star", "music.note", "chart.bar"
+                                ], id: \.self) { icon in
+                                    Button(action: { iconName = icon }) {
+                                        Image(systemName: icon)
+                                            .font(.system(size: 14))
+                                            .foregroundColor(iconName == icon ? .white : .primary)
+                                            .frame(width: 30, height: 30)
+                                            .background(
+                                                RoundedRectangle(cornerRadius: 6)
+                                                    .fill(iconName == icon ? Color.accentColor : Color(nsColor: .controlColor))
+                                            )
+                                    }
+                                    .buttonStyle(.plain)
+                                }
+                            }
+                        }
+                        .padding()
+                        .background(RoundedRectangle(cornerRadius: 10).fill(Color(nsColor: .controlBackgroundColor)))
+                        
+                        // 2. Ziel-URL
+                        VStack(alignment: .leading, spacing: 10) {
+                            Text("2. Ziel-Webseite (URL)")
+                                .font(.headline)
+                            
+                            HStack {
+                                TextField("https://...", text: $url, onCommit: {
+                                    applyURLChange()
+                                })
+                                .textFieldStyle(.roundedBorder)
+                                
+                                Button("Laden") {
+                                    applyURLChange()
+                                }
+                            }
+                            
+                            Text("Schnellvorlagen:")
+                                .font(.caption2)
+                                .foregroundColor(.secondary)
+                            
+                            LazyVGrid(columns: [GridItem(.adaptive(minimum: 120))], spacing: 6) {
+                                QuickButton(name: "Proton Calendar", icon: "calendar") {
+                                    setPreset(url: "https://calendar.proton.me", name: "Proton Kalender", icon: "calendar", preset: .widget)
+                                }
+                                QuickButton(name: "Google Calendar", icon: "calendar") {
+                                    setPreset(url: "https://calendar.google.com", name: "Google Kalender", icon: "calendar", preset: .widget)
+                                }
+                                QuickButton(name: "Notion", icon: "note.text") {
+                                    setPreset(url: "https://www.notion.so", name: "Notion", icon: "note.text", preset: .iphone8)
+                                }
+                                QuickButton(name: "ChatGPT", icon: "bubble.left.and.bubble.right") {
+                                    setPreset(url: "https://chatgpt.com", name: "ChatGPT", icon: "bubble.left.and.bubble.right", preset: .iphone14)
+                                }
+                                QuickButton(name: "Todoist", icon: "checklist") {
+                                    setPreset(url: "https://app.todoist.com", name: "Todoist", icon: "checklist", preset: .iphoneSE)
+                                }
+                                QuickButton(name: "GitHub", icon: "chevron.left.forwardslash.chevron.right") {
+                                    setPreset(url: "https://github.com", name: "GitHub", icon: "chevron.left.forwardslash.chevron.right", preset: .iphone14)
+                                }
+                            }
+                        }
+                        .padding()
+                        .background(RoundedRectangle(cornerRadius: 10).fill(Color(nsColor: .controlBackgroundColor)))
+                        
+                        // 3. Fenstergröße & User-Agent
+                        VStack(alignment: .leading, spacing: 10) {
+                            HStack {
+                                Text("3. Fenstergröße & Ansicht")
+                                    .font(.headline)
+                                Spacer()
+                                Text("\(Int(effectiveWidth)) × \(Int(effectiveHeight)) pt")
+                                    .font(.caption)
+                                    .fontWeight(.bold)
+                                    .foregroundColor(.accentColor)
+                            }
+                            
+                            Picker("Vorlage:", selection: $sizePreset) {
+                                ForEach(WebSizePreset.allCases) { preset in
+                                    Text(preset.rawValue).tag(preset)
+                                }
+                            }
+                            .pickerStyle(.menu)
+                            .onChange(of: sizePreset) {
+                                updateLivePreview()
+                            }
+                            
+                            if sizePreset == .custom {
+                                VStack(alignment: .leading, spacing: 6) {
+                                    HStack {
+                                        Text("Breite:")
+                                        Spacer()
+                                        Text("\(Int(customWidth)) pt").monospacedDigit()
+                                    }
+                                    Slider(value: $customWidth, in: 280...1200, step: 10) { _ in
+                                        updateLivePreview()
+                                    }
+                                    
+                                    HStack {
+                                        Text("Höhe:")
+                                        Spacer()
+                                        Text("\(Int(customHeight)) pt").monospacedDigit()
+                                    }
+                                    Slider(value: $customHeight, in: 300...1000, step: 10) { _ in
+                                        updateLivePreview()
+                                    }
+                                }
+                            }
+                            
+                            Divider()
+                            
+                            Text("User-Agent (Smartphone-Erkennung):")
+                                .font(.subheadline)
+                                .fontWeight(.medium)
+                            
+                            Picker("", selection: $userAgentMode) {
+                                ForEach(WebUserAgentMode.allCases) { mode in
+                                    Text(mode.rawValue).tag(mode)
+                                }
+                            }
+                            .pickerStyle(.radioGroup)
+                            .onChange(of: userAgentMode) {
+                                updateLivePreview()
+                            }
+                        }
+                        .padding()
+                        .background(RoundedRectangle(cornerRadius: 10).fill(Color(nsColor: .controlBackgroundColor)))
+                        
+                        // 4. Optionen
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("4. Optionen")
+                                .font(.headline)
+                            
+                            Toggle("In Menüleiste anzeigen", isOn: $isEnabled)
+                            Toggle("Adressleiste standardmäßig einblenden", isOn: $showsAddressBar)
+                            Toggle("Fenster anheften (Pin)", isOn: $isPinned)
+                        }
+                        .padding()
+                        .background(RoundedRectangle(cornerRadius: 10).fill(Color(nsColor: .controlBackgroundColor)))
+                    }
+                    .padding(16)
+                }
+                .frame(width: 380)
+                
+                Divider()
+                
+                // Right Column: Live Preview Area!
+                VStack(spacing: 12) {
+                    HStack {
+                        Image(systemName: "eye.fill")
+                            .foregroundColor(.accentColor)
+                        Text("Live-Vorschau (\(Int(effectiveWidth)) × \(Int(effectiveHeight)) pt)")
+                            .font(.headline)
+                        Spacer()
+                        
+                        Button(action: {
+                            previewController.reload()
+                        }) {
+                            HStack(spacing: 4) {
+                                Image(systemName: "arrow.clockwise")
+                                Text("Neu laden")
+                            }
+                            .font(.caption)
+                        }
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.top, 14)
+                    
+                    // Device Frame Outline
+                    VStack(spacing: 0) {
+                        // Fake Titlebar
+                        HStack(spacing: 6) {
+                            Circle().fill(Color.red.opacity(0.8)).frame(width: 8, height: 8)
+                            Circle().fill(Color.yellow.opacity(0.8)).frame(width: 8, height: 8)
+                            Circle().fill(Color.green.opacity(0.8)).frame(width: 8, height: 8)
+                            Spacer()
+                            Text(title.isEmpty ? url : title)
+                                .font(.system(size: 10, weight: .medium))
+                                .foregroundColor(.secondary)
+                                .lineLimit(1)
+                            Spacer()
+                            Text(userAgentMode == .desktop ? "Desktop" : "Mobil")
+                                .font(.system(size: 8, weight: .bold))
+                                .padding(.horizontal, 4)
+                                .padding(.vertical, 1)
+                                .background(Capsule().fill(Color.accentColor.opacity(0.2)))
+                                .foregroundColor(.accentColor)
+                        }
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 6)
+                        .background(Color(nsColor: .controlBackgroundColor))
+                        
+                        Divider()
+                        
+                        // Live WebView
+                        WebViewRepresentable(controller: previewController)
+                            .frame(width: effectiveWidth, height: effectiveHeight)
+                    }
+                    .background(Color(nsColor: .windowBackgroundColor))
+                    .cornerRadius(10)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 10)
+                            .stroke(Color.primary.opacity(0.15), lineWidth: 1)
+                    )
+                    .shadow(color: .black.opacity(0.2), radius: 8, y: 4)
+                    .scaleEffect(previewScale(containerWidth: 420, containerHeight: 460))
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                }
+                .background(Color(nsColor: .underPageBackgroundColor).opacity(0.5))
+            }
+            
+            Divider()
+            
+            // Bottom Action Bar
+            HStack {
+                Button("Abbrechen", action: onCancel)
+                Spacer()
+                Button(isEditing ? "Änderungen speichern" : "Web-Widget erstellen") {
+                    let item = WebWidgetItem(
+                        id: originalId ?? UUID(),
+                        title: title.isEmpty ? "Web-Widget" : title,
+                        url: url.isEmpty ? "https://calendar.proton.me" : url,
+                        iconName: iconName,
+                        sizePreset: sizePreset,
+                        customWidth: customWidth,
+                        customHeight: customHeight,
+                        userAgentMode: userAgentMode,
+                        isEnabled: isEnabled,
+                        isPinned: isPinned,
+                        showsAddressBar: showsAddressBar
+                    )
+                    onSave(item)
+                }
+                .buttonStyle(.borderedProminent)
+                .keyboardShortcut(.defaultAction)
+            }
+            .padding(.horizontal, 20)
+            .padding(.vertical, 12)
+            .background(Color(nsColor: .controlBackgroundColor))
+        }
+        .frame(minWidth: 840, minHeight: 620)
+        .onAppear {
+            updateLivePreview()
+        }
+    }
+    
+    private func previewScale(containerWidth: CGFloat, containerHeight: CGFloat) -> CGFloat {
+        let scaleW = (containerWidth - 40) / max(1, effectiveWidth)
+        let scaleH = (containerHeight - 40) / max(1, effectiveHeight)
+        return min(1.0, min(scaleW, scaleH))
+    }
+    
+    private func applyURLChange() {
+        var str = url.trimmingCharacters(in: .whitespacesAndNewlines)
         if !str.hasPrefix("http://") && !str.hasPrefix("https://") {
             str = "https://" + str
         }
-        urlInput = str
-        module.targetURL = str
+        url = str
+        updateLivePreview()
     }
     
-    private func selectURL(_ url: String, icon: String) {
-        urlInput = url
-        module.targetURL = url
-        module.statusIconName = icon
+    private func setPreset(url newURL: String, name: String, icon: String, preset: WebSizePreset) {
+        self.url = newURL
+        self.title = name
+        self.iconName = icon
+        self.sizePreset = preset
+        updateLivePreview()
     }
     
-    private func clearWebsiteData() {
-        let store = WKWebsiteDataStore.default()
-        let types = WKWebsiteDataStore.allWebsiteDataTypes()
-        store.removeData(ofTypes: types, modifiedSince: Date(timeIntervalSince1970: 0)) {
-            module.controller.reload()
+    private func updateLivePreview() {
+        var str = url.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !str.hasPrefix("http://") && !str.hasPrefix("https://") {
+            str = "https://" + str
         }
+        previewController.updateConfig(
+            userAgentMode: userAgentMode,
+            targetWidth: effectiveWidth,
+            newURL: str
+        )
     }
 }
 
-struct QuickURLButton: View {
-    let title: String
+struct QuickButton: View {
+    let name: String
     let icon: String
-    let url: String
     let action: () -> Void
     
     var body: some View {
         Button(action: action) {
-            HStack(spacing: 6) {
+            HStack(spacing: 4) {
                 Image(systemName: icon)
+                    .font(.caption2)
                     .foregroundColor(.accentColor)
-                Text(title)
-                    .font(.caption)
+                Text(name)
+                    .font(.caption2)
                     .lineLimit(1)
             }
-            .padding(.horizontal, 10)
-            .padding(.vertical, 7)
+            .padding(.horizontal, 6)
+            .padding(.vertical, 4)
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(RoundedRectangle(cornerRadius: 6).fill(Color(nsColor: .windowBackgroundColor)))
-        }
-        .buttonStyle(.plain)
-    }
-}
-
-struct IconChoiceButton: View {
-    let icon: String
-    let current: String
-    let action: () -> Void
-    
-    var isSelected: Bool { icon == current }
-    
-    var body: some View {
-        Button(action: action) {
-            Image(systemName: icon)
-                .font(.system(size: 14))
-                .foregroundColor(isSelected ? .white : .primary)
-                .frame(width: 30, height: 30)
-                .background(
-                    RoundedRectangle(cornerRadius: 6)
-                        .fill(isSelected ? Color.accentColor : Color(nsColor: .windowBackgroundColor))
-                )
         }
         .buttonStyle(.plain)
     }
