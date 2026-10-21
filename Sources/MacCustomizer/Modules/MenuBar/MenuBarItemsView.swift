@@ -144,19 +144,6 @@ public struct MenuBarItemsView: View {
                     .padding(20)
                 }
             }
-            
-            Divider()
-            
-            // Summary Footer
-            HStack {
-                Text("Änderungen an Systemeinstellungen werden nach dem Klick auf 'Übernehmen' in der Menüleiste sichtbar.")
-                    .font(.caption2)
-                    .foregroundColor(.secondary.opacity(0.8))
-                Spacer()
-            }
-            .padding(.horizontal, 20)
-            .padding(.vertical, 8)
-            .background(Color(nsColor: .controlBackgroundColor).opacity(0.5))
         }
     }
 }
