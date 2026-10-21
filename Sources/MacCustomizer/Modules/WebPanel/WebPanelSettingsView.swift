@@ -485,75 +485,83 @@ struct WebWidgetIconPickerPopover: View {
                                 .help("Neu scannen")
                             }
                             
-                            ScrollView(.horizontal, showsIndicators: false) {
-                                HStack(spacing: 6) {
-                                    ForEach(options) { opt in
-                                        let isAuto = (selectedFaviconURL == nil && opt == options.first)
-                                        let isChosen = (selectedFaviconURL == opt.urlString)
-                                        let isSelected = isChosen || isAuto
-                                        
-                                        Button(action: {
-                                            selectedFaviconURL = opt.urlString
-                                            applyChange()
-                                        }) {
-                                            VStack(spacing: 2) {
-                                                ZStack {
-                                                    RoundedRectangle(cornerRadius: 6)
-                                                        .fill(Color(nsColor: .controlBackgroundColor))
-                                                        .frame(width: 30, height: 30)
-                                                    
-                                                    if let img = faviconManager.icon(forOption: opt.urlString, removeWhite: removeWhiteBackground) {
-                                                        Image(nsImage: img)
-                                                            .resizable()
-                                                            .aspectRatio(contentMode: .fit)
-                                                            .frame(width: 18, height: 18)
-                                                            .clipShape(RoundedRectangle(cornerRadius: 3))
-                                                    } else {
-                                                        Image(systemName: "photo")
-                                                            .foregroundColor(.secondary)
+                            let columns = [GridItem(.adaptive(minimum: 64, maximum: 74), spacing: 6)]
+                            let grid = LazyVGrid(columns: columns, spacing: 6) {
+                                ForEach(options) { opt in
+                                    let isAuto = (selectedFaviconURL == nil && opt == options.first)
+                                    let isChosen = (selectedFaviconURL == opt.urlString)
+                                    let isSelected = isChosen || isAuto
+                                    
+                                    Button(action: {
+                                        selectedFaviconURL = opt.urlString
+                                        applyChange()
+                                    }) {
+                                        VStack(spacing: 2) {
+                                            ZStack {
+                                                RoundedRectangle(cornerRadius: 6)
+                                                    .fill(Color(nsColor: .controlBackgroundColor))
+                                                    .frame(width: 30, height: 30)
+                                                
+                                                if let img = faviconManager.icon(forOption: opt.urlString, removeWhite: removeWhiteBackground) {
+                                                    Image(nsImage: img)
+                                                        .resizable()
+                                                        .aspectRatio(contentMode: .fit)
+                                                        .frame(width: 18, height: 18)
+                                                        .clipShape(RoundedRectangle(cornerRadius: 3))
+                                                } else {
+                                                    Image(systemName: "photo")
+                                                        .foregroundColor(.secondary)
+                                                }
+                                            }
+                                            .overlay(
+                                                RoundedRectangle(cornerRadius: 6)
+                                                    .stroke(isSelected ? Color.accentColor : Color.primary.opacity(0.12), lineWidth: isSelected ? 2 : 1)
+                                            )
+                                            .overlay(
+                                                Group {
+                                                    if isSelected {
+                                                        Image(systemName: "checkmark.circle.fill")
+                                                            .font(.system(size: 10))
+                                                            .foregroundColor(.accentColor)
+                                                            .background(Circle().fill(Color.white))
+                                                            .offset(x: 11, y: -11)
                                                     }
                                                 }
-                                                .overlay(
-                                                    RoundedRectangle(cornerRadius: 6)
-                                                        .stroke(isSelected ? Color.accentColor : Color.primary.opacity(0.12), lineWidth: isSelected ? 2 : 1)
-                                                )
-                                                .overlay(
-                                                    Group {
-                                                        if isSelected {
-                                                            Image(systemName: "checkmark.circle.fill")
-                                                                .font(.system(size: 10))
-                                                                .foregroundColor(.accentColor)
-                                                                .background(Circle().fill(Color.white))
-                                                                .offset(x: 11, y: -11)
-                                                        }
-                                                    }
-                                                )
-                                                
-                                                Text(opt.label)
-                                                    .font(.system(size: 8.5, weight: isSelected ? .bold : .regular))
-                                                    .foregroundColor(.primary)
-                                                    .lineLimit(1)
-                                                
-                                                Text(opt.isTransparent ? "Transparent" : "Hintergrund")
-                                                    .font(.system(size: 7, weight: .medium))
-                                                    .foregroundColor(opt.isTransparent ? .green : .secondary)
-                                                    .padding(.horizontal, 3)
-                                                    .padding(.vertical, 0.5)
-                                                    .background(Capsule().fill(opt.isTransparent ? Color.green.opacity(0.15) : Color.primary.opacity(0.06)))
-                                            }
-                                            .frame(width: 68)
-                                            .padding(3)
-                                            .background(
-                                                RoundedRectangle(cornerRadius: 6)
-                                                    .fill(isSelected ? Color.accentColor.opacity(0.08) : Color.clear)
                                             )
+                                            
+                                            Text(opt.label)
+                                                .font(.system(size: 8.5, weight: isSelected ? .bold : .regular))
+                                                .foregroundColor(.primary)
+                                                .lineLimit(1)
+                                            
+                                            Text(opt.isTransparent ? "Transparent" : "Hintergrund")
+                                                .font(.system(size: 7, weight: .medium))
+                                                .foregroundColor(opt.isTransparent ? .green : .secondary)
+                                                .padding(.horizontal, 3)
+                                                .padding(.vertical, 0.5)
+                                                .background(Capsule().fill(opt.isTransparent ? Color.green.opacity(0.15) : Color.primary.opacity(0.06)))
                                         }
-                                        .buttonStyle(.plain)
-                                        .help(opt.urlString)
+                                        .frame(maxWidth: .infinity)
+                                        .padding(3)
+                                        .background(
+                                            RoundedRectangle(cornerRadius: 6)
+                                                .fill(isSelected ? Color.accentColor.opacity(0.08) : Color.clear)
+                                        )
                                     }
+                                    .buttonStyle(.plain)
+                                    .help(opt.urlString)
                                 }
-                                .padding(.vertical, 2)
-                                .padding(.horizontal, 1)
+                            }
+                            .padding(.vertical, 2)
+                            .padding(.horizontal, 1)
+                            
+                            if options.count > 8 {
+                                ScrollView(.vertical, showsIndicators: true) {
+                                    grid
+                                }
+                                .frame(maxHeight: 140)
+                            } else {
+                                grid
                             }
                         }
                     }
@@ -912,74 +920,82 @@ struct WebWidgetEditorSheet: View {
                                                     }
                                                 }
                                                 
-                                                ScrollView(.horizontal, showsIndicators: false) {
-                                                    HStack(spacing: 8) {
-                                                        ForEach(options) { opt in
-                                                            let isAuto = (selectedFaviconURL == nil && opt == options.first)
-                                                            let isChosen = (selectedFaviconURL == opt.urlString)
-                                                            let isSelected = isChosen || isAuto
-                                                            
-                                                            Button(action: {
-                                                                selectedFaviconURL = opt.urlString
-                                                            }) {
-                                                                VStack(spacing: 4) {
-                                                                    ZStack {
-                                                                        RoundedRectangle(cornerRadius: 6)
-                                                                            .fill(Color(nsColor: .controlBackgroundColor))
-                                                                            .frame(width: 34, height: 34)
-                                                                        
-                                                                        if let img = faviconManager.icon(forOption: opt.urlString, removeWhite: removeWhiteBackground) {
-                                                                            Image(nsImage: img)
-                                                                                .resizable()
-                                                                                .aspectRatio(contentMode: .fit)
-                                                                                .frame(width: 22, height: 22)
-                                                                                .clipShape(RoundedRectangle(cornerRadius: 3))
-                                                                        } else {
-                                                                            Image(systemName: "photo")
-                                                                                .foregroundColor(.secondary)
+                                                let editorColumns = [GridItem(.adaptive(minimum: 70, maximum: 84), spacing: 8)]
+                                                let editorGrid = LazyVGrid(columns: editorColumns, spacing: 8) {
+                                                    ForEach(options) { opt in
+                                                        let isAuto = (selectedFaviconURL == nil && opt == options.first)
+                                                        let isChosen = (selectedFaviconURL == opt.urlString)
+                                                        let isSelected = isChosen || isAuto
+                                                        
+                                                        Button(action: {
+                                                            selectedFaviconURL = opt.urlString
+                                                        }) {
+                                                            VStack(spacing: 4) {
+                                                                ZStack {
+                                                                    RoundedRectangle(cornerRadius: 6)
+                                                                        .fill(Color(nsColor: .controlBackgroundColor))
+                                                                        .frame(width: 34, height: 34)
+                                                                    
+                                                                    if let img = faviconManager.icon(forOption: opt.urlString, removeWhite: removeWhiteBackground) {
+                                                                        Image(nsImage: img)
+                                                                            .resizable()
+                                                                            .aspectRatio(contentMode: .fit)
+                                                                            .frame(width: 22, height: 22)
+                                                                            .clipShape(RoundedRectangle(cornerRadius: 3))
+                                                                    } else {
+                                                                        Image(systemName: "photo")
+                                                                            .foregroundColor(.secondary)
+                                                                    }
+                                                                }
+                                                                .overlay(
+                                                                    RoundedRectangle(cornerRadius: 6)
+                                                                        .stroke(isSelected ? Color.accentColor : Color.primary.opacity(0.12), lineWidth: isSelected ? 2 : 1)
+                                                                )
+                                                                .overlay(
+                                                                    Group {
+                                                                        if isSelected {
+                                                                            Image(systemName: "checkmark.circle.fill")
+                                                                                .font(.system(size: 11))
+                                                                                .foregroundColor(.accentColor)
+                                                                                .background(Circle().fill(Color.white))
+                                                                                .offset(x: 13, y: -13)
                                                                         }
                                                                     }
-                                                                    .overlay(
-                                                                        RoundedRectangle(cornerRadius: 6)
-                                                                            .stroke(isSelected ? Color.accentColor : Color.primary.opacity(0.12), lineWidth: isSelected ? 2 : 1)
-                                                                    )
-                                                                    .overlay(
-                                                                        Group {
-                                                                            if isSelected {
-                                                                                Image(systemName: "checkmark.circle.fill")
-                                                                                    .font(.system(size: 11))
-                                                                                    .foregroundColor(.accentColor)
-                                                                                    .background(Circle().fill(Color.white))
-                                                                                    .offset(x: 13, y: -13)
-                                                                            }
-                                                                        }
-                                                                    )
-                                                                    
-                                                                    Text(opt.label)
-                                                                        .font(.system(size: 9, weight: isSelected ? .bold : .regular))
-                                                                        .foregroundColor(.primary)
-                                                                        .lineLimit(1)
-                                                                    
-                                                                    Text(opt.isTransparent ? "Transparent" : "Mit Hintergrund")
-                                                                        .font(.system(size: 8, weight: .medium))
-                                                                        .foregroundColor(opt.isTransparent ? .green : .secondary)
-                                                                        .padding(.horizontal, 4)
-                                                                        .padding(.vertical, 1)
-                                                                        .background(Capsule().fill(opt.isTransparent ? Color.green.opacity(0.15) : Color.primary.opacity(0.06)))
-                                                                }
-                                                                .frame(width: 82)
-                                                                .padding(5)
-                                                                .background(
-                                                                    RoundedRectangle(cornerRadius: 8)
-                                                                        .fill(isSelected ? Color.accentColor.opacity(0.08) : Color.clear)
                                                                 )
+                                                                
+                                                                Text(opt.label)
+                                                                    .font(.system(size: 9, weight: isSelected ? .bold : .regular))
+                                                                    .foregroundColor(.primary)
+                                                                    .lineLimit(1)
+                                                                
+                                                                Text(opt.isTransparent ? "Transparent" : "Mit Hintergrund")
+                                                                    .font(.system(size: 8, weight: .medium))
+                                                                    .foregroundColor(opt.isTransparent ? .green : .secondary)
+                                                                    .padding(.horizontal, 4)
+                                                                    .padding(.vertical, 1)
+                                                                    .background(Capsule().fill(opt.isTransparent ? Color.green.opacity(0.15) : Color.primary.opacity(0.06)))
                                                             }
-                                                            .buttonStyle(.plain)
-                                                            .help(opt.urlString)
+                                                            .frame(maxWidth: .infinity)
+                                                            .padding(5)
+                                                            .background(
+                                                                RoundedRectangle(cornerRadius: 8)
+                                                                    .fill(isSelected ? Color.accentColor.opacity(0.08) : Color.clear)
+                                                            )
                                                         }
+                                                        .buttonStyle(.plain)
+                                                        .help(opt.urlString)
                                                     }
-                                                    .padding(.vertical, 3)
-                                                    .padding(.horizontal, 1)
+                                                }
+                                                .padding(.vertical, 3)
+                                                .padding(.horizontal, 1)
+                                                
+                                                if options.count > 10 {
+                                                    ScrollView(.vertical, showsIndicators: true) {
+                                                        editorGrid
+                                                    }
+                                                    .frame(maxHeight: 160)
+                                                } else {
+                                                    editorGrid
                                                 }
                                             }
                                         }

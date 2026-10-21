@@ -65,10 +65,25 @@ public final class WebFaviconManager: ObservableObject {
         return getOrFetchIcon(forURLString: optionUrl, widgetId: nil, removeWhite: removeWhite)
     }
     
-    /// Returns discovered options for a page URL
+    /// Returns discovered options for a page URL (deduplicated by visual appearance)
     public func options(for pageURL: String) -> [FaviconOption] {
         guard let host = extractHost(from: pageURL) else { return [] }
-        return discoveredOptions[host] ?? []
+        guard let list = discoveredOptions[host] else { return [] }
+        
+        var unique: [FaviconOption] = []
+        var seenFingerprints = Set<String>()
+        for opt in list {
+            let key = diskKey(forURLString: opt.urlString)
+            if let img = memoryCache[key] ?? icon(forOption: opt.urlString, removeWhite: false),
+               let fp = imageFingerprint(img) {
+                if seenFingerprints.contains(fp) {
+                    continue
+                }
+                seenFingerprints.insert(fp)
+            }
+            unique.append(opt)
+        }
+        return unique
     }
     
     /// Clears cached icons for a widget to force redownload
@@ -241,23 +256,53 @@ public final class WebFaviconManager: ObservableObject {
         
         group.notify(queue: .main) { [weak self] in
             guard let self = self else { return }
+            
+            // Deduplicate visually identical options
+            var unique: [FaviconOption] = []
+            var seenFingerprints = Set<String>()
+            
+            for opt in discovered {
+                let key = self.diskKey(forURLString: opt.urlString)
+                if let img = self.memoryCache[key], let fp = self.imageFingerprint(img) {
+                    if seenFingerprints.contains(fp) {
+                        continue
+                    }
+                    seenFingerprints.insert(fp)
+                }
+                unique.append(opt)
+            }
+            
             // Sort: transparent options first!
-            discovered.sort { (a, b) -> Bool in
+            unique.sort { (a, b) -> Bool in
                 if a.isTransparent != b.isTransparent {
                     return a.isTransparent && !b.isTransparent
                 }
                 return a.label < b.label
             }
             
-            self.discoveredOptions[host] = discovered
+            self.discoveredOptions[host] = unique
             self.changeCount += 1
             NotificationCenter.default.post(
                 name: .webFaviconDidUpdate,
                 object: nil,
                 userInfo: ["host": host, "widgetId": widgetId as Any]
             )
-            completion?(discovered)
+            completion?(unique)
         }
+    }
+    
+    /// Generates a visual fingerprint string for icon deduplication
+    public func imageFingerprint(_ image: NSImage) -> String? {
+        let targetSize = NSSize(width: 16, height: 16)
+        let smallImage = NSImage(size: targetSize, flipped: false) { rect in
+            image.draw(in: rect, from: .zero, operation: .copy, fraction: 1.0)
+            return true
+        }
+        guard let smallTiff = smallImage.tiffRepresentation,
+              let smallRep = NSBitmapImageRep(data: smallTiff),
+              let png = smallRep.representation(using: .png, properties: [:]) else { return nil }
+        
+        return png.base64EncodedString()
     }
     
     private func getOrFetchBestIcon(forPageURL pageURL: String, widgetId: UUID?, removeWhite: Bool) -> NSImage? {
