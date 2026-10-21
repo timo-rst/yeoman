@@ -30,7 +30,10 @@ public final class MenuBarItemScanner: ObservableObject {
     private let controlCenterDomain = "com.apple.controlcenter"
     
     public init() {
-        scanAll()
+        // Asynchronously populate initial items without blocking singleton creation or re-entering runloops
+        DispatchQueue.main.async { [weak self] in
+            self?.scanAll()
+        }
     }
     
     public var filteredItems: [MenuBarAppItem] {
@@ -52,20 +55,30 @@ public final class MenuBarItemScanner: ObservableObject {
     }
     
     public func scanAll() {
+        guard !isScanning else { return }
         isScanning = true
-        var scanned: [MenuBarAppItem] = []
         
-        // 1. macOS Control Center System Items
-        scanned.append(contentsOf: scanSystemControlCenterItems())
+        // Scan internal in-memory modules on current thread safely
+        let internalItems = scanInternalModules()
         
-        // 2. Installed & Running Third-Party Menu Bar Apps
-        scanned.append(contentsOf: scanThirdPartyApps())
-        
-        // 3. Internal MacCustomizer Modules
-        scanned.append(contentsOf: scanInternalModules())
-        
-        self.items = scanned
-        self.isScanning = false
+        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+            guard let self = self else { return }
+            var scanned: [MenuBarAppItem] = []
+            
+            // 1. macOS Control Center System Items (uses native CFPreferences, zero sub-processes)
+            scanned.append(contentsOf: self.scanSystemControlCenterItems())
+            
+            // 2. Installed & Running Third-Party Menu Bar Apps (filesystem scan)
+            scanned.append(contentsOf: self.scanThirdPartyApps())
+            
+            // 3. Internal MacCustomizer Modules
+            scanned.append(contentsOf: internalItems)
+            
+            DispatchQueue.main.async {
+                self.items = scanned
+                self.isScanning = false
+            }
+        }
     }
     
     // MARK: - System Items
@@ -310,22 +323,12 @@ public final class MenuBarItemScanner: ObservableObject {
     
     private func setSystemItemVisibility(key: String, enable: Bool) {
         if key == "BatteryShowPercentage" {
-            let p1 = Process()
-            p1.executableURL = URL(fileURLWithPath: "/usr/bin/defaults")
-            p1.arguments = ["-currentHost", "write", controlCenterDomain, key, "-bool", enable ? "true" : "false"]
-            try? p1.run()
-            p1.waitUntilExit()
+            CFPreferencesSetValue(key as CFString, (enable ? true : false) as CFPropertyList, controlCenterDomain as CFString, kCFPreferencesCurrentUser, kCFPreferencesCurrentHost)
         } else {
-            // In macOS ControlCenter:
-            // 18 = Visible in Menu Bar & Control Center
-            // 8  = Hidden from Menu Bar (Control Center only)
             let value = enable ? 18 : 8
-            let process = Process()
-            process.executableURL = URL(fileURLWithPath: "/usr/bin/defaults")
-            process.arguments = ["-currentHost", "write", controlCenterDomain, key, "-int", "\(value)"]
-            try? process.run()
-            process.waitUntilExit()
+            CFPreferencesSetValue(key as CFString, value as CFPropertyList, controlCenterDomain as CFString, kCFPreferencesCurrentUser, kCFPreferencesCurrentHost)
         }
+        CFPreferencesSynchronize(controlCenterDomain as CFString, kCFPreferencesCurrentUser, kCFPreferencesCurrentHost)
         
         // Post distributed notifications to ControlCenter quietly
         DistributedNotificationCenter.default().postNotificationName(
@@ -378,23 +381,17 @@ public final class MenuBarItemScanner: ObservableObject {
     }
     
     private func readControlCenterPreferences() -> [String: Any] {
-        let process = Process()
-        let pipe = Pipe()
-        process.executableURL = URL(fileURLWithPath: "/usr/bin/defaults")
-        process.arguments = ["-currentHost", "export", controlCenterDomain, "-"]
-        process.standardOutput = pipe
-        process.standardError = Pipe()
-        
-        do {
-            try process.run()
-            process.waitUntilExit()
-            let data = pipe.fileHandleForReading.readDataToEndOfFile()
-            if let plist = try? PropertyListSerialization.propertyList(from: data, options: [], format: nil) as? [String: Any] {
-                return plist
+        var dict: [String: Any] = [:]
+        let keys = [
+            "Sound", "Bluetooth", "Battery", "BatteryShowPercentage",
+            "AirDrop", "Display", "StageManager", "NowPlaying",
+            "KeyboardBrightness", "Hearing"
+        ]
+        for key in keys {
+            if let val = CFPreferencesCopyValue(key as CFString, controlCenterDomain as CFString, kCFPreferencesCurrentUser, kCFPreferencesCurrentHost) {
+                dict[key] = val
             }
-        } catch {
-            return [:]
         }
-        return [:]
+        return dict
     }
 }

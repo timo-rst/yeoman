@@ -51,6 +51,8 @@ cat <<EOF > "$CONTENTS_DIR/Info.plist"
     <false/>
     <key>NSHighResolutionCapable</key>
     <true/>
+    <key>NSQuitAlwaysKeepsWindows</key>
+    <false/>
     <key>NSHumanReadableCopyright</key>
     <string>Copyright © 2026 Timo Richstein. All rights reserved.</string>
 </dict>

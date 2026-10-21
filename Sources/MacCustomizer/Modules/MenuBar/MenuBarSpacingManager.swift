@@ -206,40 +206,11 @@ public final class MenuBarSpacingManager: ObservableObject {
     // MARK: - Defaults access
     
     private func getGlobalInt(key: String) -> Int? {
-        // Try -currentHost first
-        let p1 = Process()
-        let pipe1 = Pipe()
-        p1.executableURL = URL(fileURLWithPath: "/usr/bin/defaults")
-        p1.arguments = ["-currentHost", "read", "-globalDomain", key]
-        p1.standardOutput = pipe1
-        p1.standardError = Pipe()
-        if (try? p1.run()) != nil {
-            p1.waitUntilExit()
-            if p1.terminationStatus == 0 {
-                let data = pipe1.fileHandleForReading.readDataToEndOfFile()
-                if let str = String(data: data, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines),
-                   let val = Int(str) {
-                    return val
-                }
-            }
+        if let val = CFPreferencesCopyValue(key as CFString, kCFPreferencesAnyApplication, kCFPreferencesCurrentUser, kCFPreferencesCurrentHost) as? Int {
+            return val
         }
-        
-        // Try -g fallback
-        let p2 = Process()
-        let pipe2 = Pipe()
-        p2.executableURL = URL(fileURLWithPath: "/usr/bin/defaults")
-        p2.arguments = ["read", "-g", key]
-        p2.standardOutput = pipe2
-        p2.standardError = Pipe()
-        if (try? p2.run()) != nil {
-            p2.waitUntilExit()
-            if p2.terminationStatus == 0 {
-                let data = pipe2.fileHandleForReading.readDataToEndOfFile()
-                if let str = String(data: data, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines),
-                   let val = Int(str) {
-                    return val
-                }
-            }
+        if let val = UserDefaults.standard.persistentDomain(forName: UserDefaults.globalDomain)?[key] as? Int {
+            return val
         }
         return nil
     }

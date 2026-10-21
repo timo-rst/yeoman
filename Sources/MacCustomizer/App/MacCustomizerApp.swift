@@ -22,6 +22,10 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
         return true
     }
     
+    public func applicationSupportsSecureRestorableState(_ app: NSApplication) -> Bool {
+        return false
+    }
+    
     public func applicationWillTerminate(_ notification: Notification) {
         ModuleManager.shared.stopAll()
     }

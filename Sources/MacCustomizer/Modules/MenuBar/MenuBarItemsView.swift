@@ -145,6 +145,11 @@ public struct MenuBarItemsView: View {
                 }
             }
         }
+        .onAppear {
+            if scanner.items.isEmpty {
+                scanner.scanAll()
+            }
+        }
     }
 }
 
