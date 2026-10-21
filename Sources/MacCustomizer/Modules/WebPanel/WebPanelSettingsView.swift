@@ -118,9 +118,13 @@ public struct WebPanelSettingsView: View {
                         .font(.caption)
                         .foregroundColor(.secondary)
                     
-                    Button("Alle Cache- und Website-Daten löschen") {
-                        clearAllWebsiteData()
+                    Button(role: .destructive, action: clearAllWebsiteData) {
+                        HStack(spacing: 6) {
+                            Image(systemName: "trash")
+                            Text("Alle Cache- und Website-Daten löschen")
+                        }
                     }
+                    .buttonStyle(.bordered)
                     .foregroundColor(.red)
                 }
                 .padding()
@@ -248,38 +252,44 @@ struct WebWidgetRowView: View {
             Spacer()
             
             // Actions
-            HStack(spacing: 12) {
+            HStack(spacing: 8) {
                 // Open Popover
                 Button(action: onOpen) {
-                    HStack(spacing: 4) {
+                    HStack(spacing: 5) {
                         Image(systemName: "arrow.up.right.square")
                         Text("Öffnen")
                     }
-                    .font(.caption)
                 }
-                .buttonStyle(.plain)
-                .foregroundColor(.accentColor)
+                .buttonStyle(.bordered)
+                .controlSize(.regular)
                 .help("Fenster in Menüleiste öffnen")
                 
                 // Edit
                 Button(action: onEdit) {
-                    Image(systemName: "pencil")
-                        .font(.system(size: 13))
-                        .foregroundColor(.primary)
+                    HStack(spacing: 5) {
+                        Image(systemName: "pencil")
+                        Text("Bearbeiten")
+                    }
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(.bordered)
+                .controlSize(.regular)
                 .help("Widget bearbeiten")
                 
                 // Delete
-                Button(action: onDelete) {
-                    Image(systemName: "trash")
-                        .font(.system(size: 13))
-                        .foregroundColor(.red)
+                Button(role: .destructive, action: onDelete) {
+                    HStack(spacing: 5) {
+                        Image(systemName: "trash")
+                        Text("Löschen")
+                    }
+                    .foregroundColor(.red)
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(.bordered)
+                .controlSize(.regular)
                 .help("Widget löschen")
                 
-                Divider().frame(height: 18)
+                Divider()
+                    .frame(height: 20)
+                    .padding(.horizontal, 4)
                 
                 // In Menu Bar Toggle
                 Toggle("", isOn: Binding(
@@ -467,9 +477,15 @@ struct WebWidgetEditorSheet: View {
                                         
                                         Spacer()
                                         
-                                        Button("Neu laden") {
+                                        Button(action: {
                                             faviconManager.fetchFavicon(for: url, widgetId: originalId)
+                                        }) {
+                                            HStack(spacing: 4) {
+                                                Image(systemName: "arrow.clockwise")
+                                                Text("Neu laden")
+                                            }
                                         }
+                                        .buttonStyle(.bordered)
                                         .controlSize(.small)
                                     }
                                     .padding(8)
@@ -525,6 +541,7 @@ struct WebWidgetEditorSheet: View {
                                 Button("Laden") {
                                     applyURLChange()
                                 }
+                                .buttonStyle(.bordered)
                             }
                             
                             Text("Schnellvorlagen:")
@@ -677,6 +694,8 @@ struct WebWidgetEditorSheet: View {
                             }
                             .font(.caption)
                         }
+                        .buttonStyle(.bordered)
+                        .controlSize(.small)
                     }
                     .padding(.horizontal, 16)
                     .padding(.top, 14)
