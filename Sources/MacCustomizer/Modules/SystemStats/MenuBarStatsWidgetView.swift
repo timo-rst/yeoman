@@ -10,73 +10,83 @@ public struct StatsWidgetWidthKey: PreferenceKey {
 public struct MenuBarStatsWidgetView: View {
     @ObservedObject var provider = SystemMetricsProvider.shared
     @ObservedObject var module = ModuleManager.shared.systemStatsModule
+    public let isLiveMenuBar: Bool
     
-    public init() {}
+    public init(isLiveMenuBar: Bool = false) {
+        self.isLiveMenuBar = isLiveMenuBar
+    }
     
     public var body: some View {
-        HStack(spacing: module.useSubtleBackground ? 5 : 4) {
-            // CPU
-            if module.showCPU {
-                CompactMetricItemView(
-                    label: "CPU",
-                    value: "\(Int(provider.cpuUsagePercent))%",
-                    percent: provider.cpuUsagePercent,
-                    color: .blue,
-                    showLabel: module.showLabels,
-                    showPercentage: module.showPercentage,
-                    showGraph: module.showGraphs,
-                    layoutMode: module.layoutMode,
-                    graphStyle: module.graphStyle,
-                    history: provider.cpuHistory,
-                    useBackground: module.useSubtleBackground
-                )
-            }
-            
-            // RAM
-            if module.showRAM {
-                CompactMetricItemView(
-                    label: "RAM",
-                    value: "\(Int(provider.memoryUsagePercent))%",
-                    percent: provider.memoryUsagePercent,
-                    color: .purple,
-                    showLabel: module.showLabels,
-                    showPercentage: module.showPercentage,
-                    showGraph: module.showGraphs,
-                    layoutMode: module.layoutMode,
-                    graphStyle: module.graphStyle,
-                    history: provider.ramHistory,
-                    useBackground: module.useSubtleBackground
-                )
-            }
-            
-            // GPU
-            if module.showGPU {
-                CompactMetricItemView(
-                    label: "GPU",
-                    value: "\(Int(provider.gpuUsagePercent))%",
-                    percent: provider.gpuUsagePercent,
-                    color: .green,
-                    showLabel: module.showLabels,
-                    showPercentage: module.showPercentage,
-                    showGraph: module.showGraphs,
-                    layoutMode: module.layoutMode,
-                    graphStyle: module.graphStyle,
-                    history: provider.gpuHistory,
-                    useBackground: module.useSubtleBackground
-                )
-            }
-        }
-        .padding(.horizontal, 2)
-        .frame(height: 22)
-        .fixedSize()
-        .background(
-            GeometryReader { geo in
-                Color.clear.preference(key: StatsWidgetWidthKey.self, value: geo.size.width)
-            }
-        )
-        .onPreferenceChange(StatsWidgetWidthKey.self) { newWidth in
-            if newWidth > 10 {
-                module.updateStatusItemWidth(newWidth)
+        Group {
+            if !module.showCPU && !module.showRAM && !module.showGPU {
+                // Fallback clean icon when user turns off all individual metrics
+                HStack(spacing: 4) {
+                    Image(systemName: "gauge.with.needle")
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundColor(.secondary)
+                    if module.showLabels {
+                        Text("Stats")
+                            .font(.system(size: 8.5, weight: .bold))
+                            .foregroundColor(.secondary)
+                    }
+                }
+                .padding(.horizontal, 4)
+                .frame(height: 22)
+            } else {
+                HStack(spacing: module.useSubtleBackground ? 5 : 4) {
+                    // CPU
+                    if module.showCPU {
+                        CompactMetricItemView(
+                            label: "CPU",
+                            value: "\(Int(provider.cpuUsagePercent))%",
+                            percent: provider.cpuUsagePercent,
+                            color: .blue,
+                            showLabel: module.showLabels,
+                            showPercentage: module.showPercentage,
+                            showGraph: module.showGraphs,
+                            layoutMode: module.layoutMode,
+                            graphStyle: module.graphStyle,
+                            history: provider.cpuHistory,
+                            useBackground: module.useSubtleBackground
+                        )
+                    }
+                    
+                    // RAM
+                    if module.showRAM {
+                        CompactMetricItemView(
+                            label: "RAM",
+                            value: "\(Int(provider.memoryUsagePercent))%",
+                            percent: provider.memoryUsagePercent,
+                            color: .purple,
+                            showLabel: module.showLabels,
+                            showPercentage: module.showPercentage,
+                            showGraph: module.showGraphs,
+                            layoutMode: module.layoutMode,
+                            graphStyle: module.graphStyle,
+                            history: provider.ramHistory,
+                            useBackground: module.useSubtleBackground
+                        )
+                    }
+                    
+                    // GPU
+                    if module.showGPU {
+                        CompactMetricItemView(
+                            label: "GPU",
+                            value: "\(Int(provider.gpuUsagePercent))%",
+                            percent: provider.gpuUsagePercent,
+                            color: .green,
+                            showLabel: module.showLabels,
+                            showPercentage: module.showPercentage,
+                            showGraph: module.showGraphs,
+                            layoutMode: module.layoutMode,
+                            graphStyle: module.graphStyle,
+                            history: provider.gpuHistory,
+                            useBackground: module.useSubtleBackground
+                        )
+                    }
+                }
+                .padding(.horizontal, 2)
+                .frame(height: 22)
             }
         }
     }

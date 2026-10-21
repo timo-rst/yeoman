@@ -47,4 +47,12 @@ public final class ModuleManager: ObservableObject {
             objectWillChange.send()
         }
     }
+    
+    public func ensureAllStatusItemsVisible() {
+        systemStatsModule.ensureStatusItemVisible()
+        clipboardModule.updateStatusItemVisibility()
+        menuBarModule.updateStatusItemVisibility()
+        webPanelModule.updateStatusItemVisibility()
+        StatusItemController.shared.updateStatusItemVisibility()
+    }
 }

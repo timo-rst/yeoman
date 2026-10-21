@@ -330,7 +330,12 @@ public final class MenuBarAppearanceManager: ObservableObject {
             var minStatusX: CGFloat = screenWidth
             var foundAny = false
             
+            let myWinNumbers = Set(overlayPanels.map { $0.windowNumber })
+            
             for win in infoList {
+                let winNumber = win[kCGWindowNumber as String] as? Int ?? -1
+                if myWinNumbers.contains(winNumber) { continue }
+                
                 let layer = win[kCGWindowLayer as String] as? Int ?? -1
                 let bounds = win[kCGWindowBounds as String] as? [String: CGFloat] ?? [:]
                 
@@ -379,7 +384,7 @@ public final class MenuBarAppearanceManager: ObservableObject {
         
         for screen in NSScreen.screens {
             let panel = createOverlayPanel(for: screen)
-            panel.orderFrontRegardless()
+            panel.orderBack(nil)
             overlayPanels.append(panel)
         }
         

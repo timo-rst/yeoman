@@ -305,25 +305,20 @@ public final class MenuBarItemScanner: ObservableObject {
             deliverImmediately: true
         )
         
-        scheduleSystemReload()
+        self.hasPendingSystemReload = true
     }
     
     public func scheduleSystemReload() {
         self.hasPendingSystemReload = true
-        reloadWorkItem?.cancel()
-        let work = DispatchWorkItem { [weak self] in
-            self?.applySystemChanges()
-        }
-        reloadWorkItem = work
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.2, execute: work)
     }
     
     public func applySystemChanges() {
         reloadWorkItem?.cancel()
         MenuBarSpacingManager.shared.restartControlCenter()
         self.hasPendingSystemReload = false
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak self] in
             self?.scanAll()
+            ModuleManager.shared.ensureAllStatusItemsVisible()
         }
     }
     

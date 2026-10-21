@@ -40,55 +40,55 @@ public final class SystemStatsModule: NSObject, CustomizerModule, ObservableObje
     @Published public var layoutMode: StatsLayoutMode {
         didSet {
             UserDefaults.standard.set(layoutMode.rawValue, forKey: "stats_layout_mode")
-            recalculateStatusItemWidth()
+            updateStatusItemLength()
         }
     }
     @Published public var graphStyle: StatsGraphStyle {
         didSet {
             UserDefaults.standard.set(graphStyle.rawValue, forKey: "stats_graph_style")
-            recalculateStatusItemWidth()
+            updateStatusItemLength()
         }
     }
     @Published public var showCPU: Bool {
         didSet {
             UserDefaults.standard.set(showCPU, forKey: "stats_show_cpu")
-            recalculateStatusItemWidth()
+            updateStatusItemLength()
         }
     }
     @Published public var showRAM: Bool {
         didSet {
             UserDefaults.standard.set(showRAM, forKey: "stats_show_ram")
-            recalculateStatusItemWidth()
+            updateStatusItemLength()
         }
     }
     @Published public var showGPU: Bool {
         didSet {
             UserDefaults.standard.set(showGPU, forKey: "stats_show_gpu")
-            recalculateStatusItemWidth()
+            updateStatusItemLength()
         }
     }
     @Published public var showLabels: Bool {
         didSet {
             UserDefaults.standard.set(showLabels, forKey: "stats_show_labels")
-            recalculateStatusItemWidth()
+            updateStatusItemLength()
         }
     }
     @Published public var showPercentage: Bool {
         didSet {
             UserDefaults.standard.set(showPercentage, forKey: "stats_show_percentage")
-            recalculateStatusItemWidth()
+            updateStatusItemLength()
         }
     }
     @Published public var showGraphs: Bool {
         didSet {
             UserDefaults.standard.set(showGraphs, forKey: "stats_show_graphs")
-            recalculateStatusItemWidth()
+            updateStatusItemLength()
         }
     }
     @Published public var useSubtleBackground: Bool {
         didSet {
             UserDefaults.standard.set(useSubtleBackground, forKey: "stats_use_subtle_background")
-            recalculateStatusItemWidth()
+            updateStatusItemLength()
         }
     }
     
@@ -122,6 +122,15 @@ public final class SystemStatsModule: NSObject, CustomizerModule, ObservableObje
         self.useSubtleBackground = UserDefaults.standard.object(forKey: "stats_use_subtle_background") as? Bool ?? false
         
         super.init()
+        
+        // Listen for system / window / space changes to automatically recover status item if needed
+        NotificationCenter.default.addObserver(self, selector: #selector(handleEnvironmentChange), name: NSApplication.didBecomeActiveNotification, object: nil)
+        NotificationCenter.default.addObserver(self, selector: #selector(handleEnvironmentChange), name: NSWindow.didChangeScreenNotification, object: nil)
+        NotificationCenter.default.addObserver(self, selector: #selector(handleEnvironmentChange), name: NSWorkspace.activeSpaceDidChangeNotification, object: nil)
+    }
+    
+    @objc private func handleEnvironmentChange() {
+        ensureStatusItemVisible()
     }
     
     public func start() {
@@ -146,58 +155,100 @@ public final class SystemStatsModule: NSObject, CustomizerModule, ObservableObje
         }
     }
     
-    public func updateStatusItemWidth(_ width: CGFloat) {
+    public func calculatedStatusItemWidth() -> CGFloat {
+        let activeMetricsCount = (showCPU ? 1 : 0) + (showRAM ? 1 : 0) + (showGPU ? 1 : 0)
+        if activeMetricsCount == 0 {
+            // When all individual metrics are toggled off, show the fallback icon & title
+            return showLabels ? 52.0 : 28.0
+        }
+        
+        let interItemSpacing: CGFloat = useSubtleBackground ? 5.0 : 4.0
+        let paddingPerItem: CGFloat = useSubtleBackground ? 8.0 : 4.0
+        
+        if layoutMode == .vertical {
+            // Vertical stacked layout (label top, percentage bottom, bar or sparkline right)
+            var textW: CGFloat = 0
+            if showLabels && showPercentage {
+                textW = 28.0
+            } else if showPercentage {
+                textW = 26.0
+            } else if showLabels {
+                textW = 18.0
+            }
+            
+            var graphW: CGFloat = 0
+            if showGraphs && graphStyle != .none {
+                graphW = (graphStyle == .sparkline) ? 18.0 : 5.0
+            }
+            
+            let spacingBetweenTextAndGraph: CGFloat = (textW > 0 && graphW > 0) ? 3.0 : 0
+            let singleItemW = max(14.0, textW + graphW + spacingBetweenTextAndGraph + paddingPerItem)
+            let total = (CGFloat(activeMetricsCount) * singleItemW) + (CGFloat(activeMetricsCount - 1) * interItemSpacing)
+            return max(24.0, ceil(total + 6.0))
+        } else {
+            // Horizontal layout
+            var textW: CGFloat = 0
+            if showLabels { textW += 20.0 }
+            if showPercentage { textW += (showLabels ? 28.0 : 26.0) }
+            
+            var graphW: CGFloat = 0
+            if showGraphs && graphStyle != .none {
+                graphW = (graphStyle == .sparkline) ? 22.0 : 18.0
+            }
+            
+            let spacingBetweenTextAndGraph: CGFloat = (textW > 0 && graphW > 0) ? 3.0 : 0
+            let singleItemW = max(16.0, textW + graphW + spacingBetweenTextAndGraph + paddingPerItem)
+            let total = (CGFloat(activeMetricsCount) * singleItemW) + (CGFloat(activeMetricsCount - 1) * interItemSpacing)
+            return max(24.0, ceil(total + 6.0))
+        }
+    }
+    
+    public func updateStatusItemLength() {
         guard let item = statusItem else { return }
-        let targetLength = max(20.0, ceil(width))
-        if abs(item.length - targetLength) > 0.5 {
-            DispatchQueue.main.async {
+        let targetLength = calculatedStatusItemWidth()
+        DispatchQueue.main.async {
+            if abs(item.length - targetLength) > 0.5 {
                 item.length = targetLength
-                if let button = item.button {
-                    button.frame.size.width = targetLength
-                    button.needsLayout = true
-                }
             }
         }
     }
     
-    public func recalculateStatusItemWidth() {
-        guard let item = statusItem, let button = item.button else { return }
-        DispatchQueue.main.async {
-            if let hostingView = button.subviews.compactMap({ $0 as? NSHostingView<MenuBarStatsWidgetView> }).first {
-                hostingView.layoutSubtreeIfNeeded()
-                let targetLength = max(20.0, ceil(hostingView.fittingSize.width))
-                item.length = targetLength
-                button.frame.size.width = targetLength
-                button.needsLayout = true
+    public func ensureStatusItemVisible() {
+        guard isEnabled && showsDedicatedStatusItem else { return }
+        DispatchQueue.main.async { [weak self] in
+            guard let self = self else { return }
+            if self.statusItem == nil || self.statusItem?.button?.window == nil {
+                self.removeStatusItem()
+                self.setupStatusItem()
+            } else {
+                self.updateStatusItemLength()
             }
         }
     }
     
     private func setupStatusItem() {
-        guard statusItem == nil else { return }
+        if let existing = statusItem {
+            if existing.button?.window != nil && !(existing.button?.subviews.isEmpty ?? true) {
+                updateStatusItemLength()
+                return
+            }
+            removeStatusItem()
+        }
         
-        let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
+        let initialWidth = calculatedStatusItemWidth()
+        let item = NSStatusBar.system.statusItem(withLength: initialWidth)
         if let button = item.button {
+            button.subviews.forEach { $0.removeFromSuperview() }
             button.target = self
             button.action = #selector(statusItemClicked(_:))
             button.sendAction(on: [.leftMouseUp, .rightMouseUp])
             button.toolTip = "System Monitor & Mini Task-Manager (Klick zum Öffnen)"
             
-            let widgetView = MenuBarStatsWidgetView().allowsHitTesting(false)
+            let widgetView = MenuBarStatsWidgetView(isLiveMenuBar: true).allowsHitTesting(false)
             let hostingView = NSHostingView(rootView: widgetView)
-            hostingView.translatesAutoresizingMaskIntoConstraints = false
+            hostingView.frame = button.bounds
+            hostingView.autoresizingMask = [.width, .height]
             button.addSubview(hostingView)
-            
-            NSLayoutConstraint.activate([
-                hostingView.leadingAnchor.constraint(equalTo: button.leadingAnchor),
-                hostingView.trailingAnchor.constraint(equalTo: button.trailingAnchor),
-                hostingView.topAnchor.constraint(equalTo: button.topAnchor),
-                hostingView.bottomAnchor.constraint(equalTo: button.bottomAnchor)
-            ])
-            
-            hostingView.layoutSubtreeIfNeeded()
-            let initialWidth = max(24.0, hostingView.fittingSize.width)
-            item.length = initialWidth
         }
         self.statusItem = item
     }
@@ -323,7 +374,7 @@ public struct SystemStatsSettingsView: View {
                             .font(.subheadline)
                             .foregroundColor(.secondary)
                         Spacer()
-                        MenuBarStatsWidgetView()
+                        MenuBarStatsWidgetView(isLiveMenuBar: false)
                             .padding(.horizontal, 8)
                             .padding(.vertical, 4)
                             .background(RoundedRectangle(cornerRadius: 6).fill(Color(nsColor: .windowBackgroundColor)))
