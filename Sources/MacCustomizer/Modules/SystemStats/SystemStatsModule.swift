@@ -1,6 +1,17 @@
 import SwiftUI
 import AppKit
 
+public enum StatsLayoutMode: String, CaseIterable, Codable {
+    case vertical = "Vertikal gestapelt (wie Stats)"
+    case horizontal = "Horizontal nebeneinander"
+}
+
+public enum StatsGraphStyle: String, CaseIterable, Codable {
+    case miniBar = "Vertikaler Füllbalken"
+    case sparkline = "Mini-Verlaufskurve"
+    case none = "Kein Graph"
+}
+
 public final class SystemStatsModule: NSObject, CustomizerModule, ObservableObject {
     public let id = "system_stats"
     public let name = "Mini Task-Manager & System-Stats"
@@ -26,26 +37,59 @@ public final class SystemStatsModule: NSObject, CustomizerModule, ObservableObje
         }
     }
     
+    @Published public var layoutMode: StatsLayoutMode {
+        didSet {
+            UserDefaults.standard.set(layoutMode.rawValue, forKey: "stats_layout_mode")
+            recalculateStatusItemWidth()
+        }
+    }
+    @Published public var graphStyle: StatsGraphStyle {
+        didSet {
+            UserDefaults.standard.set(graphStyle.rawValue, forKey: "stats_graph_style")
+            recalculateStatusItemWidth()
+        }
+    }
     @Published public var showCPU: Bool {
-        didSet { UserDefaults.standard.set(showCPU, forKey: "stats_show_cpu") }
+        didSet {
+            UserDefaults.standard.set(showCPU, forKey: "stats_show_cpu")
+            recalculateStatusItemWidth()
+        }
     }
     @Published public var showRAM: Bool {
-        didSet { UserDefaults.standard.set(showRAM, forKey: "stats_show_ram") }
+        didSet {
+            UserDefaults.standard.set(showRAM, forKey: "stats_show_ram")
+            recalculateStatusItemWidth()
+        }
     }
     @Published public var showGPU: Bool {
-        didSet { UserDefaults.standard.set(showGPU, forKey: "stats_show_gpu") }
+        didSet {
+            UserDefaults.standard.set(showGPU, forKey: "stats_show_gpu")
+            recalculateStatusItemWidth()
+        }
     }
     @Published public var showLabels: Bool {
-        didSet { UserDefaults.standard.set(showLabels, forKey: "stats_show_labels") }
+        didSet {
+            UserDefaults.standard.set(showLabels, forKey: "stats_show_labels")
+            recalculateStatusItemWidth()
+        }
     }
     @Published public var showPercentage: Bool {
-        didSet { UserDefaults.standard.set(showPercentage, forKey: "stats_show_percentage") }
+        didSet {
+            UserDefaults.standard.set(showPercentage, forKey: "stats_show_percentage")
+            recalculateStatusItemWidth()
+        }
     }
     @Published public var showGraphs: Bool {
-        didSet { UserDefaults.standard.set(showGraphs, forKey: "stats_show_graphs") }
+        didSet {
+            UserDefaults.standard.set(showGraphs, forKey: "stats_show_graphs")
+            recalculateStatusItemWidth()
+        }
     }
     @Published public var useSubtleBackground: Bool {
-        didSet { UserDefaults.standard.set(useSubtleBackground, forKey: "stats_use_subtle_background") }
+        didSet {
+            UserDefaults.standard.set(useSubtleBackground, forKey: "stats_use_subtle_background")
+            recalculateStatusItemWidth()
+        }
     }
     
     private var statusItem: NSStatusItem?
@@ -55,11 +99,25 @@ public final class SystemStatsModule: NSObject, CustomizerModule, ObservableObje
         self.isEnabled = UserDefaults.standard.object(forKey: "system_stats_is_enabled") as? Bool ?? true
         self.showsDedicatedStatusItem = UserDefaults.standard.object(forKey: "system_stats_shows_dedicated_status_item") as? Bool ?? true
         
+        if let savedLayout = UserDefaults.standard.string(forKey: "stats_layout_mode"),
+           let l = StatsLayoutMode(rawValue: savedLayout) {
+            self.layoutMode = l
+        } else {
+            self.layoutMode = .vertical
+        }
+        
+        if let savedGraphStyle = UserDefaults.standard.string(forKey: "stats_graph_style"),
+           let g = StatsGraphStyle(rawValue: savedGraphStyle) {
+            self.graphStyle = g
+        } else {
+            self.graphStyle = .miniBar
+        }
+        
         self.showCPU = UserDefaults.standard.object(forKey: "stats_show_cpu") as? Bool ?? true
         self.showRAM = UserDefaults.standard.object(forKey: "stats_show_ram") as? Bool ?? true
         self.showGPU = UserDefaults.standard.object(forKey: "stats_show_gpu") as? Bool ?? true
         self.showLabels = UserDefaults.standard.object(forKey: "stats_show_labels") as? Bool ?? true
-        self.showPercentage = UserDefaults.standard.object(forKey: "stats_show_percentage") as? Bool ?? false
+        self.showPercentage = UserDefaults.standard.object(forKey: "stats_show_percentage") as? Bool ?? true
         self.showGraphs = UserDefaults.standard.object(forKey: "stats_show_graphs") as? Bool ?? true
         self.useSubtleBackground = UserDefaults.standard.object(forKey: "stats_use_subtle_background") as? Bool ?? false
         
@@ -88,6 +146,33 @@ public final class SystemStatsModule: NSObject, CustomizerModule, ObservableObje
         }
     }
     
+    public func updateStatusItemWidth(_ width: CGFloat) {
+        guard let item = statusItem else { return }
+        let targetLength = max(20.0, ceil(width))
+        if abs(item.length - targetLength) > 0.5 {
+            DispatchQueue.main.async {
+                item.length = targetLength
+                if let button = item.button {
+                    button.frame.size.width = targetLength
+                    button.needsLayout = true
+                }
+            }
+        }
+    }
+    
+    public func recalculateStatusItemWidth() {
+        guard let item = statusItem, let button = item.button else { return }
+        DispatchQueue.main.async {
+            if let hostingView = button.subviews.compactMap({ $0 as? NSHostingView<MenuBarStatsWidgetView> }).first {
+                hostingView.layoutSubtreeIfNeeded()
+                let targetLength = max(20.0, ceil(hostingView.fittingSize.width))
+                item.length = targetLength
+                button.frame.size.width = targetLength
+                button.needsLayout = true
+            }
+        }
+    }
+    
     private func setupStatusItem() {
         guard statusItem == nil else { return }
         
@@ -109,6 +194,10 @@ public final class SystemStatsModule: NSObject, CustomizerModule, ObservableObje
                 hostingView.topAnchor.constraint(equalTo: button.topAnchor),
                 hostingView.bottomAnchor.constraint(equalTo: button.bottomAnchor)
             ])
+            
+            hostingView.layoutSubtreeIfNeeded()
+            let initialWidth = max(24.0, hostingView.fittingSize.width)
+            item.length = initialWidth
         }
         self.statusItem = item
     }
@@ -253,6 +342,26 @@ public struct SystemStatsSettingsView: View {
                         Toggle("RAM (Speicher)", isOn: $module.showRAM)
                         Toggle("GPU (Grafik)", isOn: $module.showGPU)
                     }
+                    
+                    Divider()
+                    
+                    Text("Layout & Text-Ausrichtung:")
+                        .font(.subheadline)
+                        .fontWeight(.medium)
+                    
+                    Picker("Layout-Stil:", selection: $module.layoutMode) {
+                        ForEach(StatsLayoutMode.allCases, id: \.self) { mode in
+                            Text(mode.rawValue).tag(mode)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+                    
+                    Picker("Graph-Typ:", selection: $module.graphStyle) {
+                        ForEach(StatsGraphStyle.allCases, id: \.self) { style in
+                            Text(style.rawValue).tag(style)
+                        }
+                    }
+                    .pickerStyle(.segmented)
                     
                     Divider()
                     

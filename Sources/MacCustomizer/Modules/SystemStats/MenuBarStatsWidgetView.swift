@@ -1,5 +1,12 @@
 import SwiftUI
 
+public struct StatsWidgetWidthKey: PreferenceKey {
+    public static var defaultValue: CGFloat = 0
+    public static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+        value = max(value, nextValue())
+    }
+}
+
 public struct MenuBarStatsWidgetView: View {
     @ObservedObject var provider = SystemMetricsProvider.shared
     @ObservedObject var module = ModuleManager.shared.systemStatsModule
@@ -7,99 +14,175 @@ public struct MenuBarStatsWidgetView: View {
     public init() {}
     
     public var body: some View {
-        HStack(spacing: 8) {
+        HStack(spacing: module.useSubtleBackground ? 5 : 4) {
             // CPU
             if module.showCPU {
-                MetricItemView(
+                CompactMetricItemView(
                     label: "CPU",
                     value: "\(Int(provider.cpuUsagePercent))%",
+                    percent: provider.cpuUsagePercent,
                     color: .blue,
                     showLabel: module.showLabels,
                     showPercentage: module.showPercentage,
                     showGraph: module.showGraphs,
+                    layoutMode: module.layoutMode,
+                    graphStyle: module.graphStyle,
+                    history: provider.cpuHistory,
                     useBackground: module.useSubtleBackground
-                ) {
-                    MiniSparkline(data: provider.cpuHistory, color: .blue)
-                        .frame(width: 22, height: 12)
-                }
+                )
             }
             
             // RAM
             if module.showRAM {
-                MetricItemView(
+                CompactMetricItemView(
                     label: "RAM",
                     value: "\(Int(provider.memoryUsagePercent))%",
+                    percent: provider.memoryUsagePercent,
                     color: .purple,
                     showLabel: module.showLabels,
                     showPercentage: module.showPercentage,
                     showGraph: module.showGraphs,
+                    layoutMode: module.layoutMode,
+                    graphStyle: module.graphStyle,
+                    history: provider.ramHistory,
                     useBackground: module.useSubtleBackground
-                ) {
-                    MiniBarGauge(percent: provider.memoryUsagePercent, color: .purple)
-                        .frame(width: 20, height: 10)
-                }
+                )
             }
             
             // GPU
             if module.showGPU {
-                MetricItemView(
+                CompactMetricItemView(
                     label: "GPU",
                     value: "\(Int(provider.gpuUsagePercent))%",
+                    percent: provider.gpuUsagePercent,
                     color: .green,
                     showLabel: module.showLabels,
                     showPercentage: module.showPercentage,
                     showGraph: module.showGraphs,
+                    layoutMode: module.layoutMode,
+                    graphStyle: module.graphStyle,
+                    history: provider.gpuHistory,
                     useBackground: module.useSubtleBackground
-                ) {
-                    MiniSparkline(data: provider.gpuHistory, color: .green)
-                        .frame(width: 22, height: 12)
-                }
+                )
             }
         }
-        .padding(.horizontal, 4)
+        .padding(.horizontal, 2)
         .frame(height: 22)
+        .fixedSize()
+        .background(
+            GeometryReader { geo in
+                Color.clear.preference(key: StatsWidgetWidthKey.self, value: geo.size.width)
+            }
+        )
+        .onPreferenceChange(StatsWidgetWidthKey.self) { newWidth in
+            if newWidth > 10 {
+                module.updateStatusItemWidth(newWidth)
+            }
+        }
     }
 }
 
-struct MetricItemView<Content: View>: View {
+struct CompactMetricItemView: View {
     let label: String
     let value: String
+    let percent: Double
     let color: Color
     let showLabel: Bool
     let showPercentage: Bool
     let showGraph: Bool
+    let layoutMode: StatsLayoutMode
+    let graphStyle: StatsGraphStyle
+    let history: [Double]
     let useBackground: Bool
-    @ViewBuilder let content: () -> Content
     
     var body: some View {
-        HStack(spacing: 3) {
-            if showLabel {
-                Text(label)
-                    .font(.system(size: 9, weight: .bold))
-                    .foregroundColor(color)
-            }
-            
-            if showPercentage {
-                Text(value)
-                    .font(.system(size: 9, weight: .semibold))
-                    .monospacedDigit()
-                    .foregroundColor(.primary)
-            }
-            
-            if showGraph {
-                content()
+        Group {
+            if layoutMode == .vertical {
+                verticalLayout
+            } else {
+                horizontalLayout
             }
         }
-        .padding(.horizontal, useBackground ? 5 : 2)
-        .padding(.vertical, useBackground ? 2 : 0)
+        .padding(.horizontal, useBackground ? 4 : 2)
+        .padding(.vertical, useBackground ? 1.5 : 0)
         .background(
             Group {
                 if useBackground {
-                    RoundedRectangle(cornerRadius: 4)
+                    RoundedRectangle(cornerRadius: 4.5)
                         .fill(Color.primary.opacity(0.1))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 4.5)
+                                .stroke(color.opacity(0.35), lineWidth: 0.5)
+                        )
                 }
             }
         )
+    }
+    
+    // VERTICAL LAYOUT (Stats / iStat Menus style: compact stacked text)
+    private var verticalLayout: some View {
+        HStack(spacing: 3) {
+            // Text stack: Label on top, Value below
+            VStack(alignment: .trailing, spacing: -1) {
+                if showLabel {
+                    Text(label)
+                        .font(.system(size: 7.5, weight: .bold))
+                        .foregroundColor(color)
+                        .lineLimit(1)
+                }
+                if showPercentage {
+                    Text(value)
+                        .font(.system(size: 8.5, weight: .semibold, design: .monospaced))
+                        .foregroundColor(.primary)
+                        .lineLimit(1)
+                }
+            }
+            
+            // Visual indicator
+            if showGraph && graphStyle != .none {
+                if graphStyle == .miniBar {
+                    // Vertical fill bar gauge
+                    ZStack(alignment: .bottom) {
+                        RoundedRectangle(cornerRadius: 1.5)
+                            .fill(Color.primary.opacity(0.18))
+                            .frame(width: 4.5, height: 16)
+                        
+                        RoundedRectangle(cornerRadius: 1.5)
+                            .fill(color)
+                            .frame(width: 4.5, height: max(2.0, 16.0 * CGFloat(min(100.0, max(0.0, percent)) / 100.0)))
+                    }
+                } else {
+                    // Mini sparkline graph
+                    MiniSparkline(data: history, color: color)
+                        .frame(width: 18, height: 13)
+                }
+            }
+        }
+    }
+    
+    // HORIZONTAL LAYOUT
+    private var horizontalLayout: some View {
+        HStack(spacing: 3) {
+            if showLabel {
+                Text(label)
+                    .font(.system(size: 8.5, weight: .bold))
+                    .foregroundColor(color)
+            }
+            if showPercentage {
+                Text(value)
+                    .font(.system(size: 8.5, weight: .semibold, design: .monospaced))
+                    .foregroundColor(.primary)
+            }
+            if showGraph && graphStyle != .none {
+                if graphStyle == .miniBar {
+                    MiniBarGauge(percent: percent, color: color)
+                        .frame(width: 16, height: 9)
+                } else {
+                    MiniSparkline(data: history, color: color)
+                        .frame(width: 20, height: 11)
+                }
+            }
+        }
     }
 }
 
@@ -113,7 +196,6 @@ struct MiniSparkline: View {
             let h = geo.size.height
             if data.count > 1 {
                 ZStack {
-                    // Subtle transparent gradient under line
                     Path { path in
                         let step = w / CGFloat(data.count - 1)
                         path.move(to: CGPoint(x: 0, y: h))
@@ -128,7 +210,6 @@ struct MiniSparkline: View {
                     }
                     .fill(LinearGradient(colors: [color.opacity(0.4), color.opacity(0.04)], startPoint: .top, endPoint: .bottom))
                     
-                    // Crisp stroke
                     Path { path in
                         let step = w / CGFloat(data.count - 1)
                         let firstY = h - (CGFloat(min(100.0, max(0.0, data[0])) / 100.0) * h)
