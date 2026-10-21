@@ -4,6 +4,7 @@ import WebKit
 public enum WebWidgetEditorMode: Identifiable {
     case create
     case edit(WebWidgetItem)
+    case editIcon(WebWidgetItem)
     
     public var id: String {
         switch self {
@@ -11,20 +12,29 @@ public enum WebWidgetEditorMode: Identifiable {
             return "create"
         case .edit(let widget):
             return "edit_\(widget.id.uuidString)"
+        case .editIcon(let widget):
+            return "edit_icon_\(widget.id.uuidString)"
         }
     }
     
     public var widget: WebWidgetItem? {
         switch self {
         case .create: return nil
-        case .edit(let widget): return widget
+        case .edit(let widget), .editIcon(let widget): return widget
         }
     }
     
     public var isEditing: Bool {
         switch self {
         case .create: return false
-        case .edit: return true
+        case .edit, .editIcon: return true
+        }
+    }
+    
+    public var startWithIconPicker: Bool {
+        switch self {
+        case .editIcon: return true
+        default: return false
         }
     }
 }
@@ -111,6 +121,9 @@ public struct WebPanelSettingsView: View {
                                 onEdit: {
                                     editorMode = .edit(widget)
                                 },
+                                onEditIcon: {
+                                    editorMode = .editIcon(widget)
+                                },
                                 onDelete: {
                                     widgetToDelete = widget
                                     showingDeleteConfirm = true
@@ -154,6 +167,7 @@ public struct WebPanelSettingsView: View {
         .sheet(item: $editorMode) { mode in
             WebWidgetEditorSheet(
                 initialWidget: mode.widget,
+                startWithIconPicker: mode.startWithIconPicker,
                 onSave: { savedItem in
                     if mode.isEditing {
                         module.updateWidget(savedItem)
@@ -195,6 +209,7 @@ struct WebWidgetRowView: View {
     let widget: WebWidgetItem
     let onToggleEnabled: (Bool) -> Void
     let onEdit: () -> Void
+    let onEditIcon: () -> Void
     let onDelete: () -> Void
     let onOpen: () -> Void
     @ObservedObject private var faviconManager = WebFaviconManager.shared
@@ -272,31 +287,42 @@ struct WebWidgetRowView: View {
             
             Spacer(minLength: 12)
             
-            // Actions: Elegantly arranged across 2 vertical tiers to fully utilize the row's height
-            VStack(alignment: .leading, spacing: 6) {
-                // Top Tier: Open Popover
-                Button(action: onOpen) {
-                    HStack(spacing: 5) {
-                        Image(systemName: "arrow.up.right.square")
-                        Text("Öffnen")
+            // Actions: Arranged in a balanced 2x2 grid (Öffnen + Icon oben, Bearbeiten + Löschen unten)
+            Grid(horizontalSpacing: 8, verticalSpacing: 6) {
+                GridRow {
+                    Button(action: onOpen) {
+                        HStack(spacing: 5) {
+                            Image(systemName: "arrow.up.right.square")
+                            Text("Öffnen")
+                        }
+                        .frame(maxWidth: .infinity)
                     }
+                    .buttonStyle(.bordered)
+                    .controlSize(.regular)
+                    .help("Fenster in Menüleiste öffnen")
+                    
+                    Button(action: onEditIcon) {
+                        HStack(spacing: 5) {
+                            Image(systemName: "photo")
+                            Text("Icon")
+                        }
+                        .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(.bordered)
+                    .controlSize(.regular)
+                    .help("Menüleisten-Symbol & Logo anpassen")
                 }
-                .buttonStyle(.bordered)
-                .controlSize(.regular)
-                .fixedSize(horizontal: true, vertical: false)
-                .help("Fenster in Menüleiste öffnen")
                 
-                // Bottom Tier: Edit & Delete
-                HStack(spacing: 8) {
+                GridRow {
                     Button(action: onEdit) {
                         HStack(spacing: 5) {
                             Image(systemName: "pencil")
                             Text("Bearbeiten")
                         }
+                        .frame(maxWidth: .infinity)
                     }
                     .buttonStyle(.bordered)
                     .controlSize(.regular)
-                    .fixedSize(horizontal: true, vertical: false)
                     .help("Widget bearbeiten")
                     
                     Button(role: .destructive, action: onDelete) {
@@ -305,13 +331,14 @@ struct WebWidgetRowView: View {
                             Text("Löschen")
                         }
                         .foregroundColor(.red)
+                        .frame(maxWidth: .infinity)
                     }
                     .buttonStyle(.bordered)
                     .controlSize(.regular)
-                    .fixedSize(horizontal: true, vertical: false)
                     .help("Widget löschen")
                 }
             }
+            .fixedSize(horizontal: true, vertical: false)
             
             Divider()
                 .frame(height: 38)
@@ -366,6 +393,7 @@ struct WebWidgetEditorSheet: View {
     
     public init(
         initialWidget: WebWidgetItem?,
+        startWithIconPicker: Bool = false,
         onSave: @escaping (WebWidgetItem) -> Void,
         onCancel: @escaping () -> Void
     ) {
@@ -393,7 +421,7 @@ struct WebWidgetEditorSheet: View {
         _useFavicon = State(initialValue: initialUseFavicon)
         _selectedFaviconURL = State(initialValue: initialSelectedFaviconURL)
         _removeWhiteBackground = State(initialValue: initialRemoveWhite)
-        _isLogoSettingsExpanded = State(initialValue: false)
+        _isLogoSettingsExpanded = State(initialValue: startWithIconPicker)
         _sizePreset = State(initialValue: initialPreset)
         _customWidth = State(initialValue: initialW)
         _customHeight = State(initialValue: initialH)
