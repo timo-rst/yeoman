@@ -292,6 +292,12 @@ public final class MenuBarAppearanceManager: ObservableObject {
         return options.contains(.hideMenuBar) || options.contains(.autoHideMenuBar)
     }
     
+    public var isMenuBarHiddenOnScreen: Bool {
+        guard let screen = NSScreen.main else { return false }
+        let diff = screen.frame.maxY - screen.visibleFrame.maxY
+        return diff <= 1.0
+    }
+    
     public var isFullScreenWindowActive: Bool {
         guard let screen = NSScreen.main else { return false }
         let sFrame = screen.frame
@@ -308,7 +314,9 @@ public final class MenuBarAppearanceManager: ObservableObject {
                 let wVal = b["Width"] ?? 0
                 let hVal = b["Height"] ?? 0
                 let yVal = b["Y"] ?? 999
-                if yVal <= 0 && wVal >= sFrame.width && hVal >= sFrame.height {
+                // On notched MacBooks, fullscreen windows typically start below the notch (yVal around 32-34)
+                // and have height around screen height minus notch height (~948).
+                if yVal <= 36 && wVal >= (sFrame.width - 20) && hVal >= (sFrame.height - 50) {
                     return true
                 }
             }
@@ -320,16 +328,16 @@ public final class MenuBarAppearanceManager: ObservableObject {
         guard isEnabled else { return false }
         if isCurrentSpaceFullscreen { return false }
         if isMenuBarHiddenBySystem { return false }
+        if isMenuBarHiddenOnScreen { return false }
         if isFullScreenWindowActive { return false }
         return true
     }
     
     public func orderPanelToBack(_ panel: NSPanel) {
-        // orderFrontRegardless makes the backing surface active,
-        // then orderBack(nil) puts it at the lowest z-order within .statusBar (Layer 25),
-        // cleanly underneath all status items and application menus (Layer 26).
+        // At .mainMenu (Layer 24), orderFrontRegardless ensures the panel is visible
+        // directly above WindowServer's background, while remaining strictly BEHIND
+        // status items (Layer 25) and app menus (Layer 26) so text/icons are never covered!
         panel.orderFrontRegardless()
-        panel.orderBack(nil)
     }
     
     public func updateVisibilityForCurrentState() {
@@ -518,11 +526,12 @@ public final class MenuBarAppearanceManager: ObservableObject {
             defer: false
         )
         
-        // Layer 25 (.statusBar): Elevated above WindowServer background (Layer 24),
-        // with orderPanelToBack ensuring it is placed underneath status icons (Layer 25)
-        // and app menus (Layer 26).
-        panel.level = .statusBar
-        panel.collectionBehavior = [.fullScreenNone, .ignoresCycle, .moveToActiveSpace]
+        // Layer 24 (.mainMenu): Positioned directly in front of WindowServer Menubar background (Layer 24),
+        // but strictly behind status items (Layer 25) and application menus (Layer 26).
+        // This guarantees the styling acts as a true background underneath all icons and text!
+        panel.level = .mainMenu
+        // Excluded from fullscreen spaces and video overlays
+        panel.collectionBehavior = [.fullScreenNone, .ignoresCycle]
         panel.backgroundColor = .clear
         panel.isOpaque = false
         panel.hasShadow = false
