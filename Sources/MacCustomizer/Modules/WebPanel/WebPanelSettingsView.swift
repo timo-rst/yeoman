@@ -276,6 +276,7 @@ struct WebWidgetEditorSheet: View {
     @State private var customWidth: CGFloat
     @State private var customHeight: CGFloat
     @State private var userAgentMode: WebUserAgentMode
+    @State private var zoomScale: Double
     @State private var isEnabled: Bool
     @State private var isPinned: Bool
     @State private var showsAddressBar: Bool
@@ -302,6 +303,7 @@ struct WebWidgetEditorSheet: View {
         let initialW = initialWidget?.customWidth ?? 320
         let initialH = initialWidget?.customHeight ?? 400
         let initialUA = initialWidget?.userAgentMode ?? .auto
+        let initialZoom = initialWidget?.zoomScale ?? (initialPreset == .widget ? 0.85 : 1.0)
         let initialEnabled = initialWidget?.isEnabled ?? true
         let initialPinned = initialWidget?.isPinned ?? false
         let initialBar = initialWidget?.showsAddressBar ?? false
@@ -313,6 +315,7 @@ struct WebWidgetEditorSheet: View {
         _customWidth = State(initialValue: initialW)
         _customHeight = State(initialValue: initialH)
         _userAgentMode = State(initialValue: initialUA)
+        _zoomScale = State(initialValue: initialZoom)
         _isEnabled = State(initialValue: initialEnabled)
         _isPinned = State(initialValue: initialPinned)
         _showsAddressBar = State(initialValue: initialBar)
@@ -321,7 +324,8 @@ struct WebWidgetEditorSheet: View {
         _previewController = StateObject(wrappedValue: WebPanelController(
             initialURL: initialURL,
             userAgentMode: initialUA,
-            targetWidth: targetW
+            targetWidth: targetW,
+            zoomScale: initialZoom
         ))
         
         self.onSave = onSave
@@ -468,6 +472,9 @@ struct WebWidgetEditorSheet: View {
                             }
                             .pickerStyle(.menu)
                             .onChange(of: sizePreset) {
+                                if sizePreset == .widget && (zoomScale == 1.0 || zoomScale == 0) {
+                                    zoomScale = 0.85
+                                }
                                 updateLivePreview()
                             }
                             
@@ -491,6 +498,26 @@ struct WebWidgetEditorSheet: View {
                                         updateLivePreview()
                                     }
                                 }
+                            }
+                            
+                            Divider()
+                            
+                            VStack(alignment: .leading, spacing: 6) {
+                                HStack {
+                                    Text("Seiten-Skalierung (Zoom):")
+                                        .font(.subheadline)
+                                        .fontWeight(.medium)
+                                    Spacer()
+                                    Text("\(Int(zoomScale * 100))%").monospacedDigit()
+                                        .foregroundColor(.accentColor)
+                                        .fontWeight(.bold)
+                                }
+                                Slider(value: $zoomScale, in: 0.5...1.5, step: 0.05) { _ in
+                                    updateLivePreview()
+                                }
+                                Text("Skaliert Webseiten herunter, damit sie im Widget optimal ohne horizontales Scrollen lesbar sind.")
+                                    .font(.caption2)
+                                    .foregroundColor(.secondary)
                             }
                             
                             Divider()
@@ -611,6 +638,7 @@ struct WebWidgetEditorSheet: View {
                         customWidth: customWidth,
                         customHeight: customHeight,
                         userAgentMode: userAgentMode,
+                        zoomScale: zoomScale,
                         isEnabled: isEnabled,
                         isPinned: isPinned,
                         showsAddressBar: showsAddressBar
@@ -650,6 +678,9 @@ struct WebWidgetEditorSheet: View {
         self.title = name
         self.iconName = icon
         self.sizePreset = preset
+        if preset == .widget {
+            self.zoomScale = 0.85
+        }
         updateLivePreview()
     }
     
@@ -661,6 +692,7 @@ struct WebWidgetEditorSheet: View {
         previewController.updateConfig(
             userAgentMode: userAgentMode,
             targetWidth: effectiveWidth,
+            zoomScale: zoomScale,
             newURL: str
         )
     }

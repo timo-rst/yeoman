@@ -7,6 +7,7 @@ public final class WebPanelController: ObservableObject {
     @Published public var isLoading: Bool = false
     @Published public var canGoBack: Bool = false
     @Published public var canGoForward: Bool = false
+    @Published public var zoomScale: Double = 1.0
     
     public var userAgentMode: WebUserAgentMode
     public var targetWidth: CGFloat
@@ -18,21 +19,31 @@ public final class WebPanelController: ObservableObject {
     public static let iPhoneUserAgent = "Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1"
     public static let desktopUserAgent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Safari/605.1.15"
     
-    public init(initialURL: String, userAgentMode: WebUserAgentMode = .auto, targetWidth: CGFloat = 320) {
+    public init(initialURL: String, userAgentMode: WebUserAgentMode = .auto, targetWidth: CGFloat = 320, zoomScale: Double = 1.0) {
         self.currentURL = initialURL
         self.homeURL = initialURL
         self.userAgentMode = userAgentMode
         self.targetWidth = targetWidth
+        self.zoomScale = zoomScale
     }
     
-    public func updateConfig(userAgentMode: WebUserAgentMode, targetWidth: CGFloat, newURL: String? = nil) {
+    public func updateConfig(userAgentMode: WebUserAgentMode, targetWidth: CGFloat, zoomScale: Double = 1.0, newURL: String? = nil) {
         self.userAgentMode = userAgentMode
         self.targetWidth = targetWidth
+        self.zoomScale = zoomScale
+        applyZoom(zoomScale)
         if let u = newURL, u != currentURL && !u.isEmpty {
             self.homeURL = u
             loadURL(u)
         } else {
             updateUserAgent()
+        }
+    }
+    
+    public func applyZoom(_ scale: Double) {
+        self.zoomScale = scale
+        DispatchQueue.main.async { [weak self] in
+            self?.webView?.pageZoom = CGFloat(scale)
         }
     }
     
@@ -92,15 +103,15 @@ public struct WebViewRepresentable: NSViewRepresentable {
         let config = WKWebViewConfiguration()
         config.websiteDataStore = WKWebsiteDataStore.default()
         
-        // Inject viewport script so mobile pages render perfectly at native scale
+        // Inject responsive viewport script so web content scales properly to widget bounds
         let viewportScript = """
         var meta = document.querySelector('meta[name="viewport"]');
         if (!meta) {
             meta = document.createElement('meta');
             meta.name = 'viewport';
-            meta.content = 'width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes';
             document.getElementsByTagName('head')[0].appendChild(meta);
         }
+        meta.content = 'width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes';
         """
         let userScript = WKUserScript(source: viewportScript, injectionTime: .atDocumentEnd, forMainFrameOnly: true)
         config.userContentController.addUserScript(userScript)
@@ -110,13 +121,16 @@ public struct WebViewRepresentable: NSViewRepresentable {
         controller.webView = webView
         
         controller.applyUserAgent(to: webView)
+        webView.pageZoom = CGFloat(controller.zoomScale)
         controller.loadURL()
         
         return webView
     }
     
     public func updateNSView(_ nsView: WKWebView, context: Context) {
-        // Keeps state in sync
+        if abs(nsView.pageZoom - CGFloat(controller.zoomScale)) > 0.01 {
+            nsView.pageZoom = CGFloat(controller.zoomScale)
+        }
     }
     
     public func makeCoordinator() -> Coordinator {
@@ -144,6 +158,8 @@ public struct WebViewRepresentable: NSViewRepresentable {
                 if let url = webView.url?.absoluteString {
                     self.controller.currentURL = url
                 }
+                // Ensure pageZoom stays applied after page finish
+                webView.pageZoom = CGFloat(self.controller.zoomScale)
             }
         }
         
@@ -156,19 +172,23 @@ public struct WebViewRepresentable: NSViewRepresentable {
 }
 
 public struct WebPanelView: View {
-    public let item: WebWidgetItem
+    @ObservedObject var instance: WebWidgetInstanceController
     @ObservedObject var controller: WebPanelController
     public var onUpdateItem: ((WebWidgetItem) -> Void)?
+    
+    var item: WebWidgetItem {
+        instance.item
+    }
     
     @State private var inputURL: String = ""
     @State private var isShowingAddressInput: Bool = false
     
     public init(
-        item: WebWidgetItem,
+        instance: WebWidgetInstanceController,
         controller: WebPanelController,
         onUpdateItem: ((WebWidgetItem) -> Void)? = nil
     ) {
-        self.item = item
+        self.instance = instance
         self.controller = controller
         self.onUpdateItem = onUpdateItem
     }
@@ -205,9 +225,10 @@ public struct WebPanelView: View {
                 Divider()
             }
             
-            // Web View
+            // Web View - Flexible area filling all available height
             ZStack {
                 WebViewRepresentable(controller: controller)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
                 
                 if controller.isLoading {
                     VStack {
@@ -220,11 +241,12 @@ public struct WebPanelView: View {
                     .padding(.top, 10)
                 }
             }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
             
             Divider()
             
-            // Bottom Slim Toolbar (MenuBarX Style)
-            HStack(spacing: 10) {
+            // Bottom Slim Toolbar (MenuBarX Style) - Fixed at the very bottom
+            HStack(spacing: 8) {
                 // Home
                 Button(action: { controller.goHome() }) {
                     Image(systemName: "house")
@@ -261,14 +283,19 @@ public struct WebPanelView: View {
                 
                 Spacer()
                 
-                // Current Size & Mode Display / Quick Menu (e.g. 320 x 400 | Mobil)
+                // Size Preset Menu
                 Menu {
                     Section("Fenstergröße") {
                         ForEach(WebSizePreset.allCases) { preset in
                             Button(action: {
                                 var updated = item
                                 updated.sizePreset = preset
+                                // Automatically adjust zoom scale for widget mode if at default
+                                if preset == .widget && (updated.zoomScale == 1.0 || updated.zoomScale == 0) {
+                                    updated.zoomScale = 0.85
+                                }
                                 onUpdateItem?(updated)
+                                controller.applyZoom(updated.zoomScale)
                             }) {
                                 HStack {
                                     Text(preset.rawValue)
@@ -315,15 +342,49 @@ public struct WebPanelView: View {
                         StatusItemController.shared.openSettingsWindow()
                     }
                 } label: {
-                    HStack(spacing: 4) {
-                        Text("\(Int(item.effectiveWidth)) × \(Int(item.effectiveHeight)) | \(item.userAgentMode == .desktop ? "Desktop" : "Mobil")")
+                    HStack(spacing: 3) {
+                        Text("\(Int(item.effectiveWidth)) × \(Int(item.effectiveHeight))")
                             .font(.system(size: 10, weight: .medium))
                             .foregroundColor(.secondary)
                         Image(systemName: "chevron.up.chevron.down")
-                            .font(.system(size: 8))
+                            .font(.system(size: 7))
                             .foregroundColor(.secondary)
                     }
-                    .padding(.horizontal, 6)
+                    .padding(.horizontal, 5)
+                    .padding(.vertical, 2)
+                    .background(RoundedRectangle(cornerRadius: 4).fill(Color.primary.opacity(0.06)))
+                }
+                .menuStyle(.borderlessButton)
+                .fixedSize()
+                
+                // Zoom Level Menu (MenuBarX Feature: scales website to fit widget)
+                Menu {
+                    Section("Seiten-Skalierung (Zoom)") {
+                        ForEach([0.5, 0.65, 0.75, 0.85, 1.0, 1.15, 1.25, 1.5], id: \.self) { z in
+                            Button(action: {
+                                var updated = item
+                                updated.zoomScale = z
+                                onUpdateItem?(updated)
+                                controller.applyZoom(z)
+                            }) {
+                                HStack {
+                                    Text("\(Int(z * 100))%")
+                                    if abs(item.zoomScale - z) < 0.02 {
+                                        Image(systemName: "checkmark")
+                                    }
+                                }
+                            }
+                        }
+                    }
+                } label: {
+                    HStack(spacing: 2) {
+                        Image(systemName: "magnifyingglass")
+                            .font(.system(size: 8))
+                        Text("\(Int(item.zoomScale * 100))%")
+                            .font(.system(size: 10, weight: .medium))
+                    }
+                    .foregroundColor(.secondary)
+                    .padding(.horizontal, 5)
                     .padding(.vertical, 2)
                     .background(RoundedRectangle(cornerRadius: 4).fill(Color.primary.opacity(0.06)))
                 }
@@ -367,9 +428,10 @@ public struct WebPanelView: View {
                 .buttonStyle(.plain)
                 .help("Im Standard-Browser öffnen")
             }
-            .padding(.horizontal, 10)
-            .padding(.vertical, 6)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 5)
             .background(Color(nsColor: .controlBackgroundColor))
+            .frame(maxWidth: .infinity)
         }
         .frame(width: item.effectiveWidth, height: item.effectiveHeight)
     }

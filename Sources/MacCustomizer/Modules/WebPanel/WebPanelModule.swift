@@ -45,9 +45,14 @@ public struct WebWidgetItem: Identifiable, Codable, Equatable {
     public var customWidth: CGFloat
     public var customHeight: CGFloat
     public var userAgentMode: WebUserAgentMode
+    public var zoomScale: Double
     public var isEnabled: Bool
     public var isPinned: Bool
     public var showsAddressBar: Bool
+    
+    enum CodingKeys: String, CodingKey {
+        case id, title, url, iconName, sizePreset, customWidth, customHeight, userAgentMode, zoomScale, isEnabled, isPinned, showsAddressBar
+    }
     
     public init(
         id: UUID = UUID(),
@@ -58,6 +63,7 @@ public struct WebWidgetItem: Identifiable, Codable, Equatable {
         customWidth: CGFloat = 320,
         customHeight: CGFloat = 400,
         userAgentMode: WebUserAgentMode = .auto,
+        zoomScale: Double = 1.0,
         isEnabled: Bool = true,
         isPinned: Bool = false,
         showsAddressBar: Bool = false
@@ -70,9 +76,26 @@ public struct WebWidgetItem: Identifiable, Codable, Equatable {
         self.customWidth = customWidth
         self.customHeight = customHeight
         self.userAgentMode = userAgentMode
+        self.zoomScale = zoomScale
         self.isEnabled = isEnabled
         self.isPinned = isPinned
         self.showsAddressBar = showsAddressBar
+    }
+    
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.id = try container.decode(UUID.self, forKey: .id)
+        self.title = try container.decode(String.self, forKey: .title)
+        self.url = try container.decode(String.self, forKey: .url)
+        self.iconName = try container.decodeIfPresent(String.self, forKey: .iconName) ?? "calendar"
+        self.sizePreset = try container.decodeIfPresent(WebSizePreset.self, forKey: .sizePreset) ?? .widget
+        self.customWidth = try container.decodeIfPresent(CGFloat.self, forKey: .customWidth) ?? 320
+        self.customHeight = try container.decodeIfPresent(CGFloat.self, forKey: .customHeight) ?? 400
+        self.userAgentMode = try container.decodeIfPresent(WebUserAgentMode.self, forKey: .userAgentMode) ?? .auto
+        self.zoomScale = try container.decodeIfPresent(Double.self, forKey: .zoomScale) ?? 1.0
+        self.isEnabled = try container.decodeIfPresent(Bool.self, forKey: .isEnabled) ?? true
+        self.isPinned = try container.decodeIfPresent(Bool.self, forKey: .isPinned) ?? false
+        self.showsAddressBar = try container.decodeIfPresent(Bool.self, forKey: .showsAddressBar) ?? false
     }
     
     public var effectiveWidth: CGFloat {
@@ -250,7 +273,7 @@ public final class WebPanelModule: NSObject, CustomizerModule, ObservableObject 
 // MARK: - Individual Instance Controller
 
 public final class WebWidgetInstanceController: NSObject, ObservableObject {
-    public var item: WebWidgetItem
+    @Published public var item: WebWidgetItem
     public let webController: WebPanelController
     weak var module: WebPanelModule?
     
@@ -263,7 +286,8 @@ public final class WebWidgetInstanceController: NSObject, ObservableObject {
         self.webController = WebPanelController(
             initialURL: item.url,
             userAgentMode: item.userAgentMode,
-            targetWidth: item.effectiveWidth
+            targetWidth: item.effectiveWidth,
+            zoomScale: item.zoomScale
         )
         super.init()
     }
@@ -289,6 +313,7 @@ public final class WebWidgetInstanceController: NSObject, ObservableObject {
         webController.updateConfig(
             userAgentMode: newItem.userAgentMode,
             targetWidth: newItem.effectiveWidth,
+            zoomScale: newItem.zoomScale,
             newURL: newItem.url
         )
         
@@ -299,7 +324,8 @@ public final class WebWidgetInstanceController: NSObject, ObservableObject {
             button.image = img
         }
         
-        popover?.contentSize = NSSize(width: newItem.effectiveWidth, height: newItem.effectiveHeight)
+        let newSize = NSSize(width: newItem.effectiveWidth, height: newItem.effectiveHeight)
+        popover?.contentSize = newSize
         popover?.behavior = newItem.isPinned ? .applicationDefined : .transient
     }
     
@@ -337,7 +363,7 @@ public final class WebWidgetInstanceController: NSObject, ObservableObject {
             p.animates = true
             p.contentViewController = NSHostingController(
                 rootView: WebPanelView(
-                    item: item,
+                    instance: self,
                     controller: webController,
                     onUpdateItem: { [weak self] updated in
                         self?.module?.updateWidget(updated)
