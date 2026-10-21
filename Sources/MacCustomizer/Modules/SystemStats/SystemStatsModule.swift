@@ -360,16 +360,22 @@ public struct SystemStatsSettingsView: View {
     @ObservedObject var provider = SystemMetricsProvider.shared
     
     public var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 20) {
-                ModuleHeaderView(
-                    title: "System-Monitor",
-                    subtitle: "Live-Auslastung von Prozessor, Arbeitsspeicher und Grafik in der Menüleiste.",
-                    icon: "gauge.with.needle",
-                    isEnabled: $module.isEnabled
-                )
-                
-                Group {
+        VStack(spacing: 0) {
+            ModuleHeaderView(
+                title: "System-Monitor",
+                subtitle: "Live-Auslastung von Prozessor, Arbeitsspeicher und Grafik in der Menüleiste.",
+                icon: "gauge.with.needle",
+                isEnabled: $module.isEnabled
+            )
+            .padding(.horizontal, 20)
+            .padding(.top, 16)
+            .padding(.bottom, 12)
+            
+            Divider()
+            
+            ScrollView {
+                VStack(alignment: .leading, spacing: 20) {
+                    Group {
                     // Menüleisten-Option
                     VStack(alignment: .leading, spacing: 14) {
                         Text("Menüleisten-Widget")
@@ -492,6 +498,7 @@ public struct SystemStatsSettingsView: View {
             .padding(20)
         }
     }
+}
 }
 
 struct MetricInfoBox: View {

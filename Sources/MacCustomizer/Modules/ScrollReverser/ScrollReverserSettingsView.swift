@@ -9,17 +9,23 @@ public struct ScrollReverserSettingsView: View {
     }
     
     public var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 20) {
-                // Header
-                ModuleHeaderView(
-                    title: "Scroll-Richtung (Maus)",
-                    subtitle: "Kehrt die Scrollrichtung der Maus um, während das Trackpad unverändert bleibt.",
-                    icon: "computermouse",
-                    isEnabled: $module.isEnabled
-                )
-                
-                Group {
+        VStack(spacing: 0) {
+            // Header
+            ModuleHeaderView(
+                title: "Scroll-Richtung (Maus)",
+                subtitle: "Kehrt die Scrollrichtung der Maus um, während das Trackpad unverändert bleibt.",
+                icon: "computermouse",
+                isEnabled: $module.isEnabled
+            )
+            .padding(.horizontal, 20)
+            .padding(.top, 16)
+            .padding(.bottom, 12)
+            
+            Divider()
+            
+            ScrollView {
+                VStack(alignment: .leading, spacing: 20) {
+                    Group {
                     // Accessibility Permission Banner (if missing)
                     if !manager.hasAccessibilityPermission {
                         VStack(alignment: .leading, spacing: 10) {
@@ -211,6 +217,7 @@ public struct ScrollReverserSettingsView: View {
             }
             .padding(20)
         }
+    }
         .onAppear {
             manager.checkAccessibility(prompt: false)
             if !manager.hasAccessibilityPermission {

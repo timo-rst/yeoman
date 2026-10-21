@@ -40,36 +40,42 @@ public struct WebPanelSettingsView: View {
     }
     
     public var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 20) {
-                // Header
-                ModuleHeaderView(
-                    title: "Web-Widgets",
-                    subtitle: "Web-Apps direkt als Menüleisten-Symbole mit Live-Fenster nutzen.",
-                    icon: "globe",
-                    isEnabled: $module.isEnabled,
-                    extraContent: {
-                        HStack {
-                            Text("\(module.widgets.count) Web-Widget(s) eingerichtet • \(module.widgets.filter { $0.isEnabled }.count) aktiv in der Menüleiste")
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                            Spacer()
-                            
-                            Button(action: {
-                                editorMode = .create
-                            }) {
-                                HStack(spacing: 6) {
-                                    Image(systemName: "plus.circle.fill")
-                                    Text("Neues Web-Widget hinzufügen")
-                                }
-                                .fontWeight(.medium)
+        VStack(spacing: 0) {
+            // Header
+            ModuleHeaderView(
+                title: "Web-Widgets",
+                subtitle: "Web-Apps direkt als Menüleisten-Symbole mit Live-Fenster nutzen.",
+                icon: "globe",
+                isEnabled: $module.isEnabled,
+                extraContent: {
+                    HStack {
+                        Text("\(module.widgets.count) Web-Widget(s) eingerichtet • \(module.widgets.filter { $0.isEnabled }.count) aktiv in der Menüleiste")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                        Spacer()
+                        
+                        Button(action: {
+                            editorMode = .create
+                        }) {
+                            HStack(spacing: 6) {
+                                Image(systemName: "plus.circle.fill")
+                                Text("Neues Web-Widget hinzufügen")
                             }
-                            .buttonStyle(.borderedProminent)
+                            .fontWeight(.medium)
                         }
+                        .buttonStyle(.borderedProminent)
                     }
-                )
-                
-                Group {
+                }
+            )
+            .padding(.horizontal, 20)
+            .padding(.top, 16)
+            .padding(.bottom, 12)
+            
+            Divider()
+            
+            ScrollView {
+                VStack(alignment: .leading, spacing: 20) {
+                    Group {
                 
                 // Widgets List
                 VStack(alignment: .leading, spacing: 14) {
@@ -153,6 +159,7 @@ public struct WebPanelSettingsView: View {
             }
             .padding(20)
         }
+    }
         .sheet(item: $editorMode) { mode in
             WebWidgetEditorSheet(
                 initialWidget: mode.widget,

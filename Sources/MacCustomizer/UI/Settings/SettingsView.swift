@@ -26,40 +26,49 @@ public enum SettingsTab: String, CaseIterable, Identifiable {
 
 public struct SettingsView: View {
     @ObservedObject var moduleManager = ModuleManager.shared
-    @State private var selectedTab: SettingsTab? = .menuBar
+    @State private var selectedTab: SettingsTab = .menuBar
     
     public init() {}
     
     public var body: some View {
-        NavigationSplitView {
-            List(SettingsTab.allCases, selection: $selectedTab) { tab in
-                HStack(spacing: 8) {
-                    Image(systemName: tab.iconName)
-                        .frame(width: 18)
-                        .foregroundColor(.accentColor)
-                    Text(tab.rawValue)
+        HStack(spacing: 0) {
+            // Static sidebar that stays open without jumping toggle buttons
+            VStack(spacing: 0) {
+                List(SettingsTab.allCases, id: \.self, selection: $selectedTab) { tab in
+                    HStack(spacing: 8) {
+                        Image(systemName: tab.iconName)
+                            .frame(width: 18)
+                            .foregroundColor(.accentColor)
+                        Text(tab.rawValue)
+                    }
+                    .tag(tab)
                 }
-                .tag(tab)
+                .listStyle(.sidebar)
             }
-            .listStyle(.sidebar)
-            .navigationSplitViewColumnWidth(min: 220, ideal: 240, max: 280)
-        } detail: {
-            switch selectedTab ?? .menuBar {
-            case .general:
-                GeneralSettingsView()
-            case .menuBar:
-                moduleManager.menuBarModule.settingsView()
-            case .scrollReverser:
-                moduleManager.scrollReverserModule.settingsView()
-            case .webPanel:
-                moduleManager.webPanelModule.settingsView()
-            case .clipboard:
-                moduleManager.clipboardModule.settingsView()
-            case .systemStats:
-                moduleManager.systemStatsModule.settingsView()
-            case .about:
-                AboutView()
+            .frame(width: 220)
+            
+            Divider()
+            
+            // Detail Area
+            Group {
+                switch selectedTab {
+                case .general:
+                    GeneralSettingsView()
+                case .menuBar:
+                    moduleManager.menuBarModule.settingsView()
+                case .scrollReverser:
+                    moduleManager.scrollReverserModule.settingsView()
+                case .webPanel:
+                    moduleManager.webPanelModule.settingsView()
+                case .clipboard:
+                    moduleManager.clipboardModule.settingsView()
+                case .systemStats:
+                    moduleManager.systemStatsModule.settingsView()
+                case .about:
+                    AboutView()
+                }
             }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
         .frame(minWidth: 980, idealWidth: 1040, minHeight: 660, idealHeight: 720)
     }
@@ -78,18 +87,25 @@ struct GeneralSettingsView: View {
     @ObservedObject private var menuBar = ModuleManager.shared.menuBarModule
     
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 20) {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Allgemeine Einstellungen")
-                        .font(.title2)
-                        .fontWeight(.bold)
-                    Text("Grundkonfiguration für Startverhalten und Systemintegration.")
-                        .font(.subheadline)
-                        .foregroundColor(.secondary)
-                }
-                
-                Divider()
+        VStack(spacing: 0) {
+            // Header
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Allgemeine Einstellungen")
+                    .font(.title2)
+                    .fontWeight(.bold)
+                Text("Grundkonfiguration für Startverhalten und Systemintegration.")
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, 20)
+            .padding(.top, 16)
+            .padding(.bottom, 12)
+            
+            Divider()
+            
+            ScrollView {
+                VStack(alignment: .leading, spacing: 20) {
                 
                 VStack(alignment: .leading, spacing: 14) {
                     Text("Start & Darstellung")
@@ -241,6 +257,7 @@ struct GeneralSettingsView: View {
             .padding(20)
         }
     }
+}
 }
 
 struct ModuleToggleRow<ExtraContent: View>: View {
