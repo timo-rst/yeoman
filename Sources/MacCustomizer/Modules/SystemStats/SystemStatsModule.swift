@@ -159,47 +159,54 @@ public final class SystemStatsModule: NSObject, CustomizerModule, ObservableObje
         let activeMetricsCount = (showCPU ? 1 : 0) + (showRAM ? 1 : 0) + (showGPU ? 1 : 0)
         if activeMetricsCount == 0 {
             // When all individual metrics are toggled off, show the fallback icon & title
-            return showLabels ? 52.0 : 28.0
+            return showLabels ? 46.0 : 24.0
         }
         
         let interItemSpacing: CGFloat = useSubtleBackground ? 5.0 : 4.0
         let paddingPerItem: CGFloat = useSubtleBackground ? 8.0 : 4.0
+        let outerPadding: CGFloat = 4.0
         
         if layoutMode == .vertical {
             // Vertical stacked layout (label top, percentage bottom, bar or sparkline right)
             var textW: CGFloat = 0
             if showLabels && showPercentage {
-                textW = 28.0
+                textW = 21.5
             } else if showPercentage {
-                textW = 26.0
+                textW = 21.5
             } else if showLabels {
-                textW = 18.0
+                textW = 17.5
             }
             
             var graphW: CGFloat = 0
             if showGraphs && graphStyle != .none {
-                graphW = (graphStyle == .sparkline) ? 18.0 : 5.0
+                graphW = (graphStyle == .sparkline) ? 18.0 : 4.5
             }
             
             let spacingBetweenTextAndGraph: CGFloat = (textW > 0 && graphW > 0) ? 3.0 : 0
-            let singleItemW = max(14.0, textW + graphW + spacingBetweenTextAndGraph + paddingPerItem)
-            let total = (CGFloat(activeMetricsCount) * singleItemW) + (CGFloat(activeMetricsCount - 1) * interItemSpacing)
-            return max(24.0, ceil(total + 6.0))
+            let singleItemW = textW + graphW + spacingBetweenTextAndGraph + paddingPerItem
+            let total = (CGFloat(activeMetricsCount) * singleItemW) + (CGFloat(activeMetricsCount - 1) * interItemSpacing) + outerPadding
+            return ceil(total)
         } else {
-            // Horizontal layout
-            var textW: CGFloat = 0
-            if showLabels { textW += 20.0 }
-            if showPercentage { textW += (showLabels ? 28.0 : 26.0) }
-            
-            var graphW: CGFloat = 0
+            // Horizontal layout (label, percentage, graph side by side)
+            var componentsW: CGFloat = 0
+            var count = 0
+            if showLabels {
+                componentsW += 19.0
+                count += 1
+            }
+            if showPercentage {
+                componentsW += 21.5
+                count += 1
+            }
             if showGraphs && graphStyle != .none {
-                graphW = (graphStyle == .sparkline) ? 22.0 : 18.0
+                componentsW += (graphStyle == .sparkline) ? 20.0 : 16.0
+                count += 1
             }
             
-            let spacingBetweenTextAndGraph: CGFloat = (textW > 0 && graphW > 0) ? 3.0 : 0
-            let singleItemW = max(16.0, textW + graphW + spacingBetweenTextAndGraph + paddingPerItem)
-            let total = (CGFloat(activeMetricsCount) * singleItemW) + (CGFloat(activeMetricsCount - 1) * interItemSpacing)
-            return max(24.0, ceil(total + 6.0))
+            let spacing: CGFloat = CGFloat(max(0, count - 1)) * 3.0
+            let singleItemW = componentsW + spacing + paddingPerItem
+            let total = (CGFloat(activeMetricsCount) * singleItemW) + (CGFloat(activeMetricsCount - 1) * interItemSpacing) + outerPadding
+            return ceil(total)
         }
     }
     
@@ -209,6 +216,9 @@ public final class SystemStatsModule: NSObject, CustomizerModule, ObservableObje
         DispatchQueue.main.async {
             if abs(item.length - targetLength) > 0.5 {
                 item.length = targetLength
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                    MenuBarAppearanceManager.shared.updateDynamicMetrics()
+                }
             }
         }
     }
