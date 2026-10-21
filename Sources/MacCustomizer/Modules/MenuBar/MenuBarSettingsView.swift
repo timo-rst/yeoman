@@ -1,30 +1,86 @@
 import SwiftUI
 
+public enum MenuBarSubTab: String, CaseIterable, Identifiable {
+    case items = "Icons & Sichtbarkeit"
+    case appearance = "Design & Hintergrund"
+    case spacing = "Abstände (Ice)"
+    
+    public var id: String { rawValue }
+    
+    public var iconName: String {
+        switch self {
+        case .items: return "list.bullet.rectangle"
+        case .appearance: return "paintpalette"
+        case .spacing: return "arrow.left.and.line.vertical.and.arrow.right"
+        }
+    }
+}
+
 public struct MenuBarSettingsView: View {
     @ObservedObject var module: MenuBarModule
-    @ObservedObject var spacingManager = MenuBarSpacingManager.shared
-    @ObservedObject var displayManager = DisplayManager.shared
+    @State private var selectedSubTab: MenuBarSubTab = .items
     
     public init(module: MenuBarModule) {
         self.module = module
     }
     
     public var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 20) {
-                // Header
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Menu Bar Optimizer")
-                        .font(.title2)
-                        .fontWeight(.bold)
-                    Text("Passe den Abstand und die Darstellung der Menüleisten-Symbole an (wie in Ice), optimiert für Multi-Monitor Setups.")
-                        .font(.subheadline)
-                        .foregroundColor(.secondary)
+        VStack(spacing: 0) {
+            // Module Header & Sub-Navigation Picker
+            VStack(spacing: 12) {
+                HStack {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Menüleisten-Optimizer (Ice-Modul)")
+                            .font(.title2)
+                            .fontWeight(.bold)
+                        Text("Verwalte Icons, visuelles Design, Transparenz und Menüleisten-Abstände.")
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                    }
+                    Spacer()
+                    Toggle("Modul aktiv", isOn: $module.isEnabled)
+                        .toggleStyle(.switch)
                 }
                 
-                Divider()
-                
-                // Menüleisten-Option
+                // Sub-menu switcher for this module
+                Picker("", selection: $selectedSubTab) {
+                    ForEach(MenuBarSubTab.allCases) { tab in
+                        Label(tab.rawValue, systemImage: tab.iconName).tag(tab)
+                    }
+                }
+                .pickerStyle(.segmented)
+            }
+            .padding(.horizontal, 20)
+            .padding(.top, 16)
+            .padding(.bottom, 12)
+            .background(Color(nsColor: .controlBackgroundColor))
+            
+            Divider()
+            
+            // Sub-Menu Content
+            Group {
+                switch selectedSubTab {
+                case .items:
+                    MenuBarItemsView()
+                case .appearance:
+                    MenuBarAppearanceView()
+                case .spacing:
+                    MenuBarSpacingSectionView(module: module)
+                }
+            }
+        }
+    }
+}
+
+public struct MenuBarSpacingSectionView: View {
+    @ObservedObject var module: MenuBarModule
+    @ObservedObject var spacingManager = MenuBarSpacingManager.shared
+    @ObservedObject var displayManager = DisplayManager.shared
+    
+    public var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 20) {
+                // Dedicated status item toggle
                 VStack(alignment: .leading, spacing: 14) {
                     Text("Menüleisten-Integration")
                         .font(.headline)
@@ -94,11 +150,8 @@ public struct MenuBarSettingsView: View {
                         ), in: 0...24, step: 1)
                     }
                     
-                    Toggle("ControlCenter nach Änderung automatisch neu starten", isOn: $spacingManager.autoRestartControlCenter)
-                        .font(.subheadline)
-                    
                     HStack {
-                        Button("ControlCenter jetzt neu starten") {
+                        Button("ControlCenter neu laden") {
                             spacingManager.restartControlCenter()
                         }
                         

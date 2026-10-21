@@ -2,11 +2,9 @@ import SwiftUI
 
 public enum SettingsTab: String, CaseIterable, Identifiable {
     case general = "Allgemein"
-    case menuBarItems = "Icons & Leiste"
-    case menuBarAppearance = "Design & Hintergrund"
-    case menuBarSpacing = "Abstände (Ice)"
-    case clipboard = "Zwischenablage"
-    case systemStats = "System-Stats"
+    case menuBar = "Menüleiste"
+    case clipboard = "Zwischenablage (Clippy)"
+    case systemStats = "System-Stats & Tasks"
     case about = "Über MacCustomizer"
     
     public var id: String { rawValue }
@@ -14,9 +12,7 @@ public enum SettingsTab: String, CaseIterable, Identifiable {
     public var iconName: String {
         switch self {
         case .general: return "gearshape"
-        case .menuBarItems: return "list.bullet.rectangle"
-        case .menuBarAppearance: return "paintpalette"
-        case .menuBarSpacing: return "menubar.rectangle"
+        case .menuBar: return "menubar.rectangle"
         case .clipboard: return "doc.on.clipboard"
         case .systemStats: return "gauge.with.needle"
         case .about: return "info.circle"
@@ -26,7 +22,7 @@ public enum SettingsTab: String, CaseIterable, Identifiable {
 
 public struct SettingsView: View {
     @ObservedObject var moduleManager = ModuleManager.shared
-    @State private var selectedTab: SettingsTab = .menuBarAppearance
+    @State private var selectedTab: SettingsTab = .menuBar
     
     public init() {}
     
@@ -40,7 +36,7 @@ public struct SettingsView: View {
                     Text(tab.rawValue)
                     Spacer()
                     
-                    if (tab == .menuBarItems || tab == .menuBarSpacing || tab == .menuBarAppearance) && moduleManager.menuBarModule.isEnabled {
+                    if tab == .menuBar && moduleManager.menuBarModule.isEnabled {
                         Circle().fill(Color.green).frame(width: 6, height: 6)
                     } else if tab == .clipboard && moduleManager.clipboardModule.isEnabled {
                         Circle().fill(Color.green).frame(width: 6, height: 6)
@@ -51,16 +47,12 @@ public struct SettingsView: View {
                 .tag(tab)
             }
             .listStyle(.sidebar)
-            .navigationSplitViewColumnWidth(min: 200, ideal: 220, max: 260)
+            .navigationSplitViewColumnWidth(min: 220, ideal: 240, max: 280)
         } detail: {
             switch selectedTab {
             case .general:
                 GeneralSettingsView()
-            case .menuBarItems:
-                MenuBarItemsView()
-            case .menuBarAppearance:
-                MenuBarAppearanceView()
-            case .menuBarSpacing:
+            case .menuBar:
                 moduleManager.menuBarModule.settingsView()
             case .clipboard:
                 moduleManager.clipboardModule.settingsView()
@@ -70,7 +62,7 @@ public struct SettingsView: View {
                 AboutView()
             }
         }
-        .frame(minWidth: 760, minHeight: 560)
+        .frame(minWidth: 780, minHeight: 580)
     }
 }
 
