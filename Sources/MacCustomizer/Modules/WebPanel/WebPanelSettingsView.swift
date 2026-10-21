@@ -636,6 +636,8 @@ struct WebWidgetEditorSheet: View {
     @State private var selectedFaviconURL: String?
     @State private var removeWhiteBackground: Bool
     @State private var isLogoSettingsExpanded: Bool = false
+    @State private var isSizeSettingsExpanded: Bool = false
+    @State private var isExtraOptionsExpanded: Bool = false
     @State private var sizePreset: WebSizePreset
     @State private var customWidth: CGFloat
     @State private var customHeight: CGFloat
@@ -684,6 +686,8 @@ struct WebWidgetEditorSheet: View {
         _selectedFaviconURL = State(initialValue: initialSelectedFaviconURL)
         _removeWhiteBackground = State(initialValue: initialRemoveWhite)
         _isLogoSettingsExpanded = State(initialValue: startWithIconPicker)
+        _isSizeSettingsExpanded = State(initialValue: false)
+        _isExtraOptionsExpanded = State(initialValue: false)
         _sizePreset = State(initialValue: initialPreset)
         _customWidth = State(initialValue: initialW)
         _customHeight = State(initialValue: initialH)
@@ -1072,112 +1076,134 @@ struct WebWidgetEditorSheet: View {
                         .padding()
                         .background(RoundedRectangle(cornerRadius: 10).fill(Color(nsColor: .controlBackgroundColor)))
                         
-                        // 2. Fenstergröße & Ansicht
-                        VStack(alignment: .leading, spacing: 10) {
-                            HStack {
-                                Text("2. Fenstergröße & Ansicht")
-                                    .font(.headline)
-                                Spacer()
-                                Text("\(Int(effectiveWidth)) × \(Int(effectiveHeight)) pt")
-                                    .font(.caption)
-                                    .fontWeight(.bold)
-                                    .foregroundColor(.accentColor)
-                            }
-                            
-                            Picker("Vorlage:", selection: $sizePreset) {
-                                ForEach(WebSizePreset.allCases) { preset in
-                                    Text(preset.rawValue).tag(preset)
+                        // 2. Fenstergröße & Ansicht (Einklappbar)
+                        DisclosureGroup(isExpanded: $isSizeSettingsExpanded) {
+                            VStack(alignment: .leading, spacing: 10) {
+                                Divider()
+                                    .padding(.vertical, 4)
+                                
+                                Picker("Vorlage:", selection: $sizePreset) {
+                                    ForEach(WebSizePreset.allCases) { preset in
+                                        Text(preset.rawValue).tag(preset)
+                                    }
                                 }
-                            }
-                            .pickerStyle(.menu)
-                            .onChange(of: sizePreset) {
-                                if sizePreset == .widget && (zoomScale == 1.0 || zoomScale == 0) {
-                                    zoomScale = 0.85
+                                .pickerStyle(.menu)
+                                .onChange(of: sizePreset) {
+                                    if sizePreset == .widget && (zoomScale == 1.0 || zoomScale == 0) {
+                                        zoomScale = 0.85
+                                    }
+                                    updateLivePreview()
                                 }
-                                updateLivePreview()
-                            }
-                            
-                            if sizePreset == .custom {
+                                
+                                if sizePreset == .custom {
+                                    VStack(alignment: .leading, spacing: 6) {
+                                        HStack {
+                                            Text("Breite:")
+                                            Spacer()
+                                            Text("\(Int(customWidth)) pt").monospacedDigit()
+                                        }
+                                        Slider(value: $customWidth, in: 280...1200, step: 10) { _ in
+                                            updateLivePreview()
+                                        }
+                                        
+                                        HStack {
+                                            Text("Höhe:")
+                                            Spacer()
+                                            Text("\(Int(customHeight)) pt").monospacedDigit()
+                                        }
+                                        Slider(value: $customHeight, in: 300...1000, step: 10) { _ in
+                                            updateLivePreview()
+                                        }
+                                    }
+                                }
+                                
+                                Divider()
+                                
                                 VStack(alignment: .leading, spacing: 6) {
-                                    HStack {
-                                        Text("Breite:")
+                                    HStack(spacing: 5) {
+                                        Text("Seiten-Skalierung (Zoom):")
+                                            .font(.subheadline)
+                                            .fontWeight(.medium)
+                                        InfoTooltip(text: "Skaliert Webseiten herunter, damit sie im Widget optimal ohne horizontales Scrollen lesbar sind.")
                                         Spacer()
-                                        Text("\(Int(customWidth)) pt").monospacedDigit()
+                                        Text("\(Int(zoomScale * 100))%").monospacedDigit()
+                                            .foregroundColor(.accentColor)
+                                            .fontWeight(.bold)
                                     }
-                                    Slider(value: $customWidth, in: 280...1200, step: 10) { _ in
-                                        updateLivePreview()
-                                    }
-                                    
-                                    HStack {
-                                        Text("Höhe:")
-                                        Spacer()
-                                        Text("\(Int(customHeight)) pt").monospacedDigit()
-                                    }
-                                    Slider(value: $customHeight, in: 300...1000, step: 10) { _ in
+                                    Slider(value: $zoomScale, in: 0.5...1.5, step: 0.05) { _ in
                                         updateLivePreview()
                                     }
                                 }
-                            }
-                            
-                            Divider()
-                            
-                            VStack(alignment: .leading, spacing: 6) {
+                                
+                                Divider()
+                                
                                 HStack(spacing: 5) {
-                                    Text("Seiten-Skalierung (Zoom):")
+                                    Text("Darstellung:")
                                         .font(.subheadline)
                                         .fontWeight(.medium)
-                                    InfoTooltip(text: "Skaliert Webseiten herunter, damit sie im Widget optimal ohne horizontales Scrollen lesbar sind.")
-                                    Spacer()
-                                    Text("\(Int(zoomScale * 100))%").monospacedDigit()
-                                        .foregroundColor(.accentColor)
-                                        .fontWeight(.bold)
+                                    InfoTooltip(text: "Mobil erzwingt ein schmales Smartphone-Layout (ideal für Widgets). Desktop lädt die Standard-Website.")
                                 }
-                                Slider(value: $zoomScale, in: 0.5...1.5, step: 0.05) { _ in
+                                
+                                Picker("", selection: $userAgentMode) {
+                                    ForEach(WebUserAgentMode.allCases) { mode in
+                                        Text(mode.rawValue).tag(mode)
+                                    }
+                                }
+                                .pickerStyle(.radioGroup)
+                                .onChange(of: userAgentMode) {
                                     updateLivePreview()
                                 }
                             }
-                            
-                            Divider()
-                            
-                            HStack(spacing: 5) {
-                                Text("Darstellung:")
+                        } label: {
+                            HStack(spacing: 8) {
+                                Image(systemName: "aspectratio")
+                                    .foregroundColor(.accentColor)
+                                Text("2. Fenstergröße & Ansicht")
                                     .font(.subheadline)
                                     .fontWeight(.medium)
-                                InfoTooltip(text: "Mobil erzwingt ein schmales Smartphone-Layout (ideal für Widgets). Desktop lädt die Standard-Website.")
-                            }
-                            
-                            Picker("", selection: $userAgentMode) {
-                                ForEach(WebUserAgentMode.allCases) { mode in
-                                    Text(mode.rawValue).tag(mode)
-                                }
-                            }
-                            .pickerStyle(.radioGroup)
-                            .onChange(of: userAgentMode) {
-                                updateLivePreview()
+                                Spacer()
+                                Text("\(Int(effectiveWidth)) × \(Int(effectiveHeight)) pt")
+                                    .font(.caption2)
+                                    .fontWeight(.bold)
+                                    .foregroundColor(.accentColor)
                             }
                         }
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .padding()
                         .background(RoundedRectangle(cornerRadius: 10).fill(Color(nsColor: .controlBackgroundColor)))
                         
-                        // 3. Weitere Optionen
-                        VStack(alignment: .leading, spacing: 8) {
-                            Text("3. Weitere Optionen")
-                                .font(.headline)
-                            
-                            HStack(spacing: 6) {
-                                Toggle("In Menüleiste anzeigen", isOn: $isEnabled)
-                                InfoTooltip(text: "Zeigt das Widget als eigenständiges Symbol direkt in der macOS Menüleiste an.")
+                        // 3. Weitere Optionen (Einklappbar)
+                        DisclosureGroup(isExpanded: $isExtraOptionsExpanded) {
+                            VStack(alignment: .leading, spacing: 10) {
+                                Divider()
+                                    .padding(.vertical, 4)
+                                
+                                HStack(spacing: 6) {
+                                    Toggle("In Menüleiste anzeigen", isOn: $isEnabled)
+                                    InfoTooltip(text: "Zeigt das Widget als eigenständiges Symbol direkt in der macOS Menüleiste an.")
+                                }
+                                
+                                HStack(spacing: 6) {
+                                    Toggle("Adressleiste standardmäßig einblenden", isOn: $showsAddressBar)
+                                    InfoTooltip(text: "Zeigt im Popup eine Navigationsleiste mit Vor-, Zurück- und Neuladen-Buttons.")
+                                }
+                                
+                                HStack(spacing: 6) {
+                                    Toggle("Fenster anheften (Pin)", isOn: $isPinned)
+                                    InfoTooltip(text: "Hält das Widget-Fenster dauerhaft geöffnet, auch wenn du in eine andere App klickst.")
+                                }
                             }
-                            
-                            HStack(spacing: 6) {
-                                Toggle("Adressleiste standardmäßig einblenden", isOn: $showsAddressBar)
-                                InfoTooltip(text: "Zeigt im Popup eine Navigationsleiste mit Vor-, Zurück- und Neuladen-Buttons.")
-                            }
-                            
-                            HStack(spacing: 6) {
-                                Toggle("Fenster anheften (Pin)", isOn: $isPinned)
-                                InfoTooltip(text: "Hält das Widget-Fenster dauerhaft geöffnet, auch wenn du in eine andere App klickst.")
+                        } label: {
+                            HStack(spacing: 8) {
+                                Image(systemName: "slider.horizontal.3")
+                                    .foregroundColor(.accentColor)
+                                Text("3. Weitere Optionen")
+                                    .font(.subheadline)
+                                    .fontWeight(.medium)
+                                Spacer()
+                                Text(isEnabled ? "In Menüleiste aktiv" : "Deaktiviert")
+                                    .font(.caption2)
+                                    .foregroundColor(.secondary)
                             }
                         }
                         .frame(maxWidth: .infinity, alignment: .leading)
