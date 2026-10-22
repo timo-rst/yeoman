@@ -16,8 +16,13 @@ public final class ClipboardHistoryStore: ObservableObject {
         let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
         let directory = appSupport.appendingPathComponent("MacCustomizer", isDirectory: true)
         self.imagesDirectory = directory.appendingPathComponent("clipboard_images", isDirectory: true)
-        try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
-        try? FileManager.default.createDirectory(at: imagesDirectory, withIntermediateDirectories: true)
+        
+        let dirAttributes: [FileAttributeKey: Any] = [.posixPermissions: 0o700]
+        try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true, attributes: dirAttributes)
+        try? FileManager.default.createDirectory(at: imagesDirectory, withIntermediateDirectories: true, attributes: dirAttributes)
+        try? FileManager.default.setAttributes(dirAttributes, ofItemAtPath: directory.path)
+        try? FileManager.default.setAttributes(dirAttributes, ofItemAtPath: imagesDirectory.path)
+        
         self.storageURL = directory.appendingPathComponent("clipboard_history.json")
         load()
     }
@@ -74,7 +79,8 @@ public final class ClipboardHistoryStore: ObservableObject {
         let fileURL = imagesDirectory.appendingPathComponent(fileName)
         
         do {
-            try pngData.write(to: fileURL, options: .atomic)
+            try pngData.write(to: fileURL, options: [.atomic, .completeFileProtection])
+            try? FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: fileURL.path)
         } catch {
             return
         }
@@ -176,7 +182,8 @@ public final class ClipboardHistoryStore: ObservableObject {
             let encoder = JSONEncoder()
             encoder.outputFormatting = .prettyPrinted
             if let data = try? encoder.encode(items) {
-                try? data.write(to: url, options: .atomic)
+                try? data.write(to: url, options: [.atomic, .completeFileProtection])
+                try? FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: url.path)
             }
         }
     }

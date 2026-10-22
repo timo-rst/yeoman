@@ -249,11 +249,46 @@ public final class WebPanelController: NSObject, ObservableObject, WKNavigationD
         hasPreloaded = false
     }
     
+    // MARK: - WKNavigationDelegate Security & Policy
+    
+    public func webView(_ webView: WKWebView, decidePolicyFor navigationAction: WKNavigationAction, decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {
+        guard let url = navigationAction.request.url else {
+            decisionHandler(.cancel)
+            return
+        }
+        
+        let scheme = url.scheme?.lowercased() ?? ""
+        
+        // 1. Allow standard web navigation and about:blank
+        if scheme == "https" || scheme == "http" || (scheme == "about" && url.absoluteString == "about:blank") {
+            decisionHandler(.allow)
+            return
+        }
+        
+        // 2. Strictly block dangerous local or scripting schemes
+        if scheme == "file" || scheme == "javascript" || scheme == "applescript" || scheme == "data" {
+            decisionHandler(.cancel)
+            return
+        }
+        
+        // 3. If user clicked an external link with safe external schemes (e.g. mailto:, tel:), delegate to macOS default app
+        if navigationAction.navigationType == .linkActivated && (scheme == "mailto" || scheme == "tel") {
+            NSWorkspace.shared.open(url)
+        }
+        
+        decisionHandler(.cancel)
+    }
+    
     // MARK: - WKUIDelegate
     
     public func webView(_ webView: WKWebView, createWebViewWith configuration: WKWebViewConfiguration, for navigationAction: WKNavigationAction, windowFeatures: WKWindowFeatures) -> WKWebView? {
-        if navigationAction.targetFrame == nil {
-            webView.load(navigationAction.request)
+        if navigationAction.targetFrame == nil, let url = navigationAction.request.url {
+            let scheme = url.scheme?.lowercased() ?? ""
+            if scheme == "https" || scheme == "http" {
+                webView.load(navigationAction.request)
+            } else if navigationAction.navigationType == .linkActivated && (scheme == "mailto" || scheme == "tel") {
+                NSWorkspace.shared.open(url)
+            }
         }
         return nil
     }

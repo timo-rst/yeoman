@@ -73,7 +73,12 @@ public final class UpdateManager: ObservableObject {
     
     @Published public var githubToken: String {
         didSet {
-            UserDefaults.standard.set(githubToken, forKey: "update_github_token")
+            let trimmed = githubToken.trimmingCharacters(in: .whitespacesAndNewlines)
+            if trimmed.isEmpty {
+                UserDefaults.standard.removeObject(forKey: "update_github_token")
+            } else {
+                UserDefaults.standard.set(trimmed, forKey: "update_github_token")
+            }
         }
     }
     
@@ -223,6 +228,27 @@ public final class UpdateManager: ObservableObject {
     // MARK: - Download & Install
     
     public func downloadAndInstall(from downloadUrl: URL) {
+        // Enforce secure HTTPS protocol
+        guard downloadUrl.scheme?.lowercased() == "https" else {
+            self.status = .failed(message: "Sicherheitsprüfung fehlgeschlagen: Unsichere Download-URL (nur HTTPS erlaubt).")
+            return
+        }
+        
+        // Whitelist verified GitHub release distribution hosts
+        let trustedHosts = [
+            "github.com",
+            "api.github.com",
+            "objects.githubusercontent.com",
+            "github-releases.githubusercontent.com",
+            "github-production-release-asset-2e65be.s3.amazonaws.com"
+        ]
+        
+        guard let host = downloadUrl.host?.lowercased(),
+              trustedHosts.contains(where: { host == $0 || host.hasSuffix("." + $0) }) else {
+            self.status = .failed(message: "Sicherheitsprüfung fehlgeschlagen: Nicht autorisierter Download-Host (\(downloadUrl.host ?? "unbekannt")).")
+            return
+        }
+        
         self.status = .downloading(progress: 0.0)
         
         let session = URLSession(configuration: .default)
@@ -302,6 +328,15 @@ public final class UpdateManager: ObservableObject {
                     return
                 }
                 
+                // Verify bundle identifier of the extracted app before applying
+                guard let bundle = Bundle(path: validNewAppPath),
+                      bundle.bundleIdentifier == "de.trst.MacCustomizer" || bundle.bundleIdentifier == Bundle.main.bundleIdentifier else {
+                    DispatchQueue.main.async {
+                        self.status = .failed(message: "Sicherheitsprüfung fehlgeschlagen: Die extrahierte App besitzt keine gültige MacCustomizer Bundle-ID.")
+                    }
+                    return
+                }
+                
                 // Remove quarantine attribute
                 let xattr = Process()
                 xattr.executableURL = URL(fileURLWithPath: "/usr/bin/xattr")
@@ -312,18 +347,24 @@ public final class UpdateManager: ObservableObject {
                 let targetBundlePath = Bundle.main.bundleURL.path
                 let currentPid = ProcessInfo.processInfo.processIdentifier
                 
-                // Create a standalone relaunch script to replace the app and relaunch
+                // Create a standalone relaunch script taking arguments safely without shell string interpolation
                 let updateScriptPath = fileManager.temporaryDirectory.appendingPathComponent("maccustomizer_update.sh").path
                 let scriptContent = """
                 #!/bin/bash
-                while kill -0 \(currentPid) 2>/dev/null; do
+                PID="$1"
+                NEW_APP="$2"
+                TARGET_BUNDLE="$3"
+                EXTRACT_DIR="$4"
+
+                while kill -0 "$PID" 2>/dev/null; do
                     sleep 0.2
                 done
-                rm -rf "\(targetBundlePath)"
-                cp -R "\(validNewAppPath)" "\(targetBundlePath)"
-                xattr -cr "\(targetBundlePath)"
-                open "\(targetBundlePath)"
-                rm -rf "\(extractDir.path)"
+
+                rm -rf "$TARGET_BUNDLE"
+                cp -R "$NEW_APP" "$TARGET_BUNDLE"
+                xattr -cr "$TARGET_BUNDLE"
+                open "$TARGET_BUNDLE"
+                rm -rf "$EXTRACT_DIR"
                 rm -f "$0"
                 """
                 
@@ -331,14 +372,14 @@ public final class UpdateManager: ObservableObject {
                 
                 let chmod = Process()
                 chmod.executableURL = URL(fileURLWithPath: "/bin/chmod")
-                chmod.arguments = ["+x", updateScriptPath]
+                chmod.arguments = ["700", updateScriptPath]
                 try? chmod.run()
                 chmod.waitUntilExit()
                 
-                // Launch the update script detached
+                // Launch the update script detached with safe positional parameters
                 let relaunch = Process()
                 relaunch.executableURL = URL(fileURLWithPath: "/bin/bash")
-                relaunch.arguments = [updateScriptPath]
+                relaunch.arguments = [updateScriptPath, "\(currentPid)", validNewAppPath, targetBundlePath, extractDir.path]
                 try relaunch.run()
                 
                 DispatchQueue.main.async {

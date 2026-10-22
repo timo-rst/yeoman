@@ -334,12 +334,52 @@ public final class SystemMetricsProvider: ObservableObject {
     
     @discardableResult
     public func killProcess(pid: Int) -> Bool {
-        // 1. Try NSRunningApplication force terminate if it is a GUI app
+        // Prevent killing invalid, broadcast, or kernel/init PIDs (PID <= 1)
+        guard pid > 1 else { return false }
+        
+        let currentPid = ProcessInfo.processInfo.processIdentifier
+        guard pid != Int(currentPid) else { return false }
+        
+        // Critical system processes and daemons that must never be terminated
+        let protectedProcessNames: Set<String> = [
+            "kernel_task",
+            "launchd",
+            "WindowServer",
+            "loginwindow",
+            "systemstats",
+            "diskarbitrationd",
+            "coreauthd",
+            "securityd",
+            "opendirectoryd",
+            "syslogd",
+            "notifyd",
+            "configd",
+            "powerd"
+        ]
+        
+        // 1. If it is a running GUI application, check protected bundle IDs and names
         if let app = NSWorkspace.shared.runningApplications.first(where: { $0.processIdentifier == pid_t(pid) }) {
+            if let name = app.localizedName, protectedProcessNames.contains(name) {
+                return false
+            }
+            if let bundleId = app.bundleIdentifier,
+               bundleId == "com.apple.loginwindow" ||
+               bundleId == "com.apple.WindowServer" ||
+               bundleId == "de.trst.MacCustomizer" ||
+               bundleId == Bundle.main.bundleIdentifier {
+                return false
+            }
             app.forceTerminate()
         }
         
-        // 2. Send SIGKILL directly
+        // 2. Also check against known process name from current process table
+        if let item = processes.first(where: { $0.pid == pid }) {
+            if protectedProcessNames.contains(item.name) {
+                return false
+            }
+        }
+        
+        // 3. Send SIGKILL directly
         let status = kill(pid_t(pid), SIGKILL)
         
         // Remove immediately from memory for responsive feel

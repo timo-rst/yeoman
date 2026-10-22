@@ -35,3 +35,20 @@ Icon
 *.swp
 *.swo
 *~
+
+# Secrets, credentials & private configs
+.env
+.env.*
+*.key
+*.pem
+*.p12
+*.cer
+*.p8
+*.mobileprovision
+*.token
+credentials.json
+
+# Logs & crash dumps
+*.log
+*.crash
+crash.log
