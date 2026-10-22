@@ -1067,6 +1067,19 @@ struct WebWidgetEditorSheet: View {
                                     .font(.caption2)
                                     .foregroundColor(.secondary)
                             }
+                            .contentShape(Rectangle())
+                            .onTapGesture {
+                                withAnimation(.easeInOut(duration: 0.2)) {
+                                    isLogoSettingsExpanded.toggle()
+                                }
+                            }
+                            .onHover { isHovered in
+                                if isHovered {
+                                    NSCursor.pointingHand.push()
+                                } else {
+                                    NSCursor.pop()
+                                }
+                            }
                         }
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .padding()
@@ -1163,6 +1176,19 @@ struct WebWidgetEditorSheet: View {
                                     .fontWeight(.bold)
                                     .foregroundColor(.accentColor)
                             }
+                            .contentShape(Rectangle())
+                            .onTapGesture {
+                                withAnimation(.easeInOut(duration: 0.2)) {
+                                    isSizeSettingsExpanded.toggle()
+                                }
+                            }
+                            .onHover { isHovered in
+                                if isHovered {
+                                    NSCursor.pointingHand.push()
+                                } else {
+                                    NSCursor.pop()
+                                }
+                            }
                         }
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .padding()
@@ -1200,6 +1226,19 @@ struct WebWidgetEditorSheet: View {
                                 Text(isEnabled ? "In Menüleiste aktiv" : "Deaktiviert")
                                     .font(.caption2)
                                     .foregroundColor(.secondary)
+                            }
+                            .contentShape(Rectangle())
+                            .onTapGesture {
+                                withAnimation(.easeInOut(duration: 0.2)) {
+                                    isExtraOptionsExpanded.toggle()
+                                }
+                            }
+                            .onHover { isHovered in
+                                if isHovered {
+                                    NSCursor.pointingHand.push()
+                                } else {
+                                    NSCursor.pop()
+                                }
                             }
                         }
                         .frame(maxWidth: .infinity, alignment: .leading)
