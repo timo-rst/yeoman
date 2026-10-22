@@ -214,9 +214,6 @@ public final class StatusItemController: NSObject, NSMenuDelegate {
         let minWidth: CGFloat = 980
         let minHeight: CGFloat = 660
         
-        let showDock = UserDefaults.standard.object(forKey: "showDockIcon") as? Bool ?? true
-        let targetLevel: NSWindow.Level = showDock ? .normal : .floating
-        
         if settingsWindow == nil {
             let window = NSWindow(
                 contentRect: NSRect(x: 0, y: 0, width: standardWidth, height: standardHeight),
@@ -229,10 +226,10 @@ public final class StatusItemController: NSObject, NSMenuDelegate {
             window.contentView = NSHostingView(rootView: SettingsView())
             window.center()
             window.isReleasedWhenClosed = false
-            window.level = targetLevel
+            window.level = .normal
             self.settingsWindow = window
         } else if let window = settingsWindow {
-            window.level = targetLevel
+            window.level = .normal
             window.minSize = NSSize(width: minWidth, height: minHeight)
             if window.frame.width < minWidth || window.frame.height < minHeight {
                 var frame = window.frame
@@ -253,13 +250,13 @@ public final class StatusItemController: NSObject, NSMenuDelegate {
     
     public func setDockIconVisible(_ visible: Bool) {
         let policy: NSApplication.ActivationPolicy = visible ? .regular : .accessory
-        let targetLevel: NSWindow.Level = visible ? .normal : .floating
+        let targetWindow = settingsWindow ?? NSApp.windows.first(where: { !($0 is NSPanel) && $0.isVisible })
         
-        if let window = settingsWindow ?? NSApp.windows.first(where: { !($0 is NSPanel) && $0.isVisible }) {
-            window.level = targetLevel
-            window.orderFrontRegardless()
-            window.makeKeyAndOrderFront(nil)
-        }
+        // Temporarily elevate to .floating during the transition so WindowServer
+        // doesn't push the window behind background apps while toggling the dock icon
+        targetWindow?.level = .floating
+        targetWindow?.orderFrontRegardless()
+        targetWindow?.makeKeyAndOrderFront(nil)
         
         NSApp.setActivationPolicy(policy)
         
@@ -271,7 +268,6 @@ public final class StatusItemController: NSObject, NSMenuDelegate {
                 NSApp.activate(ignoringOtherApps: true)
             }
             if let window = self?.settingsWindow ?? NSApp.windows.first(where: { !($0 is NSPanel) && $0.isVisible }) {
-                window.level = targetLevel
                 window.orderFrontRegardless()
                 window.makeKeyAndOrderFront(nil)
             }
@@ -282,7 +278,16 @@ public final class StatusItemController: NSObject, NSMenuDelegate {
         DispatchQueue.main.async(execute: bringToFront)
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.05, execute: bringToFront)
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.15, execute: bringToFront)
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.35, execute: bringToFront)
+        
+        // As soon as the transition is complete, restore .normal level so clicking on another window
+        // naturally allows that window to come to the front!
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { [weak self] in
+            if let window = self?.settingsWindow ?? NSApp.windows.first(where: { !($0 is NSPanel) && $0.isVisible }) {
+                window.level = .normal
+                window.orderFrontRegardless()
+                window.makeKeyAndOrderFront(nil)
+            }
+        }
     }
     
     @objc private func quitApp() {
