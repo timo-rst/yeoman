@@ -108,6 +108,7 @@ public final class UpdateManager: ObservableObject {
         if !silent { status = .checking }
         var request = URLRequest(url: UpdateURLPolicy.api)
         request.setValue("application/vnd.github+json", forHTTPHeaderField: "Accept")
+        request.setValue("Yeoman/\(currentVersion)", forHTTPHeaderField: "User-Agent")
         if !githubToken.isEmpty {
             do { request.setValue("Bearer " + (try SecretMigration.validatedToken(githubToken)), forHTTPHeaderField: "Authorization") }
             catch { busy = false; status = .failed(message: error.localizedDescription); return }

@@ -198,7 +198,7 @@ public struct UpdateSettingsSection: View {
             HStack(spacing: 6) {
                 Image(systemName: "exclamationmark.triangle.fill")
                     .foregroundColor(.orange)
-                Text(message)
+                Text(localizedErrorMessage(message))
                     .font(.caption)
                     .foregroundColor(.secondary)
                     .lineLimit(2)
@@ -210,7 +210,7 @@ public struct UpdateSettingsSection: View {
     private var badgeForCurrentStatus: some View {
         switch updater.status {
         case .upToDate:
-            Text("Aktuell")
+            Text(l10n.localized("updates.badge_current"))
                 .font(.caption2)
                 .fontWeight(.bold)
                 .padding(.horizontal, 6)
@@ -219,7 +219,7 @@ public struct UpdateSettingsSection: View {
                 .foregroundColor(.green)
                 
         case .updateAvailable:
-            Text("Neu")
+            Text(l10n.localized("updates.badge_new"))
                 .font(.caption2)
                 .fontWeight(.bold)
                 .padding(.horizontal, 6)
@@ -232,11 +232,42 @@ public struct UpdateSettingsSection: View {
         }
     }
     
+    private func localizedErrorMessage(_ raw: String) -> String {
+        if raw.starts(with: "updates.error_") {
+            return l10n.localized(raw)
+        }
+        if raw.contains("Ungültige oder zu große Update-Antwort") {
+            return l10n.localized("updates.error_invalid_response")
+        }
+        if raw.contains("Kein Release gefunden") || raw.contains("404") || raw.contains("Not Found") {
+            return l10n.localized("updates.error_not_found_or_private")
+        }
+        if raw.contains("403") || raw.contains("verweigert") || raw.contains("denied") {
+            return l10n.localized("updates.error_forbidden")
+        }
+        if raw.contains("Ungültige Release-Version") || raw.contains("Invalid release") {
+            return l10n.localized("updates.error_invalid_version")
+        }
+        if raw.contains("Update-Weiterleitung abgewiesen") || raw.contains("redirect") {
+            return l10n.localized("updates.error_redirect_rejected")
+        }
+        if raw.contains("Updatearchiv wurde verändert") || raw.contains("tamper") {
+            return l10n.localized("updates.error_archive_tampered")
+        }
+        if raw.contains("Integritätsprüfung") || raw.contains("integrity") {
+            return l10n.localized("updates.error_integrity_failed")
+        }
+        if raw.contains("Internetverbindung") || raw.contains("offline") || raw.contains("connection") {
+            return l10n.localized("updates.error_network")
+        }
+        return raw
+    }
+    
     private func formattedDate(_ date: Date) -> String {
         let formatter = DateFormatter()
         formatter.dateStyle = .medium
         formatter.timeStyle = .short
-        formatter.locale = Locale(identifier: "de_DE")
+        formatter.locale = Locale(identifier: l10n.selectedLanguage.rawValue)
         return formatter.string(from: date)
     }
 }

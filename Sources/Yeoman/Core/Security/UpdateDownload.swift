@@ -46,10 +46,23 @@ public final class UpdateDownload: NSObject, URLSessionDataDelegate {
     public func urlSession(_ session: URLSession, dataTask: URLSessionDataTask, didReceive response: URLResponse,
                            completionHandler: @escaping (URLSession.ResponseDisposition) -> Void) {
         let length = response.expectedContentLength
-        guard let http = response as? HTTPURLResponse, http.statusCode == 200, let url = http.url,
-              UpdateURLPolicy.redirect(url, apiRequest: apiRequest, count: redirects),
+        guard let http = response as? HTTPURLResponse else {
+            failure = SecurityFailure.rejected("updates.error_invalid_response")
+            completionHandler(.cancel); return
+        }
+        guard http.statusCode == 200 else {
+            if http.statusCode == 404 {
+                failure = SecurityFailure.rejected("updates.error_not_found_or_private")
+            } else if http.statusCode == 403 {
+                failure = SecurityFailure.rejected("updates.error_forbidden")
+            } else {
+                failure = SecurityFailure.rejected("updates.error_invalid_response")
+            }
+            completionHandler(.cancel); return
+        }
+        guard let url = http.url, UpdateURLPolicy.redirect(url, apiRequest: apiRequest, count: redirects),
               length == NSURLSessionTransferSizeUnknown || (length >= 0 && length <= limit) else {
-            failure = SecurityFailure.rejected("Ungültige oder zu große Update-Antwort."); completionHandler(.cancel); return
+            failure = SecurityFailure.rejected("updates.error_invalid_response"); completionHandler(.cancel); return
         }
         completionHandler(.allow)
     }

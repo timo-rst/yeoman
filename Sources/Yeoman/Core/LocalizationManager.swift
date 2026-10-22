@@ -634,6 +634,66 @@ public final class LocalizationManager: ObservableObject {
             .spanish: "Ver en GitHub",
             .french: "Voir sur GitHub"
         ],
+        "updates.badge_current": [
+            .german: "Aktuell",
+            .english: "Current",
+            .spanish: "Actual",
+            .french: "À jour"
+        ],
+        "updates.badge_new": [
+            .german: "Neu",
+            .english: "New",
+            .spanish: "Nuevo",
+            .french: "Nouveau"
+        ],
+        "updates.error_invalid_response": [
+            .german: "Ungültige oder unerwartete Update-Antwort vom Server.",
+            .english: "Invalid or unexpected update response from server.",
+            .spanish: "Respuesta de actualización no válida o inesperada del servidor.",
+            .french: "Réponse de mise à jour non valide ou inattendue du serveur."
+        ],
+        "updates.error_not_found_or_private": [
+            .german: "Kein Update gefunden oder Repository ist privat (HTTP 404).",
+            .english: "No update found or repository is private (HTTP 404).",
+            .spanish: "No se encontró ninguna actualización o el repositorio es privado (HTTP 404).",
+            .french: "Aucune mise à jour trouvée ou le dépôt est privé (HTTP 404)."
+        ],
+        "updates.error_forbidden": [
+            .german: "GitHub-Zugriff verweigert oder Rate-Limit erreicht (HTTP 403).",
+            .english: "GitHub access denied or rate limit exceeded (HTTP 403).",
+            .spanish: "Acceso a GitHub denegado o límite de tasa excedido (HTTP 403).",
+            .french: "Accès à GitHub refusé ou limite de taux dépassée (HTTP 403)."
+        ],
+        "updates.error_invalid_version": [
+            .german: "Ungültige Versionsnummer im Release.",
+            .english: "Invalid version number in release.",
+            .spanish: "Número de versión no válido en la versión publicada.",
+            .french: "Numéro de version non valide dans la version publiée."
+        ],
+        "updates.error_redirect_rejected": [
+            .german: "Update-Weiterleitung aus Sicherheitsgründen abgewiesen.",
+            .english: "Update redirect rejected for security reasons.",
+            .spanish: "Redirección de actualización rechazada por seguridad.",
+            .french: "Redirection de mise à jour rejetée pour des raisons de sécurité."
+        ],
+        "updates.error_archive_tampered": [
+            .german: "Update-Archiv wurde verändert oder ist beschädigt.",
+            .english: "Update archive was modified or is corrupt.",
+            .spanish: "El archivo de actualización fue modificado o está dañado.",
+            .french: "L'archive de mise à jour a été modifiée ou est corrompue."
+        ],
+        "updates.error_integrity_failed": [
+            .german: "Integritätsprüfung der App-Signatur fehlgeschlagen.",
+            .english: "App signature integrity verification failed.",
+            .spanish: "Error en la verificación de integridad de la firma.",
+            .french: "Échec de la vérification de l'intégrité de la signature."
+        ],
+        "updates.error_network": [
+            .german: "Verbindung zu GitHub fehlgeschlagen. Bitte Internetverbindung prüfen.",
+            .english: "Connection to GitHub failed. Please check your internet connection.",
+            .spanish: "Error al conectar con GitHub. Compruebe la conexión a Internet.",
+            .french: "Échec de connexion à GitHub. Veuillez vérifier votre connexion Internet."
+        ],
         
         // Menu Bar Optimizer
         "menubar.title": [
