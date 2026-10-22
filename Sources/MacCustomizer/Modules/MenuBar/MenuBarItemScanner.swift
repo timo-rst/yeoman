@@ -206,7 +206,7 @@ public final class MenuBarItemScanner: ObservableObject {
                 bundleIdentifier: "de.trst.MacCustomizer.systemstats",
                 appPath: nil,
                 sfSymbol: "gauge.with.needle",
-                isVisibleInMenuBar: mm.systemStatsModule.isEnabled && mm.systemStatsModule.showsDedicatedStatusItem,
+                isVisibleInMenuBar: mm.systemStatsModule.isEnabled,
                 isRunning: mm.systemStatsModule.isEnabled
             ),
             MenuBarAppItem(
@@ -289,8 +289,9 @@ public final class MenuBarItemScanner: ObservableObject {
                 mm.clipboardModule.showsDedicatedStatusItem = enable
                 items[idx].isVisibleInMenuBar = enable
             } else if id == "module_stats" {
-                mm.systemStatsModule.showsDedicatedStatusItem = enable
+                mm.toggleModule(id: mm.systemStatsModule.id, enabled: enable)
                 items[idx].isVisibleInMenuBar = enable
+                items[idx].isRunning = enable
             } else if id == "module_spacing" {
                 mm.menuBarModule.showsDedicatedStatusItem = enable
                 items[idx].isVisibleInMenuBar = enable

@@ -33,10 +33,12 @@ public final class SystemStatsModule: NSObject, CustomizerModule, ObservableObje
         }
     }
     
-    @Published public var showsDedicatedStatusItem: Bool {
-        didSet {
-            UserDefaults.standard.set(showsDedicatedStatusItem, forKey: "system_stats_shows_dedicated_status_item")
-            ModuleManager.shared.recreateAllStatusItems()
+    public var showsDedicatedStatusItem: Bool {
+        get { isEnabled }
+        set {
+            if isEnabled != newValue {
+                isEnabled = newValue
+            }
         }
     }
     
@@ -101,7 +103,6 @@ public final class SystemStatsModule: NSObject, CustomizerModule, ObservableObje
     
     public override init() {
         self.isEnabled = UserDefaults.standard.object(forKey: "system_stats_is_enabled") as? Bool ?? true
-        self.showsDedicatedStatusItem = UserDefaults.standard.object(forKey: "system_stats_shows_dedicated_status_item") as? Bool ?? true
         
         if let savedLayout = UserDefaults.standard.string(forKey: "stats_layout_mode"),
            let l = StatsLayoutMode(rawValue: savedLayout) {
@@ -376,20 +377,6 @@ public struct SystemStatsSettingsView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 20) {
                     Group {
-                    // Menüleisten-Option
-                    VStack(alignment: .leading, spacing: 14) {
-                        Text("Menüleisten-Widget")
-                            .font(.headline)
-                        
-                        HStack(spacing: 6) {
-                            Toggle("Mini-Graphen & Metriken in Menüleiste anzeigen", isOn: $module.showsDedicatedStatusItem)
-                                .font(.subheadline)
-                            InfoTooltip(text: "Rendert kompakte Live-Metriken für CPU, RAM und GPU direkt in der Menüleiste. Klick darauf öffnet den Mini Task-Manager.")
-                        }
-                    }
-                    .padding()
-                    .background(RoundedRectangle(cornerRadius: 12).fill(Color(nsColor: .controlBackgroundColor)))
-                    
                     // Menüleisten-Anzeige Konfiguration
                     VStack(alignment: .leading, spacing: 14) {
                         Text("Menüleisten-Anzeige konfigurieren")

@@ -248,15 +248,11 @@ struct GeneralSettingsView: View {
                     // 5. System Stats Monitor
                     ModuleToggleRow(
                         title: "System-Monitor",
-                        subtitle: "Live-Auslastung von Prozessor, Arbeitsspeicher und Grafik",
+                        subtitle: "Live-Auslastung von Prozessor, Arbeitsspeicher und Grafik in der Menüleiste",
                         icon: "gauge.with.needle",
                         isOn: Binding(
                             get: { stats.isEnabled },
                             set: { mm.toggleModule(id: stats.id, enabled: $0) }
-                        ),
-                        showsDedicatedIcon: Binding(
-                            get: { stats.showsDedicatedStatusItem },
-                            set: { stats.showsDedicatedStatusItem = $0 }
                         )
                     )
                 }
