@@ -357,7 +357,6 @@ public struct WebPanelView: View {
                                     updated.zoomScale = 0.85
                                 }
                                 onUpdateItem?(updated)
-                                controller.applyZoom(updated.zoomScale)
                             }) {
                                 HStack {
                                     Text(preset.rawValue)
@@ -405,9 +404,18 @@ public struct WebPanelView: View {
                     }
                 } label: {
                     HStack(spacing: 3) {
-                        Text("\(Int(item.effectiveWidth)) × \(Int(item.effectiveHeight))")
-                            .font(.system(size: 10, weight: .medium))
-                            .foregroundColor(.secondary)
+                        if instance.autoFitScale < 0.99 {
+                            Text("\(Int(instance.fittedSize.width)) × \(Int(instance.fittedSize.height))")
+                                .font(.system(size: 10, weight: .medium))
+                                .foregroundColor(.secondary)
+                            Image(systemName: "arrow.down.right.and.arrow.up.left")
+                                .font(.system(size: 7))
+                                .foregroundColor(.accentColor)
+                        } else {
+                            Text("\(Int(item.effectiveWidth)) × \(Int(item.effectiveHeight))")
+                                .font(.system(size: 10, weight: .medium))
+                                .foregroundColor(.secondary)
+                        }
                         Image(systemName: "chevron.up.chevron.down")
                             .font(.system(size: 7))
                             .foregroundColor(.secondary)
@@ -418,6 +426,7 @@ public struct WebPanelView: View {
                 }
                 .menuStyle(.borderlessButton)
                 .fixedSize()
+                .help(instance.autoFitScale < 0.99 ? "Konfiguriert: \(Int(item.effectiveWidth)) × \(Int(item.effectiveHeight)) pt (automatisch an Bildschirm angepasst)" : "Fenstergröße anpassen")
                 
                 // Zoom Level Menu (scales website to fit widget)
                 Menu {
@@ -427,7 +436,6 @@ public struct WebPanelView: View {
                                 var updated = item
                                 updated.zoomScale = z
                                 onUpdateItem?(updated)
-                                controller.applyZoom(z)
                             }) {
                                 HStack {
                                     Text("\(Int(z * 100))%")
@@ -510,6 +518,6 @@ public struct WebPanelView: View {
             .frame(maxWidth: .infinity)
         }
         }
-        .frame(width: item.effectiveWidth, height: item.effectiveHeight)
+        .frame(width: instance.fittedSize.width, height: instance.fittedSize.height)
     }
 }

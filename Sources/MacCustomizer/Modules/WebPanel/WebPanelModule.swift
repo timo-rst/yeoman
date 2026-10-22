@@ -316,15 +316,24 @@ public final class WebPanelModule: NSObject, CustomizerModule, ObservableObject 
 
 public final class WebWidgetInstanceController: NSObject, ObservableObject {
     @Published public var item: WebWidgetItem
+    @Published public var fittedSize: NSSize
+    @Published public var autoFitScale: Double = 1.0
     public let webController: WebPanelController
     weak var module: WebPanelModule?
     
     private var statusItem: NSStatusItem?
     private var popover: NSPopover?
     
+    public struct FittedDimensions {
+        public let size: NSSize
+        public let autoFitScale: Double
+    }
+    
     public init(item: WebWidgetItem, module: WebPanelModule) {
         self.item = item
         self.module = module
+        self.fittedSize = NSSize(width: item.effectiveWidth, height: item.effectiveHeight)
+        self.autoFitScale = 1.0
         self.webController = WebPanelController(
             initialURL: item.url,
             userAgentMode: item.userAgentMode,
@@ -333,6 +342,7 @@ public final class WebWidgetInstanceController: NSObject, ObservableObject {
         )
         super.init()
         self.webController.associatedItem = item
+        updateFittedDimensions()
         
         NotificationCenter.default.addObserver(
             self,
@@ -340,10 +350,81 @@ public final class WebWidgetInstanceController: NSObject, ObservableObject {
             name: .webFaviconDidUpdate,
             object: nil
         )
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(handleScreenParametersChange),
+            name: NSApplication.didChangeScreenParametersNotification,
+            object: nil
+        )
     }
     
     deinit {
         NotificationCenter.default.removeObserver(self)
+    }
+    
+    @discardableResult
+    public func updateFittedDimensions(for targetScreen: NSScreen? = nil) -> FittedDimensions {
+        let currentScreen = targetScreen
+            ?? statusItem?.button?.window?.screen
+            ?? popover?.contentViewController?.view.window?.screen
+            ?? NSScreen.main
+            ?? NSScreen.screens.first
+        
+        let desiredWidth = item.effectiveWidth
+        let desiredHeight = item.effectiveHeight
+        
+        guard let screen = currentScreen else {
+            let fallback = FittedDimensions(size: NSSize(width: desiredWidth, height: desiredHeight), autoFitScale: 1.0)
+            self.fittedSize = fallback.size
+            self.autoFitScale = 1.0
+            return fallback
+        }
+        
+        let visibleFrame = screen.visibleFrame
+        
+        // Calculate vertical space from status bar down to bottom of visible area (above Dock)
+        let topAnchorY: CGFloat = {
+            if let btn = statusItem?.button, let win = btn.window, win.frame.minY > visibleFrame.minY {
+                return win.frame.minY
+            }
+            return visibleFrame.maxY
+        }()
+        
+        let bottomBoundaryY = visibleFrame.minY
+        let availableVerticalSpace = max(250, topAnchorY - bottomBoundaryY)
+        
+        // Reserve 24 pt for popover arrow (12 pt), borders, and bottom breathing margin above Dock
+        let maxAllowedHeight = max(250, availableVerticalSpace - 24)
+        
+        // Reserve 32 pt for horizontal margins from display edge
+        let maxAllowedWidth = max(280, visibleFrame.width - 32)
+        
+        let clampedWidth = min(desiredWidth, maxAllowedWidth)
+        let clampedHeight = min(desiredHeight, maxAllowedHeight)
+        
+        // Calculate scaling factor to proportionately fit web content if screen is smaller than configured size
+        let scaleX = clampedWidth / max(desiredWidth, 1)
+        let scaleY = clampedHeight / max(desiredHeight, 1)
+        let scale = min(scaleX, scaleY, 1.0)
+        
+        let result = FittedDimensions(
+            size: NSSize(width: clampedWidth, height: clampedHeight),
+            autoFitScale: scale
+        )
+        
+        self.fittedSize = result.size
+        self.autoFitScale = result.autoFitScale
+        return result
+    }
+    
+    @objc private func handleScreenParametersChange() {
+        DispatchQueue.main.async { [weak self] in
+            guard let self = self else { return }
+            self.updateFittedDimensions()
+            guard let p = self.popover, p.isShown else { return }
+            p.contentSize = self.fittedSize
+            self.webController.applyZoom(self.item.zoomScale * self.autoFitScale)
+        }
     }
     
     @objc private func handleFaviconUpdate(_ notification: Notification) {
@@ -411,8 +492,9 @@ public final class WebWidgetInstanceController: NSObject, ObservableObject {
     
     public func preparePopover() {
         if popover == nil {
+            updateFittedDimensions()
             let p = NSPopover()
-            p.contentSize = NSSize(width: item.effectiveWidth, height: item.effectiveHeight)
+            p.contentSize = fittedSize
             p.behavior = item.isPinned ? .applicationDefined : .transient
             p.animates = true
             p.contentViewController = NSHostingController(
@@ -436,11 +518,12 @@ public final class WebWidgetInstanceController: NSObject, ObservableObject {
         let oldRemoveWhite = self.item.removeWhiteBackground
         
         self.item = newItem
+        updateFittedDimensions()
         webController.associatedItem = newItem
         webController.updateConfig(
             userAgentMode: newItem.userAgentMode,
             targetWidth: newItem.effectiveWidth,
-            zoomScale: newItem.zoomScale,
+            zoomScale: newItem.zoomScale * autoFitScale,
             newURL: newItem.url
         )
         
@@ -465,8 +548,7 @@ public final class WebWidgetInstanceController: NSObject, ObservableObject {
             }
         }
         
-        let newSize = NSSize(width: newItem.effectiveWidth, height: newItem.effectiveHeight)
-        popover?.contentSize = newSize
+        popover?.contentSize = fittedSize
         popover?.behavior = newItem.isPinned ? .applicationDefined : .transient
     }
     
@@ -499,13 +581,15 @@ public final class WebWidgetInstanceController: NSObject, ObservableObject {
     }
     
     private func togglePopover(_ sender: NSStatusBarButton) {
+        updateFittedDimensions(for: sender.window?.screen)
         preparePopover()
         
         guard let p = popover else { return }
         if p.isShown {
             p.performClose(sender)
         } else {
-            p.contentSize = NSSize(width: item.effectiveWidth, height: item.effectiveHeight)
+            p.contentSize = fittedSize
+            webController.applyZoom(item.zoomScale * autoFitScale)
             p.show(relativeTo: sender.bounds, of: sender, preferredEdge: .minY)
             p.contentViewController?.view.window?.makeKey()
             NSApp.activate(ignoringOtherApps: true)
