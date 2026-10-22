@@ -103,6 +103,7 @@ struct GeneralSettingsView: View {
     @ObservedObject private var stats = ModuleManager.shared.systemStatsModule
     @ObservedObject private var scrollReverser = ModuleManager.shared.scrollReverserModule
     @ObservedObject private var menuBar = ModuleManager.shared.menuBarModule
+    @ObservedObject private var faviconManager = WebFaviconManager.shared
     
     var body: some View {
         VStack(spacing: 0) {
@@ -224,10 +225,24 @@ struct GeneralSettingsView: View {
                                         ForEach(webPanel.widgets) { widget in
                                             HStack(spacing: 8) {
                                                 Spacer().frame(width: 44)
-                                                Image(systemName: widget.iconName.isEmpty ? "globe" : widget.iconName)
-                                                    .font(.caption)
-                                                    .foregroundColor(.accentColor)
-                                                    .frame(width: 14)
+                                                
+                                                // Preferred Favicon with Fallback to SF Symbol
+                                                Group {
+                                                    if let icon = faviconManager.previewIcon(for: widget.url, widgetId: widget.id, selectedFaviconURL: widget.selectedFaviconURL, removeWhite: widget.removeWhiteBackground) {
+                                                        Image(nsImage: icon)
+                                                            .resizable()
+                                                            .aspectRatio(contentMode: .fit)
+                                                            .frame(width: 15, height: 15)
+                                                            .clipShape(RoundedRectangle(cornerRadius: 3.5))
+                                                    } else {
+                                                        Image(systemName: widget.iconName.isEmpty ? "globe" : widget.iconName)
+                                                            .font(.caption)
+                                                            .foregroundColor(.accentColor)
+                                                            .frame(width: 15, height: 15)
+                                                    }
+                                                }
+                                                .frame(width: 16, height: 16)
+                                                
                                                 Text(widget.title)
                                                     .font(.caption)
                                                     .foregroundColor(.primary)
@@ -244,6 +259,11 @@ struct GeneralSettingsView: View {
                                             .padding(.vertical, 3)
                                             .padding(.horizontal, 8)
                                             .background(RoundedRectangle(cornerRadius: 6).fill(Color.primary.opacity(0.04)))
+                                            .onAppear {
+                                                if !widget.url.isEmpty && faviconManager.options(for: widget.url).isEmpty {
+                                                    faviconManager.discoverFavicons(for: widget.url, widgetId: widget.id)
+                                                }
+                                            }
                                         }
                                     }
                                     .padding(.leading, 8)
