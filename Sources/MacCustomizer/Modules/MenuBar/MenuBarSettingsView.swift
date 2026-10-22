@@ -1,6 +1,6 @@
 import SwiftUI
 
-public enum MenuBarSubTab: String, CaseIterable, Identifiable {
+public enum MenuBarSubTab: String, CaseIterable, Identifiable, SubTabProtocol {
     case items = "items"
     case spacing = "spacing"
     
@@ -24,7 +24,6 @@ public enum MenuBarSubTab: String, CaseIterable, Identifiable {
 public struct MenuBarSettingsView: View {
     @ObservedObject var module: MenuBarModule
     @ObservedObject var l10nObj = LocalizationManager.shared
-    @State private var selectedSubTab: MenuBarSubTab = .items
     
     public init(module: MenuBarModule) {
         self.module = module
@@ -32,8 +31,8 @@ public struct MenuBarSettingsView: View {
     
     public var body: some View {
         VStack(spacing: 0) {
-            // Module Header & Sub-Navigation Picker
-            VStack(spacing: 12) {
+            // Module Header & Sub-Navigation
+            VStack(spacing: 14) {
                 ModuleHeaderView(
                     title: l10n("menubar.title"),
                     subtitle: l10n("menubar.subtitle"),
@@ -41,14 +40,11 @@ public struct MenuBarSettingsView: View {
                     isEnabled: $module.isEnabled
                 )
                 
-                // Sub-menu switcher for this module
-                Picker("", selection: $selectedSubTab) {
-                    ForEach(MenuBarSubTab.allCases) { tab in
-                        Label(tab.title, systemImage: tab.iconName).tag(tab)
-                    }
-                }
-                .pickerStyle(.segmented)
-                .frame(maxWidth: 360)
+                // Unified sub-menu switcher for this module
+                UnifiedSubTabBar(
+                    tabs: MenuBarSubTab.allCases,
+                    selectedTab: $module.activeSubTab
+                )
             }
             .padding(.horizontal, 20)
             .padding(.top, 16)
@@ -58,7 +54,7 @@ public struct MenuBarSettingsView: View {
             
             // Sub-Menu Content
             Group {
-                switch selectedSubTab {
+                switch module.activeSubTab {
                 case .items:
                     MenuBarItemsView()
                 case .spacing:

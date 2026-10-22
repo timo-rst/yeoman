@@ -40,10 +40,45 @@ public enum SettingsTab: String, CaseIterable, Identifiable {
     }
 }
 
+public enum SettingsSidebarItem: Hashable, Identifiable {
+    case general
+    case menuBar
+    case menuBarItems
+    case menuBarSpacing
+    case scrollReverser
+    case webPanel
+    case clipboard
+    case clipboardHistory
+    case clipboardOptions
+    case systemStats
+    case about
+    
+    public var id: String {
+        switch self {
+        case .general: return "general"
+        case .menuBar: return "menuBar"
+        case .menuBarItems: return "menuBar.items"
+        case .menuBarSpacing: return "menuBar.spacing"
+        case .scrollReverser: return "scrollReverser"
+        case .webPanel: return "webPanel"
+        case .clipboard: return "clipboard"
+        case .clipboardHistory: return "clipboard.history"
+        case .clipboardOptions: return "clipboard.options"
+        case .systemStats: return "systemStats"
+        case .about: return "about"
+        }
+    }
+}
+
 public struct SettingsView: View {
     @ObservedObject var moduleManager = ModuleManager.shared
     @ObservedObject var l10n = LocalizationManager.shared
+    @ObservedObject private var menuBar = ModuleManager.shared.menuBarModule
+    @ObservedObject private var clipboard = ModuleManager.shared.clipboardModule
     @State private var selectedTab: SettingsTab = .general
+    @State private var selectedSidebarItem: SettingsSidebarItem = .general
+    @State private var isMenuBarExpanded: Bool = true
+    @State private var isClipboardExpanded: Bool = true
     
     public init() {}
     
@@ -51,18 +86,102 @@ public struct SettingsView: View {
         HStack(spacing: 0) {
             // Static sidebar that stays open without jumping toggle buttons
             VStack(spacing: 0) {
-                List(SettingsTab.allCases, id: \.self, selection: $selectedTab) { tab in
-                    HStack(spacing: 8) {
-                        Image(systemName: tab.iconName)
-                            .frame(width: 18)
-                            .foregroundColor(.accentColor)
-                        Text(tab.title)
+                List(selection: $selectedSidebarItem) {
+                    // 1. General
+                    SidebarStandardRow(icon: "gearshape", title: l10n.localized("tab.general"))
+                        .tag(SettingsSidebarItem.general)
+                    
+                    // 2. Menüleiste Group
+                    SidebarParentRow(
+                        icon: "menubar.rectangle",
+                        title: l10n.localized("tab.menuBar"),
+                        count: 2,
+                        isExpanded: isMenuBarExpanded,
+                        isSectionActive: selectedTab == .menuBar,
+                        onToggleExpand: {
+                            withAnimation(.easeInOut(duration: 0.18)) {
+                                isMenuBarExpanded.toggle()
+                                if isMenuBarExpanded && selectedTab == .menuBar {
+                                    selectedSidebarItem = (menuBar.activeSubTab == .spacing) ? .menuBarSpacing : .menuBarItems
+                                } else if !isMenuBarExpanded && selectedTab == .menuBar {
+                                    selectedSidebarItem = .menuBar
+                                }
+                            }
+                        }
+                    )
+                    .tag(SettingsSidebarItem.menuBar)
+                    
+                    if isMenuBarExpanded {
+                        SidebarSubItemRow(
+                            icon: "list.bullet.rectangle",
+                            title: l10n.localized("menubar.tab_items"),
+                            isSelected: selectedSidebarItem == .menuBarItems
+                        )
+                        .tag(SettingsSidebarItem.menuBarItems)
+                        
+                        SidebarSubItemRow(
+                            icon: "arrow.left.and.line.vertical.and.arrow.right",
+                            title: l10n.localized("menubar.tab_spacing"),
+                            isSelected: selectedSidebarItem == .menuBarSpacing
+                        )
+                        .tag(SettingsSidebarItem.menuBarSpacing)
                     }
-                    .tag(tab)
+                    
+                    // 3. Scroll Reverser
+                    SidebarStandardRow(icon: "computermouse", title: l10n.localized("tab.scrollReverser"))
+                        .tag(SettingsSidebarItem.scrollReverser)
+                    
+                    // 4. Web Panel
+                    SidebarStandardRow(icon: "globe", title: l10n.localized("tab.webPanel"))
+                        .tag(SettingsSidebarItem.webPanel)
+                    
+                    // 5. Clipboard Group
+                    SidebarParentRow(
+                        icon: "doc.on.clipboard",
+                        title: l10n.localized("tab.clipboard"),
+                        count: 2,
+                        isExpanded: isClipboardExpanded,
+                        isSectionActive: selectedTab == .clipboard,
+                        onToggleExpand: {
+                            withAnimation(.easeInOut(duration: 0.18)) {
+                                isClipboardExpanded.toggle()
+                                if isClipboardExpanded && selectedTab == .clipboard {
+                                    selectedSidebarItem = (clipboard.activeSubTab == .options) ? .clipboardOptions : .clipboardHistory
+                                } else if !isClipboardExpanded && selectedTab == .clipboard {
+                                    selectedSidebarItem = .clipboard
+                                }
+                            }
+                        }
+                    )
+                    .tag(SettingsSidebarItem.clipboard)
+                    
+                    if isClipboardExpanded {
+                        SidebarSubItemRow(
+                            icon: "clock.arrow.circlepath",
+                            title: l10n.localized("clipboard.subtab_history"),
+                            isSelected: selectedSidebarItem == .clipboardHistory
+                        )
+                        .tag(SettingsSidebarItem.clipboardHistory)
+                        
+                        SidebarSubItemRow(
+                            icon: "slider.horizontal.3",
+                            title: l10n.localized("clipboard.subtab_options"),
+                            isSelected: selectedSidebarItem == .clipboardOptions
+                        )
+                        .tag(SettingsSidebarItem.clipboardOptions)
+                    }
+                    
+                    // 6. System Stats
+                    SidebarStandardRow(icon: "gauge.with.needle", title: l10n.localized("tab.systemStats"))
+                        .tag(SettingsSidebarItem.systemStats)
+                    
+                    // 7. About
+                    SidebarStandardRow(icon: "info.circle", title: l10n.localized("tab.about"))
+                        .tag(SettingsSidebarItem.about)
                 }
                 .listStyle(.sidebar)
             }
-            .frame(width: 220)
+            .frame(width: 230)
             
             Divider()
             
@@ -88,6 +207,139 @@ public struct SettingsView: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
         .frame(minWidth: 980, idealWidth: 1040, minHeight: 660, idealHeight: 720)
+        .onChange(of: selectedSidebarItem) { _, newItem in
+            handleSidebarSelection(newItem)
+        }
+        .onChange(of: menuBar.activeSubTab) { _, newSubTab in
+            if selectedTab == .menuBar {
+                if isMenuBarExpanded {
+                    selectedSidebarItem = (newSubTab == .spacing) ? .menuBarSpacing : .menuBarItems
+                } else {
+                    selectedSidebarItem = .menuBar
+                }
+            }
+        }
+        .onChange(of: clipboard.activeSubTab) { _, newSubTab in
+            if selectedTab == .clipboard {
+                if isClipboardExpanded {
+                    selectedSidebarItem = (newSubTab == .options) ? .clipboardOptions : .clipboardHistory
+                } else {
+                    selectedSidebarItem = .clipboard
+                }
+            }
+        }
+    }
+    
+    private func handleSidebarSelection(_ item: SettingsSidebarItem) {
+        switch item {
+        case .general:
+            selectedTab = .general
+        case .menuBar:
+            selectedTab = .menuBar
+            if isMenuBarExpanded {
+                selectedSidebarItem = (menuBar.activeSubTab == .spacing) ? .menuBarSpacing : .menuBarItems
+            }
+        case .menuBarItems:
+            selectedTab = .menuBar
+            menuBar.activeSubTab = .items
+        case .menuBarSpacing:
+            selectedTab = .menuBar
+            menuBar.activeSubTab = .spacing
+        case .scrollReverser:
+            selectedTab = .scrollReverser
+        case .webPanel:
+            selectedTab = .webPanel
+        case .clipboard:
+            selectedTab = .clipboard
+            if isClipboardExpanded {
+                selectedSidebarItem = (clipboard.activeSubTab == .options) ? .clipboardOptions : .clipboardHistory
+            }
+        case .clipboardHistory:
+            selectedTab = .clipboard
+            clipboard.activeSubTab = .history
+        case .clipboardOptions:
+            selectedTab = .clipboard
+            clipboard.activeSubTab = .options
+        case .systemStats:
+            selectedTab = .systemStats
+        case .about:
+            selectedTab = .about
+        }
+    }
+}
+
+struct SidebarStandardRow: View {
+    let icon: String
+    let title: String
+    
+    var body: some View {
+        HStack(spacing: 8) {
+            Image(systemName: icon)
+                .frame(width: 18)
+                .foregroundColor(.accentColor)
+            Text(title)
+        }
+    }
+}
+
+struct SidebarParentRow: View {
+    let icon: String
+    let title: String
+    let count: Int
+    let isExpanded: Bool
+    let isSectionActive: Bool
+    let onToggleExpand: () -> Void
+    
+    var body: some View {
+        HStack(spacing: 8) {
+            Image(systemName: icon)
+                .frame(width: 18)
+                .foregroundColor(isSectionActive ? .accentColor : .secondary)
+            
+            Text(title)
+                .fontWeight(isSectionActive ? .semibold : .regular)
+            
+            Spacer()
+            
+            Text("\(count)")
+                .font(.system(size: 10, weight: .semibold, design: .rounded))
+                .foregroundColor(.secondary)
+                .padding(.horizontal, 5)
+                .padding(.vertical, 1.5)
+                .background(Capsule().fill(Color.secondary.opacity(0.12)))
+            
+            Button(action: onToggleExpand) {
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 10, weight: .bold))
+                    .foregroundColor(.secondary.opacity(0.8))
+                    .rotationEffect(.degrees(isExpanded ? 90 : 0))
+                    .frame(width: 16, height: 16)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+        }
+    }
+}
+
+struct SidebarSubItemRow: View {
+    let icon: String
+    let title: String
+    let isSelected: Bool
+    
+    var body: some View {
+        HStack(spacing: 8) {
+            Image(systemName: icon)
+                .font(.system(size: 11.5))
+                .frame(width: 16)
+                .foregroundColor(isSelected ? .accentColor : .secondary)
+            
+            Text(title)
+                .font(.system(size: 12.5))
+                .foregroundColor(isSelected ? .primary : .secondary)
+            
+            Spacer()
+        }
+        .padding(.leading, 18)
     }
 }
 

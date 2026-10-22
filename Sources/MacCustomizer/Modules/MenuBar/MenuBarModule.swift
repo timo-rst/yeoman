@@ -28,6 +28,8 @@ public final class MenuBarModule: NSObject, CustomizerModule, ObservableObject {
         }
     }
     
+    @Published public var activeSubTab: MenuBarSubTab = .items
+    
     private var statusItem: NSStatusItem?
     
     public override init() {

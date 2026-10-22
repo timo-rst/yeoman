@@ -1,26 +1,31 @@
 import SwiftUI
 
+public enum ClipboardSubTab: String, CaseIterable, Identifiable, SubTabProtocol {
+    case history = "history"
+    case options = "options"
+    
+    public var id: String { rawValue }
+    
+    public var title: String {
+        switch self {
+        case .history: return l10n("clipboard.subtab_history")
+        case .options: return l10n("clipboard.subtab_options")
+        }
+    }
+    
+    public var iconName: String {
+        switch self {
+        case .history: return "clock.arrow.circlepath"
+        case .options: return "slider.horizontal.3"
+        }
+    }
+}
+
 public struct ClipboardSettingsView: View {
     @ObservedObject var module: ClipboardModule
     @ObservedObject var store = ClipboardHistoryStore.shared
     @ObservedObject var monitor = ClipboardMonitor.shared
     @ObservedObject var l10nObj = LocalizationManager.shared
-    
-    enum SettingsSubTab: String, CaseIterable, Identifiable {
-        case history = "history"
-        case options = "options"
-        
-        var id: String { rawValue }
-        
-        var title: String {
-            switch self {
-            case .history: return l10n("clipboard.subtab_history")
-            case .options: return l10n("clipboard.subtab_options")
-            }
-        }
-    }
-    
-    @State private var selectedTab: SettingsSubTab = .history
     
     public init(module: ClipboardModule) {
         self.module = module
@@ -28,8 +33,8 @@ public struct ClipboardSettingsView: View {
     
     public var body: some View {
         VStack(spacing: 0) {
-            // Header
-            VStack(alignment: .leading, spacing: 12) {
+            // Header & Sub-Navigation
+            VStack(spacing: 14) {
                 ModuleHeaderView(
                     title: l10n("tab.clipboard"),
                     subtitle: l10n("clipboard.subtitle"),
@@ -37,12 +42,11 @@ public struct ClipboardSettingsView: View {
                     isEnabled: $module.isEnabled
                 )
                 
-                Picker("", selection: $selectedTab) {
-                    ForEach(SettingsSubTab.allCases) { tab in
-                        Text(tab.title).tag(tab)
-                    }
-                }
-                .pickerStyle(.segmented)
+                // Unified sub-menu switcher for this module
+                UnifiedSubTabBar(
+                    tabs: ClipboardSubTab.allCases,
+                    selectedTab: $module.activeSubTab
+                )
             }
             .padding(.horizontal, 20)
             .padding(.top, 16)
@@ -51,7 +55,7 @@ public struct ClipboardSettingsView: View {
             Divider()
             
             Group {
-                if selectedTab == .history {
+                if module.activeSubTab == .history {
                 // Live Clipboard Browser (Full View)
                 HStack(spacing: 0) {
                     Spacer()

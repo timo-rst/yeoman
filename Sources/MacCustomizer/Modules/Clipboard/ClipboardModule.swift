@@ -28,6 +28,8 @@ public final class ClipboardModule: NSObject, CustomizerModule, ObservableObject
         }
     }
     
+    @Published public var activeSubTab: ClipboardSubTab = .history
+    
     private var statusItem: NSStatusItem?
     private var popover: NSPopover?
     
