@@ -37,6 +37,16 @@ Yeoman is an open-source macOS menu bar tool that bundles several customization 
 
 ---
 
+## Motivation & Background
+
+This project started because several utilities I relied on broke or became incompatible across newer macOS updates. Rather than searching for separate replacements, I decided to build the specific features I personally need into a single native menu bar app.
+
+Nothing here is reinventing the wheel—it is simply a collection of tools tailored to my personal preferences and daily workflow.
+
+> **AI Transparency:** This project was developed with the assistance of AI pair-programming tools for scaffolding, implementation, and test coverage, directed and reviewed by the author.
+
+---
+
 ## Modules
 
 ### 1. Web Widgets
