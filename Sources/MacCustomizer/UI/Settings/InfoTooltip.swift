@@ -13,7 +13,6 @@ public struct InfoTooltip: View {
     public var body: some View {
         InfoTooltipRepresentable(text: text)
             .frame(width: 16, height: 16)
-            .help(text)
     }
 }
 
@@ -129,23 +128,14 @@ final class TooltipNSView: NSView {
         label.font = font
         label.stringValue = tooltipText
         
-        let paragraphStyle = NSMutableParagraphStyle()
-        paragraphStyle.lineBreakMode = .byWordWrapping
-        let attributes: [NSAttributedString.Key: Any] = [
-            .font: font,
-            .paragraphStyle: paragraphStyle
-        ]
-        let maxLabelWidth: CGFloat = 250
-        let textRect = (tooltipText as NSString).boundingRect(
-            with: NSSize(width: maxLabelWidth, height: 1000),
-            options: [.usesLineFragmentOrigin, .usesFontLeading],
-            attributes: attributes
-        )
+        let maxLabelWidth: CGFloat = 280
+        label.preferredMaxLayoutWidth = maxLabelWidth
+        let fit = label.sizeThatFits(NSSize(width: maxLabelWidth, height: CGFloat.greatestFiniteMagnitude))
         
-        let labelW = max(60, ceil(textRect.width) + 4)
-        let labelH = ceil(textRect.height) + 2
-        let padX: CGFloat = 10
-        let padY: CGFloat = 8
+        let labelW = max(70, min(maxLabelWidth, ceil(fit.width) + 2))
+        let labelH = ceil(fit.height) + 6
+        let padX: CGFloat = 12
+        let padY: CGFloat = 10
         let panelW = labelW + (padX * 2)
         let panelH = labelH + (padY * 2)
         
