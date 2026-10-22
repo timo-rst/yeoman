@@ -41,7 +41,8 @@ final class TooltipNSView: NSView {
     private static var activePanel: NSPanel?
     private static var activeLabel: NSTextField?
     private static weak var currentHoveredView: TooltipNSView?
-    private static var eventMonitor: Any?
+    private static var hoveredViews = NSHashTable<TooltipNSView>.weakObjects()
+    private static var hoverEventMonitor: Any?
     private static var didSetupScrollObserver = false
     private static var lastScrollTimestamp: CFTimeInterval = 0
     
@@ -49,7 +50,14 @@ final class TooltipNSView: NSView {
     private let iconImageView = NSImageView()
     private var isHovered: Bool = false {
         didSet {
+            guard oldValue != isHovered else { return }
             updateIcon()
+            if isHovered {
+                Self.hoveredViews.add(self)
+                Self.startHoverMonitorIfNeeded()
+            } else {
+                Self.hoveredViews.remove(self)
+            }
         }
     }
     
@@ -65,6 +73,7 @@ final class TooltipNSView: NSView {
     
     deinit {
         showTimer?.invalidate()
+        isHovered = false
         if Self.currentHoveredView === self {
             Self.hideActiveTooltip(animated: false)
         }
@@ -128,10 +137,7 @@ final class TooltipNSView: NSView {
             object: nil,
             queue: .main
         ) { _ in
-            lastScrollTimestamp = CACurrentMediaTime()
-            if activePanel?.isVisible == true || currentHoveredView != nil {
-                hideActiveTooltip(animated: false)
-            }
+            handleScroll()
         }
         
         // Listen to live scrolling start & update
@@ -140,10 +146,7 @@ final class TooltipNSView: NSView {
             object: nil,
             queue: .main
         ) { _ in
-            lastScrollTimestamp = CACurrentMediaTime()
-            if activePanel?.isVisible == true || currentHoveredView != nil {
-                hideActiveTooltip(animated: false)
-            }
+            handleScroll()
         }
         
         center.addObserver(
@@ -151,49 +154,79 @@ final class TooltipNSView: NSView {
             object: nil,
             queue: .main
         ) { _ in
-            lastScrollTimestamp = CACurrentMediaTime()
-            if activePanel?.isVisible == true || currentHoveredView != nil {
-                hideActiveTooltip(animated: false)
-            }
+            handleScroll()
         }
-    }
-    
-    private static func startEventMonitor() {
-        stopEventMonitor()
-        eventMonitor = NSEvent.addLocalMonitorForEvents(matching: [.scrollWheel, .leftMouseDown, .rightMouseDown, .mouseMoved]) { event in
-            switch event.type {
-            case .scrollWheel, .leftMouseDown, .rightMouseDown:
-                lastScrollTimestamp = CACurrentMediaTime()
-                hideActiveTooltip(animated: false)
-                
-            case .mouseMoved:
-                if let active = currentHoveredView, let window = active.window {
-                    let mouseLoc = window.mouseLocationOutsideOfEventStream
-                    let localPoint = active.convert(mouseLoc, from: nil)
-                    if !active.bounds.contains(localPoint) {
-                        hideActiveTooltip(animated: true)
-                    }
-                } else if activePanel?.isVisible == true {
-                    hideActiveTooltip(animated: false)
-                }
-                
-            default:
-                break
-            }
+        
+        center.addObserver(
+            forName: NSScrollView.didEndLiveScrollNotification,
+            object: nil,
+            queue: .main
+        ) { _ in
+            handleScroll()
+        }
+        
+        // Intercept all scroll wheel events directly from the event stream
+        NSEvent.addLocalMonitorForEvents(matching: [.scrollWheel]) { event in
+            handleScroll()
             return event
         }
     }
     
-    private static func stopEventMonitor() {
-        if let monitor = eventMonitor {
+    private static func handleScroll() {
+        lastScrollTimestamp = CACurrentMediaTime()
+        
+        let all = hoveredViews.allObjects
+        hoveredViews.removeAllObjects()
+        for view in all {
+            view.showTimer?.invalidate()
+            view.showTimer = nil
+            view.isHovered = false
+        }
+        
+        hideActiveTooltip(animated: false)
+    }
+    
+    private static func startHoverMonitorIfNeeded() {
+        guard hoverEventMonitor == nil else { return }
+        hoverEventMonitor = NSEvent.addLocalMonitorForEvents(matching: [.mouseMoved, .leftMouseDown, .rightMouseDown]) { event in
+            if event.type == .leftMouseDown || event.type == .rightMouseDown {
+                handleScroll()
+                return event
+            }
+            
+            // On mouse move: verify all hovered views still genuinely contain the cursor
+            let all = hoveredViews.allObjects
+            for view in all {
+                guard let window = view.window else {
+                    view.isHovered = false
+                    continue
+                }
+                let mouseLoc = window.mouseLocationOutsideOfEventStream
+                let localPoint = view.convert(mouseLoc, from: nil)
+                if !view.bounds.contains(localPoint) {
+                    view.isHovered = false
+                    if currentHoveredView === view {
+                        hideActiveTooltip(animated: true)
+                    }
+                }
+            }
+            
+            if hoveredViews.allObjects.isEmpty && activePanel?.isVisible != true {
+                stopHoverMonitor()
+            }
+            
+            return event
+        }
+    }
+    
+    private static func stopHoverMonitor() {
+        if let monitor = hoverEventMonitor {
             NSEvent.removeMonitor(monitor)
-            eventMonitor = nil
+            hoverEventMonitor = nil
         }
     }
     
     static func hideActiveTooltip(animated: Bool = true) {
-        stopEventMonitor()
-        
         if let active = currentHoveredView {
             active.showTimer?.invalidate()
             active.showTimer = nil
@@ -223,17 +256,13 @@ final class TooltipNSView: NSView {
     // MARK: - Mouse Hover & Interaction
     
     private func scheduleShow() {
-        // If the user scrolled in the last 150ms, don't trigger while in scroll motion
-        if CACurrentMediaTime() - Self.lastScrollTimestamp < 0.15 {
-            return
-        }
-        
         showTimer?.invalidate()
         showTimer = Timer.scheduledTimer(withTimeInterval: 0.12, repeats: false) { [weak self] _ in
             guard let self = self, self.isHovered else { return }
             
             // Double check scrolling didn't happen while timer was waiting
             if CACurrentMediaTime() - Self.lastScrollTimestamp < 0.15 {
+                self.isHovered = false
                 return
             }
             
@@ -252,12 +281,21 @@ final class TooltipNSView: NSView {
     
     override func mouseEntered(with event: NSEvent) {
         super.mouseEntered(with: event)
+        // If the user was scrolling in the last 150ms, this was triggered by scrolling past cursor
+        if CACurrentMediaTime() - Self.lastScrollTimestamp < 0.15 {
+            isHovered = false
+            return
+        }
         isHovered = true
         scheduleShow()
     }
     
     override func mouseMoved(with event: NSEvent) {
         super.mouseMoved(with: event)
+        if CACurrentMediaTime() - Self.lastScrollTimestamp < 0.15 {
+            isHovered = false
+            return
+        }
         if !isHovered {
             isHovered = true
             scheduleShow()
@@ -286,7 +324,7 @@ final class TooltipNSView: NSView {
         guard !tooltipText.isEmpty, let window = self.window else { return }
         
         Self.currentHoveredView = self
-        Self.startEventMonitor()
+        Self.startHoverMonitorIfNeeded()
         
         let panel = Self.getOrCreatePanel()
         guard let label = Self.activeLabel else { return }
