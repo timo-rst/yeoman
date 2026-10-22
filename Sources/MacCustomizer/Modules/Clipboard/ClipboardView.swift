@@ -153,11 +153,8 @@ public struct ClipboardView: View {
             // Content Area
             if displayedItems.isEmpty {
                 emptyStateView()
-            } else if selectedTab == .images {
-                // Dedicated Photo Grid for Images tab
-                imageGridView()
             } else {
-                // List View for All, Text, Pinned
+                // List View for All tabs (Alle, Texte, Bilder, Favoriten)
                 itemListView()
             }
             
@@ -224,29 +221,6 @@ public struct ClipboardView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .padding(30)
-    }
-    
-    @ViewBuilder
-    private func imageGridView() -> some View {
-        ScrollView {
-            LazyVGrid(columns: [GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10)], spacing: 10) {
-                ForEach(displayedItems) { item in
-                    ClipboardImageCardView(
-                        item: item,
-                        onSelect: {
-                            ClipboardMonitor.shared.copyItemToClipboard(item)
-                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
-                                onCopy?()
-                            }
-                        },
-                        onTogglePin: { store.togglePin(for: item) },
-                        onDelete: { store.removeItem(id: item.id) },
-                        onZoom: { previewItem = item }
-                    )
-                }
-            }
-            .padding(10)
-        }
     }
     
     @ViewBuilder
@@ -486,149 +460,6 @@ struct ClipboardRowView: View {
         case .file: return .orange
         case .code: return .purple
         case .image: return .green
-        }
-    }
-    
-    private func formatTime(_ date: Date) -> String {
-        let formatter = RelativeDateTimeFormatter()
-        formatter.unitsStyle = .short
-        return formatter.localizedString(for: date, relativeTo: Date())
-    }
-}
-
-// MARK: - Image Card View for Photos Grid
-struct ClipboardImageCardView: View {
-    let item: ClipboardItem
-    let onSelect: () -> Void
-    let onTogglePin: () -> Void
-    let onDelete: () -> Void
-    let onZoom: () -> Void
-    
-    @State private var isHovered: Bool = false
-    @State private var isJustCopied: Bool = false
-    
-    var body: some View {
-        Button(action: {
-            isJustCopied = true
-            onSelect()
-            DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
-                isJustCopied = false
-            }
-        }) {
-            VStack(alignment: .leading, spacing: 6) {
-                // Image preview with overlay actions
-                ZStack(alignment: .topTrailing) {
-                    ClipboardThumbnailView(item: item, maxPixelSize: 300)
-                        .frame(height: 105)
-                        .frame(maxWidth: .infinity)
-                        .clipped()
-                        .background(Color.black.opacity(0.05))
-                    
-                    // Pin badge
-                    if item.isPinned {
-                        Image(systemName: "pin.fill")
-                            .font(.system(size: 10))
-                            .foregroundColor(.white)
-                            .padding(5)
-                            .background(Circle().fill(Color.accentColor))
-                            .padding(6)
-                    }
-                    
-                    // Hover action overlay
-                    if isHovered {
-                        HStack(spacing: 4) {
-                            Button(action: onZoom) {
-                                Image(systemName: "arrow.up.left.and.arrow.down.right")
-                                    .font(.system(size: 10))
-                                    .foregroundColor(.white)
-                                    .padding(4)
-                                    .background(Circle().fill(Color.black.opacity(0.65)))
-                            }
-                            .buttonStyle(.plain)
-                            .help("Vergrößern")
-                            
-                            Button(action: onTogglePin) {
-                                Image(systemName: item.isPinned ? "pin.fill" : "pin")
-                                    .font(.system(size: 10))
-                                    .foregroundColor(.white)
-                                    .padding(4)
-                                    .background(Circle().fill(Color.black.opacity(0.65)))
-                            }
-                            .buttonStyle(.plain)
-                            .help(item.isPinned ? "Lösen" : "Anpinnen")
-                            
-                            Button(action: onDelete) {
-                                Image(systemName: "trash")
-                                    .font(.system(size: 10))
-                                    .foregroundColor(.white)
-                                    .padding(4)
-                                    .background(Circle().fill(Color.black.opacity(0.65)))
-                            }
-                            .buttonStyle(.plain)
-                            .help("Löschen")
-                        }
-                        .padding(6)
-                    }
-                    
-                    if isJustCopied {
-                        ZStack {
-                            Color.black.opacity(0.7)
-                            HStack(spacing: 4) {
-                                Image(systemName: "checkmark.circle.fill")
-                                Text("Kopiert!")
-                            }
-                            .font(.caption)
-                            .fontWeight(.bold)
-                            .foregroundColor(.green)
-                        }
-                        .frame(height: 105)
-                    }
-                }
-                .clipShape(RoundedRectangle(cornerRadius: 8))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 8)
-                        .stroke(isHovered ? Color.accentColor : Color.secondary.opacity(0.2), lineWidth: isHovered ? 1.5 : 0.8)
-                )
-                
-                // Metadata Footer
-                VStack(alignment: .leading, spacing: 2) {
-                    HStack {
-                        if !item.formattedDimensions.isEmpty {
-                            Text(item.formattedDimensions)
-                                .font(.system(size: 10, weight: .semibold))
-                                .foregroundColor(.primary)
-                        }
-                        Spacer()
-                        if !item.formattedByteSize.isEmpty {
-                            Text(item.formattedByteSize)
-                                .font(.system(size: 9))
-                                .foregroundColor(.secondary)
-                        }
-                    }
-                    
-                    HStack {
-                        if let app = item.sourceApp {
-                            Text(app)
-                                .font(.system(size: 9))
-                                .foregroundColor(.secondary)
-                        }
-                        Spacer()
-                        Text(formatTime(item.createdAt))
-                            .font(.system(size: 9))
-                            .foregroundColor(.secondary.opacity(0.8))
-                    }
-                }
-                .padding(.horizontal, 2)
-            }
-            .padding(6)
-            .background(
-                RoundedRectangle(cornerRadius: 10)
-                    .fill(isHovered ? Color.accentColor.opacity(0.08) : Color(nsColor: .controlBackgroundColor).opacity(0.6))
-            )
-        }
-        .buttonStyle(.plain)
-        .onHover { hovering in
-            isHovered = hovering
         }
     }
     
