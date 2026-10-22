@@ -259,24 +259,10 @@ public final class WebPanelModule: NSObject, CustomizerModule, ObservableObject 
     
     private func loadWidgets() {
         if let data = UserDefaults.standard.data(forKey: widgetsStorageKey),
-           let loaded = try? JSONDecoder().decode([WebWidgetItem].self, from: data),
-           !loaded.isEmpty {
+           let loaded = try? JSONDecoder().decode([WebWidgetItem].self, from: data) {
             self.widgets = loaded
         } else {
-            // Default first item: Proton Calendar (matching user's setup!)
-            self.widgets = [
-                WebWidgetItem(
-                    title: "Proton Kalender",
-                    url: "https://calendar.proton.me",
-                    iconName: "calendar",
-                    sizePreset: .widget,
-                    customWidth: 320,
-                    customHeight: 400,
-                    userAgentMode: .auto,
-                    isEnabled: true
-                )
-            ]
-            saveWidgets()
+            self.widgets = []
         }
     }
     

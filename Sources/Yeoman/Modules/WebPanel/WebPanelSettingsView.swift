@@ -1327,7 +1327,7 @@ struct WebWidgetEditorSheet: View {
                     let item = WebWidgetItem(
                         id: originalId ?? UUID(),
                         title: finalTitle,
-                        url: finalURL.isEmpty ? "https://calendar.proton.me" : finalURL,
+                        url: finalURL,
                         iconName: iconName,
                         useFavicon: useFavicon,
                         selectedFaviconURL: selectedFaviconURL,
