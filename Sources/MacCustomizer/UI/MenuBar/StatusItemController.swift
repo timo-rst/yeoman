@@ -223,6 +223,7 @@ public final class StatusItemController: NSObject, NSMenuDelegate {
             )
             window.title = "MacCustomizer Einstellungen"
             window.minSize = NSSize(width: minWidth, height: minHeight)
+            window.collectionBehavior = [.fullScreenPrimary]
             window.contentView = NSHostingView(rootView: SettingsView())
             window.center()
             window.isReleasedWhenClosed = false
