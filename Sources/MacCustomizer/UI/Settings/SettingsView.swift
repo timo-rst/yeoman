@@ -146,13 +146,15 @@ struct GeneralSettingsView: View {
                             
                             Picker("", selection: $l10n.selectedLanguage) {
                                 ForEach(AppLanguage.allCases) { lang in
-                                    Text("\(lang.flag) \(lang.nativeName)")
+                                    Text("\(lang.flag) \(lang.displayName(in: l10n.effectiveLanguage))")
                                         .tag(lang)
+                                        .id("\(lang.rawValue)_\(l10n.effectiveLanguage.rawValue)")
                                 }
                             }
                             .labelsHidden()
                             .pickerStyle(.menu)
-                            .frame(width: 190)
+                            .frame(minWidth: 190, maxWidth: 220)
+                            .id("app_language_picker_\(l10n.selectedLanguage.rawValue)_\(l10n.effectiveLanguage.rawValue)")
                         }
                     }
                     .padding()

@@ -20,10 +20,10 @@ public enum AppLanguage: String, CaseIterable, Identifiable {
         }
     }
     
-    public var nativeName: String {
+    public func displayName(in language: AppLanguage) -> String {
         switch self {
         case .system:
-            return LocalizationManager.shared.localized("lang.system")
+            return LocalizationManager.shared.localized("lang.system", for: language)
         case .german:
             return "Deutsch"
         case .english:
@@ -33,6 +33,10 @@ public enum AppLanguage: String, CaseIterable, Identifiable {
         case .french:
             return "Français"
         }
+    }
+    
+    public var nativeName: String {
+        displayName(in: LocalizationManager.shared.effectiveLanguage)
     }
 }
 
@@ -71,8 +75,8 @@ public final class LocalizationManager: ObservableObject {
         }
     }
     
-    public func localized(_ key: String) -> String {
-        let lang = effectiveLanguage
+    public func localized(_ key: String, for language: AppLanguage? = nil) -> String {
+        let lang = language ?? effectiveLanguage
         if let table = translations[key], let val = table[lang] ?? table[.english] ?? table[.german] {
             return val
         }
