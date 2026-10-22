@@ -6,8 +6,7 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
         let showDockIcon = UserDefaults.standard.object(forKey: "showDockIcon") as? Bool ?? true
         NSApp.setActivationPolicy(showDockIcon ? .regular : .accessory)
         
-        // Initialize DisplayManager and ModuleManager
-        _ = DisplayManager.shared
+        // Initialize ModuleManager
         ModuleManager.shared.startAllEnabled()
         ModuleManager.shared.recreateAllStatusItems()
         

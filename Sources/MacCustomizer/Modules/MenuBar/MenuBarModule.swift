@@ -39,7 +39,6 @@ public final class MenuBarModule: NSObject, CustomizerModule, ObservableObject {
     public func start() {
         guard isEnabled else { return }
         _ = MenuBarSpacingManager.shared
-        _ = DisplayManager.shared
         updateStatusItemVisibility()
     }
     

@@ -66,7 +66,6 @@ public struct MenuBarSettingsView: View {
 public struct MenuBarSpacingSectionView: View {
     @ObservedObject var module: MenuBarModule
     @ObservedObject var spacingManager = MenuBarSpacingManager.shared
-    @ObservedObject var displayManager = DisplayManager.shared
     
     public var body: some View {
         ScrollView {
@@ -175,56 +174,6 @@ public struct MenuBarSpacingSectionView: View {
                             spacingManager.resetToDefaults()
                         }
                         .buttonStyle(.bordered)
-                    }
-                }
-                .padding()
-                .background(RoundedRectangle(cornerRadius: 12).fill(Color(nsColor: .controlBackgroundColor)))
-                
-                // Multi-Display Status & Detection
-                VStack(alignment: .leading, spacing: 12) {
-                    HStack {
-                        Image(systemName: "display.2")
-                            .font(.title3)
-                            .foregroundColor(.accentColor)
-                        Text("Multi-Monitor Status")
-                            .font(.headline)
-                        Spacer()
-                        Text("\(displayManager.displays.count) Bildschirm(e) erkannt")
-                            .font(.subheadline)
-                            .foregroundColor(.secondary)
-                    }
-                    
-                    ForEach(displayManager.displays) { display in
-                        HStack {
-                            VStack(alignment: .leading, spacing: 2) {
-                                HStack {
-                                    Text(display.name)
-                                        .fontWeight(.medium)
-                                    if display.isMain {
-                                        Text("Hauptbildschirm")
-                                            .font(.caption2)
-                                            .padding(.horizontal, 6)
-                                            .padding(.vertical, 2)
-                                            .background(Capsule().fill(Color.accentColor.opacity(0.2)))
-                                            .foregroundColor(.accentColor)
-                                    }
-                                    if display.hasNotch {
-                                        Text("Notch")
-                                            .font(.caption2)
-                                            .padding(.horizontal, 6)
-                                            .padding(.vertical, 2)
-                                            .background(Capsule().fill(Color.orange.opacity(0.2)))
-                                            .foregroundColor(.orange)
-                                    }
-                                }
-                                Text("\(Int(display.frame.width)) x \(Int(display.frame.height)) @ \(Int(display.backingScaleFactor))x (Menüleiste: \(Int(display.menuBarHeight))pt)")
-                                    .font(.caption)
-                                    .foregroundColor(.secondary)
-                            }
-                            Spacer()
-                        }
-                        .padding(8)
-                        .background(RoundedRectangle(cornerRadius: 8).fill(Color(nsColor: .windowBackgroundColor)))
                     }
                 }
                 .padding()

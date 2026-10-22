@@ -132,14 +132,6 @@ public final class StatusItemController: NSObject, NSMenuDelegate {
         
         menu.addItem(NSMenuItem.separator())
         
-        // Multi-Monitor Info item
-        let displayCount = DisplayManager.shared.displays.count
-        let monitorItem = NSMenuItem(title: "\(displayCount) Monitor(e) verbunden", action: nil, keyEquivalent: "")
-        monitorItem.isEnabled = false
-        menu.addItem(monitorItem)
-        
-        menu.addItem(NSMenuItem.separator())
-        
         // Settings & Quit
         let settingsItem = NSMenuItem(title: "Einstellungen...", action: #selector(openSettingsWindow), keyEquivalent: ",")
         settingsItem.target = self
