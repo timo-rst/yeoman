@@ -64,7 +64,6 @@ public struct SettingsView: View {
                     SidebarParentRow(
                         icon: "menubar.rectangle",
                         title: l10n.localized("tab.menuBar"),
-                        count: 2,
                         isExpanded: isMenuBarExpanded,
                         isSelected: selectedTab == .menuBar,
                         onToggleExpand: {
@@ -109,7 +108,6 @@ public struct SettingsView: View {
                     SidebarParentRow(
                         icon: "doc.on.clipboard",
                         title: l10n.localized("tab.clipboard"),
-                        count: 2,
                         isExpanded: isClipboardExpanded,
                         isSelected: selectedTab == .clipboard,
                         onToggleExpand: {
@@ -214,7 +212,6 @@ struct SidebarStandardRow: View {
 struct SidebarParentRow: View {
     let icon: String
     let title: String
-    let count: Int
     let isExpanded: Bool
     let isSelected: Bool
     let onToggleExpand: () -> Void
@@ -230,13 +227,6 @@ struct SidebarParentRow: View {
                 .foregroundColor(isSelected ? .white : .primary)
             
             Spacer()
-            
-            Text("\(count)")
-                .font(.system(size: 10, weight: .semibold, design: .rounded))
-                .foregroundColor(isSelected ? .white : .secondary)
-                .padding(.horizontal, 5)
-                .padding(.vertical, 1.5)
-                .background(Capsule().fill(isSelected ? Color.white.opacity(0.22) : Color.secondary.opacity(0.12)))
             
             Button(action: onToggleExpand) {
                 Image(systemName: "chevron.right")
@@ -273,12 +263,6 @@ struct SidebarSubItemRow: View {
                     .foregroundColor(isActive ? .primary : (isHovered ? .primary : .secondary))
                 
                 Spacer()
-                
-                if isActive {
-                    Circle()
-                        .fill(Color.accentColor)
-                        .frame(width: 5, height: 5)
-                }
             }
             .padding(.horizontal, 8)
             .padding(.vertical, 4.5)
