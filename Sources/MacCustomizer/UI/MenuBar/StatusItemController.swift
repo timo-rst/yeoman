@@ -1,7 +1,7 @@
 import AppKit
 import SwiftUI
 
-public final class StatusItemController: NSObject, ObservableObject, NSMenuDelegate {
+public final class StatusItemController: NSObject, ObservableObject, NSMenuDelegate, NSWindowDelegate {
     public static let shared = StatusItemController()
     
     @Published public var isChangingDockPolicy: Bool = false
@@ -9,7 +9,11 @@ public final class StatusItemController: NSObject, ObservableObject, NSMenuDeleg
     
     private var statusItem: NSStatusItem?
     private var clipboardWindow: NSWindow?
-    private var settingsWindow: NSWindow?
+    public private(set) var settingsWindow: NSWindow?
+    
+    private var previousAppForMenu: NSRunningApplication?
+    private var previousAppForClipboardWindow: NSRunningApplication?
+    private var temporarilyHiddenSettingsForClipboard: Bool = false
     
     public override init() {
         super.init()
@@ -166,7 +170,11 @@ public final class StatusItemController: NSObject, ObservableObject, NSMenuDeleg
         UpdateManager.shared.checkForUpdates(silent: false)
     }
     
-    public func menuWillOpen(_ menu: NSMenu) {
+    @objc public func menuWillOpen(_ menu: NSMenu) {
+        if let front = NSWorkspace.shared.frontmostApplication,
+           front.bundleIdentifier != Bundle.main.bundleIdentifier {
+            self.previousAppForMenu = front
+        }
         updateMenu()
     }
     
@@ -189,26 +197,100 @@ public final class StatusItemController: NSObject, ObservableObject, NSMenuDeleg
     @objc private func copyClipboardItem(_ sender: NSMenuItem) {
         if let text = sender.representedObject as? String {
             ClipboardMonitor.shared.copyToClipboard(text)
+            if let prev = previousAppForMenu,
+               prev.bundleIdentifier != Bundle.main.bundleIdentifier,
+               !prev.isTerminated {
+                activateApp(prev)
+            } else {
+                NSApp.deactivate()
+            }
+            previousAppForMenu = nil
         }
     }
     
     @objc public func openClipboardWindow() {
+        if let front = NSWorkspace.shared.frontmostApplication,
+           front.bundleIdentifier != Bundle.main.bundleIdentifier {
+            self.previousAppForClipboardWindow = front
+        }
+        
+        if let settings = settingsWindow,
+           settings.isVisible,
+           !settings.isKeyWindow {
+            self.temporarilyHiddenSettingsForClipboard = true
+            settings.orderOut(nil)
+        } else {
+            self.temporarilyHiddenSettingsForClipboard = false
+        }
+        
         if clipboardWindow == nil {
             let window = NSWindow(
-                contentRect: NSRect(x: 0, y: 0, width: 380, height: 440),
+                contentRect: NSRect(x: 0, y: 0, width: 380, height: 480),
                 styleMask: [.titled, .closable, .resizable],
                 backing: .buffered,
                 defer: false
             )
-            window.title = "Zwischenablage Verlauf"
-            window.contentView = NSHostingView(rootView: ClipboardView())
+            window.title = l10n("tab.clipboard")
+            window.contentView = NSHostingView(rootView: ClipboardView(onCopy: { [weak self] in
+                self?.closeClipboardWindowAndRestoreFocus()
+            }))
             window.center()
             window.isReleasedWhenClosed = false
+            window.delegate = self
             self.clipboardWindow = window
+        } else {
+            clipboardWindow?.contentView = NSHostingView(rootView: ClipboardView(onCopy: { [weak self] in
+                self?.closeClipboardWindowAndRestoreFocus()
+            }))
         }
         clipboardWindow?.orderFrontRegardless()
         clipboardWindow?.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
+    }
+    
+    private func closeClipboardWindowAndRestoreFocus() {
+        clipboardWindow?.orderOut(nil)
+        restoreFocusFromClipboardWindow()
+    }
+    
+    public func windowWillClose(_ notification: Notification) {
+        if let closingWindow = notification.object as? NSWindow, closingWindow == clipboardWindow {
+            restoreFocusFromClipboardWindow()
+        }
+    }
+    
+    private func restoreFocusFromClipboardWindow() {
+        guard previousAppForClipboardWindow != nil || temporarilyHiddenSettingsForClipboard else { return }
+        
+        let appToRestore = self.previousAppForClipboardWindow
+        let shouldRestoreSettings = self.temporarilyHiddenSettingsForClipboard
+        self.previousAppForClipboardWindow = nil
+        self.temporarilyHiddenSettingsForClipboard = false
+        
+        DispatchQueue.main.async { [weak self] in
+            guard let self = self else { return }
+            if let app = appToRestore,
+               app.bundleIdentifier != Bundle.main.bundleIdentifier,
+               !app.isTerminated {
+                self.activateApp(app)
+            } else {
+                NSApp.deactivate()
+            }
+            
+            if shouldRestoreSettings, let settings = self.settingsWindow {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+                    settings.orderBack(nil)
+                }
+            }
+        }
+    }
+    
+    private func activateApp(_ app: NSRunningApplication) {
+        if #available(macOS 14.0, *) {
+            app.activate()
+        } else {
+            app.activate(options: [.activateIgnoringOtherApps])
+        }
     }
     
     @objc public func openSettingsWindow() {

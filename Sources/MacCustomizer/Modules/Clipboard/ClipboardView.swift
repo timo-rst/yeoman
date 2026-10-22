@@ -74,6 +74,14 @@ public struct ClipboardView: View {
                 TextField(l10n("clipboard.search"), text: $store.searchQuery)
                     .textFieldStyle(.plain)
                     .font(.system(size: 13))
+                    .onSubmit {
+                        if let firstItem = displayedItems.first {
+                            ClipboardMonitor.shared.copyItemToClipboard(firstItem)
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+                                onCopy?()
+                            }
+                        }
+                    }
                 
                 if !store.searchQuery.isEmpty {
                     Button(action: { store.searchQuery = "" }) {
