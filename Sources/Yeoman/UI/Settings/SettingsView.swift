@@ -744,7 +744,7 @@ struct AboutView: View {
                     Text(l10n("about.developed_for"))
                         .font(.caption)
                         .foregroundColor(.secondary)
-                    Text("Copyright © 2026 Timo Richstein. All rights reserved.")
+                    Text("Copyright © 2026 trst. All rights reserved.")
                         .font(.caption2)
                         .foregroundColor(.secondary.opacity(0.8))
                 }

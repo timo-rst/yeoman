@@ -56,7 +56,7 @@ cat <<EOF > "$CONTENTS_DIR/Info.plist"
     <key>NSQuitAlwaysKeepsWindows</key>
     <false/>
     <key>NSHumanReadableCopyright</key>
-    <string>Copyright © 2026 Timo Richstein. All rights reserved.</string>
+    <string>Copyright © 2026 trst. All rights reserved.</string>
 </dict>
 </plist>
 EOF
