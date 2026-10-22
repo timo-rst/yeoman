@@ -45,6 +45,8 @@ cat <<EOF > "$CONTENTS_DIR/Info.plist"
     <string>2</string>
     <key>CFBundleIconFile</key>
     <string>AppIcon</string>
+    <key>CFBundleIconName</key>
+    <string>AppIcon</string>
     <key>LSMinimumSystemVersion</key>
     <string>14.0</string>
     <key>LSUIElement</key>
@@ -61,6 +63,18 @@ EOF
 
 echo "==> Signing macOS App Bundle with stable designated requirement..."
 codesign -s - -f --deep -r='designated => identifier "de.trst.Yeoman"' "$APP_BUNDLE"
+
+if [ -f "Resources/AppIcon.icns" ]; then
+    echo "==> Registering native custom icon with Finder..."
+    swift -e '
+    import AppKit
+    let app = "'"$APP_BUNDLE"'"
+    let icon = "Resources/AppIcon.icns"
+    if let img = NSImage(contentsOfFile: icon) {
+        _ = NSWorkspace.shared.setIcon(img, forFile: app, options: [])
+    }
+    '
+fi
 
 echo "==> Successfully created and signed $APP_BUNDLE!"
 echo "You can launch it with: open $APP_BUNDLE"

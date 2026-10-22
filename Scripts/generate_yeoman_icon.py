@@ -17,23 +17,18 @@ def generate():
     inset = (canvas_size - icon_size) // 2
     radius = 185
 
-    # 1. Base squircle canvas with macOS drop shadow
+    # 1. Base squircle canvas with subtle macOS drop shadow
     mask_img = Image.new("L", (canvas_size, canvas_size), 0)
     draw_mask = ImageDraw.Draw(mask_img)
     draw_mask.rounded_rectangle([inset, inset, inset + icon_size, inset + icon_size], radius=radius, fill=255)
 
     shadow_img = Image.new("RGBA", (canvas_size, canvas_size), (0, 0, 0, 0))
     draw_shadow = ImageDraw.Draw(shadow_img)
-    draw_shadow.rounded_rectangle([inset, inset + 14, inset + icon_size, inset + icon_size + 14], radius=radius, fill=(0, 0, 0, 48))
+    draw_shadow.rounded_rectangle([inset, inset + 14, inset + icon_size, inset + icon_size + 14], radius=radius, fill=(0, 0, 0, 42))
     shadow_blurred = shadow_img.filter(ImageFilter.GaussianBlur(radius=20))
 
-    surface = Image.new("RGBA", (canvas_size, canvas_size), (0, 0, 0, 0))
-    draw_surface = ImageDraw.Draw(surface)
-    for y in range(inset, inset + icon_size):
-        ratio = (y - inset) / float(icon_size)
-        val = int(255 - ratio * 8)
-        draw_surface.line([(inset, y), (inset + icon_size, y)], fill=(val, val, val, 255))
-    draw_surface.rounded_rectangle([inset, inset, inset + icon_size, inset + icon_size], radius=radius, outline=(0, 0, 0, 22), width=2)
+    # Squircle surface: Pure clean white (#FFFFFF) like Brave Browser and Apple System icons (no extra grey border)
+    surface = Image.new("RGBA", (canvas_size, canvas_size), (255, 255, 255, 255))
 
     base = Image.new("RGBA", (canvas_size, canvas_size), (0, 0, 0, 0))
     base.paste(shadow_blurred, (0, 0), shadow_blurred)
