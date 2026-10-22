@@ -17,6 +17,7 @@ public final class WebPanelController: NSObject, ObservableObject, WKNavigationD
     
     // Persistent preloaded WKWebView instance
     public private(set) var webView: WKWebView!
+    public private(set) var lastKnownPID: pid_t?
     private var hasPreloaded = false
     
     // User Agents
@@ -159,12 +160,18 @@ public final class WebPanelController: NSObject, ObservableObject, WKNavigationD
     // MARK: - WKNavigationDelegate
     
     public func webView(_ webView: WKWebView, didStartProvisionalNavigation navigation: WKNavigation!) {
+        if let num = webView.value(forKey: "_webProcessIdentifier") as? NSNumber, num.int32Value > 0 {
+            self.lastKnownPID = num.int32Value
+        }
         DispatchQueue.main.async { [weak self] in
             self?.isLoading = true
         }
     }
     
     public func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
+        if let num = webView.value(forKey: "_webProcessIdentifier") as? NSNumber, num.int32Value > 0 {
+            self.lastKnownPID = num.int32Value
+        }
         DispatchQueue.main.async { [weak self] in
             guard let self = self else { return }
             self.isLoading = false
@@ -235,6 +242,11 @@ public final class WebPanelController: NSObject, ObservableObject, WKNavigationD
         DispatchQueue.main.async { [weak self] in
             self?.isLoading = false
         }
+    }
+    
+    public func webViewWebContentProcessDidTerminate(_ webView: WKWebView) {
+        lastKnownPID = nil
+        hasPreloaded = false
     }
     
     // MARK: - WKUIDelegate

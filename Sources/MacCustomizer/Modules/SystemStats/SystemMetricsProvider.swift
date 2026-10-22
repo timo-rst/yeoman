@@ -10,13 +10,47 @@ public struct ProcessTaskItem: Identifiable, Equatable {
     public let memoryMB: Double
     public let isUserApp: Bool
     public let bundleIdentifier: String?
+    public let customIcon: NSImage?
+    
+    public init(
+        id: Int,
+        pid: Int,
+        name: String,
+        cpuPercent: Double,
+        memoryMB: Double,
+        isUserApp: Bool,
+        bundleIdentifier: String?,
+        customIcon: NSImage? = nil
+    ) {
+        self.id = id
+        self.pid = pid
+        self.name = name
+        self.cpuPercent = cpuPercent
+        self.memoryMB = memoryMB
+        self.isUserApp = isUserApp
+        self.bundleIdentifier = bundleIdentifier
+        self.customIcon = customIcon
+    }
     
     public var icon: NSImage? {
+        if let customIcon = customIcon {
+            return customIcon
+        }
         if let bundleId = bundleIdentifier,
            let app = NSWorkspace.shared.runningApplications.first(where: { $0.bundleIdentifier == bundleId }) {
             return app.icon
         }
         return nil
+    }
+    
+    public static func == (lhs: ProcessTaskItem, rhs: ProcessTaskItem) -> Bool {
+        lhs.id == rhs.id &&
+        lhs.pid == rhs.pid &&
+        lhs.name == rhs.name &&
+        lhs.cpuPercent == rhs.cpuPercent &&
+        lhs.memoryMB == rhs.memoryMB &&
+        lhs.isUserApp == rhs.isUserApp &&
+        lhs.bundleIdentifier == rhs.bundleIdentifier
     }
 }
 
@@ -178,6 +212,9 @@ public final class SystemMetricsProvider: ObservableObject {
     // MARK: - Process Table Snapshot
     
     public func refreshProcessList() {
+        let widgetInfoMap = ModuleManager.shared.webPanelModule.getCurrentWidgetProcessMap()
+        let enabledWidgets = ModuleManager.shared.webPanelModule.widgets.filter { $0.isEnabled }
+        
         DispatchQueue.global(qos: .utility).async { [weak self] in
             let process = Process()
             let pipe = Pipe()
@@ -202,6 +239,12 @@ public final class SystemMetricsProvider: ObservableObject {
                 var items: [ProcessTaskItem] = []
                 let lines = output.components(separatedBy: .newlines)
                 
+                var matchedWidgetTitles = Set<String>()
+                for (_, info) in widgetInfoMap {
+                    matchedWidgetTitles.insert(info.title)
+                }
+                var unassignedWidgets = enabledWidgets.filter { !matchedWidgetTitles.contains($0.title) }
+                
                 // Skip header line
                 for line in lines.dropFirst() {
                     let trimmed = line.trimmingCharacters(in: .whitespaces)
@@ -217,8 +260,24 @@ public final class SystemMetricsProvider: ObservableObject {
                     let memoryMB = rssKB / 1024.0
                     
                     let isApp = appMap[pid_t(pid)] != nil
-                    let friendlyName = appMap[pid_t(pid)]?.name ?? rawName
+                    var friendlyName = appMap[pid_t(pid)]?.name ?? rawName
                     let bundleId = appMap[pid_t(pid)]?.bundleId
+                    var customIcon: NSImage? = nil
+                    
+                    // Match with Web Widget info if this process is a WebWidget process
+                    if let widgetInfo = widgetInfoMap[pid_t(pid)] {
+                        if !friendlyName.contains("(\(widgetInfo.title))") {
+                            friendlyName = "\(friendlyName) (\(widgetInfo.title))"
+                        }
+                        customIcon = widgetInfo.icon
+                    } else if (friendlyName.contains("Web Content") || rawName.contains("WebKit.WebContent")),
+                              !unassignedWidgets.isEmpty {
+                        let fallback = unassignedWidgets.removeFirst()
+                        if !friendlyName.contains("(\(fallback.title))") {
+                            friendlyName = "\(friendlyName) (\(fallback.title))"
+                        }
+                        customIcon = ModuleManager.shared.webPanelModule.getTaskIcon(for: fallback)
+                    }
                     
                     items.append(ProcessTaskItem(
                         id: pid,
@@ -227,7 +286,8 @@ public final class SystemMetricsProvider: ObservableObject {
                         cpuPercent: cpu,
                         memoryMB: memoryMB,
                         isUserApp: isApp,
-                        bundleIdentifier: bundleId
+                        bundleIdentifier: bundleId,
+                        customIcon: customIcon
                     ))
                 }
                 

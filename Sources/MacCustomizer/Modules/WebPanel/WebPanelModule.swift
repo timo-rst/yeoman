@@ -308,6 +308,31 @@ public final class WebPanelModule: NSObject, CustomizerModule, ObservableObject 
         }
     }
     
+    public func getTaskIcon(for item: WebWidgetItem) -> NSImage? {
+        if item.useFavicon {
+            if let fav = WebFaviconManager.shared.previewIcon(
+                for: item.url,
+                widgetId: item.id,
+                selectedFaviconURL: item.selectedFaviconURL,
+                removeWhite: false
+            ) ?? WebFaviconManager.shared.menuBarIcon(for: item) {
+                let copy = fav.copy() as? NSImage ?? fav
+                copy.isTemplate = false
+                return copy
+            }
+        }
+        return NSImage(systemSymbolName: item.iconName, accessibilityDescription: item.title)
+    }
+    
+    public func getCurrentWidgetProcessMap() -> [pid_t: (title: String, icon: NSImage?)] {
+        var map: [pid_t: (title: String, icon: NSImage?)] = [:]
+        for controller in instanceControllers.values {
+            guard let pid = controller.webProcessIdentifier, pid > 0 else { continue }
+            map[pid] = (title: controller.item.title, icon: controller.taskIcon)
+        }
+        return map
+    }
+    
     public func settingsView() -> AnyView {
         AnyView(WebPanelSettingsView(module: self))
     }
@@ -321,6 +346,33 @@ public final class WebWidgetInstanceController: NSObject, ObservableObject, NSPo
     @Published public var autoFitScale: Double = 1.0
     public let webController: WebPanelController
     weak var module: WebPanelModule?
+    
+    public var webProcessIdentifier: pid_t? {
+        if let wv = webController.webView,
+           let num = wv.value(forKey: "_webProcessIdentifier") as? NSNumber {
+            let p = num.int32Value
+            if p > 0 {
+                return p
+            }
+        }
+        return webController.lastKnownPID
+    }
+    
+    public var taskIcon: NSImage? {
+        if item.useFavicon {
+            if let fav = WebFaviconManager.shared.previewIcon(
+                for: item.url,
+                widgetId: item.id,
+                selectedFaviconURL: item.selectedFaviconURL,
+                removeWhite: false
+            ) ?? WebFaviconManager.shared.menuBarIcon(for: item) {
+                let copy = fav.copy() as? NSImage ?? fav
+                copy.isTemplate = false
+                return copy
+            }
+        }
+        return NSImage(systemSymbolName: item.iconName, accessibilityDescription: item.title)
+    }
     
     private var statusItem: NSStatusItem?
     private var popover: NSPopover?

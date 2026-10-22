@@ -304,6 +304,7 @@ struct TaskRowView: View {
                         .resizable()
                         .aspectRatio(contentMode: .fit)
                         .frame(width: 18, height: 18)
+                        .clipShape(RoundedRectangle(cornerRadius: 3.5))
                 } else {
                     Image(systemName: item.isUserApp ? "app.dashed" : "gearshape")
                         .font(.system(size: 12))
@@ -314,9 +315,24 @@ struct TaskRowView: View {
             
             // Name + PID
             VStack(alignment: .leading, spacing: 1) {
-                Text(item.name)
-                    .font(.system(size: 12, weight: .medium))
-                    .lineLimit(1)
+                if let openParen = item.name.range(of: " (", options: .backwards),
+                   item.name.hasSuffix(")") {
+                    let mainPart = String(item.name[..<openParen.lowerBound])
+                    let annotation = String(item.name[openParen.lowerBound...])
+                    HStack(spacing: 3) {
+                        Text(mainPart)
+                            .font(.system(size: 12, weight: .medium))
+                            .lineLimit(1)
+                        Text(annotation)
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundColor(.accentColor)
+                            .lineLimit(1)
+                    }
+                } else {
+                    Text(item.name)
+                        .font(.system(size: 12, weight: .medium))
+                        .lineLimit(1)
+                }
                 Text("PID \(item.pid)")
                     .font(.system(size: 9))
                     .foregroundColor(.secondary)
