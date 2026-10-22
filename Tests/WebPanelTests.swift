@@ -13,9 +13,9 @@ func runWebPanelTests() {
                 useFavicon: true,
                 selectedFaviconURL: "https://github.com/favicon.ico",
                 removeWhiteBackground: true,
-                sizePreset: .iphone14,
-                customWidth: 390,
-                customHeight: 844,
+                sizePreset: .custom,
+                customWidth: 320,
+                customHeight: 400,
                 userAgentMode: .mobile,
                 zoomScale: 1.0,
                 isEnabled: true,
@@ -47,14 +47,17 @@ func runWebPanelTests() {
         }
         
         harness.test("WebSizePreset dimensions are accurate") {
+            assertEqual(WebSizePreset.custom.dimensions.width, 320)
+            assertEqual(WebSizePreset.custom.dimensions.height, 400)
+            
             assertEqual(WebSizePreset.widget.dimensions.width, 320)
             assertEqual(WebSizePreset.widget.dimensions.height, 400)
             
-            assertEqual(WebSizePreset.iphone14.dimensions.width, 390)
-            assertEqual(WebSizePreset.iphone14.dimensions.height, 844)
+            assertEqual(WebSizePreset.smartphone.dimensions.width, 375)
+            assertEqual(WebSizePreset.smartphone.dimensions.height, 667)
             
-            assertEqual(WebSizePreset.ipadMini.dimensions.width, 768)
-            assertEqual(WebSizePreset.ipadMini.dimensions.height, 1024)
+            assertEqual(WebSizePreset.large.dimensions.width, 500)
+            assertEqual(WebSizePreset.large.dimensions.height, 700)
         }
     }
 }

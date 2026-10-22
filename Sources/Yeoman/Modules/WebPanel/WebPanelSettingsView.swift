@@ -686,11 +686,11 @@ struct WebWidgetEditorSheet: View {
         let initialUseFavicon = initialWidget?.useFavicon ?? true
         let initialSelectedFaviconURL = initialWidget?.selectedFaviconURL
         let initialRemoveWhite = initialWidget?.removeWhiteBackground ?? true
-        let initialPreset = initialWidget?.sizePreset ?? .widget
+        let initialPreset = initialWidget?.sizePreset ?? .custom
         let initialW = initialWidget?.customWidth ?? 320
         let initialH = initialWidget?.customHeight ?? 400
         let initialUA = initialWidget?.userAgentMode ?? .auto
-        let initialZoom = initialWidget?.zoomScale ?? (initialPreset == .widget ? 0.85 : 1.0)
+        let initialZoom = initialWidget?.zoomScale ?? 0.85
         let initialEnabled = initialWidget?.isEnabled ?? true
         let initialPinned = initialWidget?.isPinned ?? false
         let initialBar = initialWidget?.showsAddressBar ?? false
@@ -827,7 +827,7 @@ struct WebWidgetEditorSheet: View {
                                 
                                 LazyVGrid(columns: [GridItem(.adaptive(minimum: 120))], spacing: 6) {
                                     QuickButton(name: "Google Gemini", icon: "sparkles") {
-                                        setPreset(url: "https://gemini.google.com", name: "Google Gemini", icon: "sparkles", preset: .iphone14)
+                                        setPreset(url: "https://gemini.google.com", name: "Google Gemini", icon: "sparkles", preset: .smartphone)
                                     }
                                     QuickButton(name: "Proton Calendar", icon: "calendar") {
                                         setPreset(url: "https://calendar.proton.me", name: "Proton Kalender", icon: "calendar", preset: .widget)
@@ -836,13 +836,13 @@ struct WebWidgetEditorSheet: View {
                                         setPreset(url: "https://calendar.google.com", name: "Google Kalender", icon: "calendar", preset: .widget)
                                     }
                                     QuickButton(name: "Notion", icon: "note.text") {
-                                        setPreset(url: "https://www.notion.so", name: "Notion", icon: "note.text", preset: .iphone8)
+                                        setPreset(url: "https://www.notion.so", name: "Notion", icon: "note.text", preset: .large)
                                     }
                                     QuickButton(name: "Todoist", icon: "checklist") {
-                                        setPreset(url: "https://app.todoist.com", name: "Todoist", icon: "checklist", preset: .iphoneSE)
+                                        setPreset(url: "https://app.todoist.com", name: "Todoist", icon: "checklist", preset: .widget)
                                     }
                                     QuickButton(name: "GitHub", icon: "chevron.left.forwardslash.chevron.right") {
-                                        setPreset(url: "https://github.com", name: "GitHub", icon: "chevron.left.forwardslash.chevron.right", preset: .iphone14)
+                                        setPreset(url: "https://github.com", name: "GitHub", icon: "chevron.left.forwardslash.chevron.right", preset: .smartphone)
                                     }
                                 }
                             }
@@ -1090,38 +1090,54 @@ struct WebWidgetEditorSheet: View {
                                 Divider()
                                     .padding(.vertical, 4)
                                 
-                                Picker("Vorlage:", selection: $sizePreset) {
+                                Picker("Größe:", selection: $sizePreset) {
                                     ForEach(WebSizePreset.allCases) { preset in
                                         Text(preset.rawValue).tag(preset)
                                     }
                                 }
                                 .pickerStyle(.menu)
                                 .onChange(of: sizePreset) {
+                                    if sizePreset != .custom {
+                                        customWidth = sizePreset.dimensions.width
+                                        customHeight = sizePreset.dimensions.height
+                                    }
                                     if sizePreset == .widget && (zoomScale == 1.0 || zoomScale == 0) {
                                         zoomScale = 0.85
                                     }
                                     updateLivePreview()
                                 }
                                 
-                                if sizePreset == .custom {
-                                    VStack(alignment: .leading, spacing: 6) {
-                                        HStack {
-                                            Text("Breite:")
-                                            Spacer()
-                                            Text("\(Int(customWidth)) pt").monospacedDigit()
+                                VStack(alignment: .leading, spacing: 6) {
+                                    HStack {
+                                        Text("Breite:")
+                                            .font(.caption)
+                                            .foregroundColor(.secondary)
+                                        Spacer()
+                                        Text("\(Int(customWidth)) pt").monospacedDigit()
+                                            .font(.caption)
+                                            .fontWeight(.semibold)
+                                    }
+                                    Slider(value: $customWidth, in: 280...1200, step: 10) { _ in
+                                        if sizePreset != .custom {
+                                            sizePreset = .custom
                                         }
-                                        Slider(value: $customWidth, in: 280...1200, step: 10) { _ in
-                                            updateLivePreview()
+                                        updateLivePreview()
+                                    }
+                                    
+                                    HStack {
+                                        Text("Höhe:")
+                                            .font(.caption)
+                                            .foregroundColor(.secondary)
+                                        Spacer()
+                                        Text("\(Int(customHeight)) pt").monospacedDigit()
+                                            .font(.caption)
+                                            .fontWeight(.semibold)
+                                    }
+                                    Slider(value: $customHeight, in: 300...1000, step: 10) { _ in
+                                        if sizePreset != .custom {
+                                            sizePreset = .custom
                                         }
-                                        
-                                        HStack {
-                                            Text("Höhe:")
-                                            Spacer()
-                                            Text("\(Int(customHeight)) pt").monospacedDigit()
-                                        }
-                                        Slider(value: $customHeight, in: 300...1000, step: 10) { _ in
-                                            updateLivePreview()
-                                        }
+                                        updateLivePreview()
                                     }
                                 }
                                 
@@ -1424,6 +1440,8 @@ struct WebWidgetEditorSheet: View {
         self.title = name
         self.iconName = icon
         self.sizePreset = preset
+        self.customWidth = preset.dimensions.width
+        self.customHeight = preset.dimensions.height
         self.selectedFaviconURL = nil
         if preset == .widget {
             self.zoomScale = 0.85

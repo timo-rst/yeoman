@@ -11,27 +11,35 @@ public enum WebUserAgentMode: String, CaseIterable, Identifiable, Codable {
 }
 
 public enum WebSizePreset: String, CaseIterable, Identifiable, Codable {
-    case widget = "320 × 400 (Widget)"
-    case iphoneSE = "320 × 568 (iPhone SE)"
-    case nexus = "360 × 640 (Mobil Standard)"
-    case iphone8 = "375 × 667 (iPhone 8)"
-    case iphone14 = "390 × 844 (iPhone 14)"
-    case iphoneMax = "430 × 932 (iPhone Pro Max)"
-    case ipadMini = "768 × 1024 (iPad mini)"
     case custom = "Benutzerdefiniert"
+    case widget = "320 × 400 (Widget)"
+    case smartphone = "375 × 667 (Smartphone)"
+    case large = "500 × 700 (Großes Fenster)"
     
     public var id: String { rawValue }
     
     public var dimensions: (width: CGFloat, height: CGFloat) {
         switch self {
+        case .custom: return (320, 400)
         case .widget: return (320, 400)
-        case .iphoneSE: return (320, 568)
-        case .nexus: return (360, 640)
-        case .iphone8: return (375, 667)
-        case .iphone14: return (390, 844)
-        case .iphoneMax: return (430, 932)
-        case .ipadMini: return (768, 1024)
-        case .custom: return (380, 550)
+        case .smartphone: return (375, 667)
+        case .large: return (500, 700)
+        }
+    }
+    
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        let raw = try container.decode(String.self)
+        if let match = WebSizePreset(rawValue: raw) {
+            self = match
+        } else if raw.contains("320") || raw.contains("Widget") {
+            self = .widget
+        } else if raw.contains("iPhone") || raw.contains("Mobil") || raw.contains("Smart") {
+            self = .smartphone
+        } else if raw.contains("iPad") || raw.contains("mini") || raw.contains("Groß") {
+            self = .large
+        } else {
+            self = .custom
         }
     }
 }
@@ -65,7 +73,7 @@ public struct WebWidgetItem: Identifiable, Codable, Equatable {
         useFavicon: Bool = true,
         selectedFaviconURL: String? = nil,
         removeWhiteBackground: Bool = true,
-        sizePreset: WebSizePreset = .widget,
+        sizePreset: WebSizePreset = .custom,
         customWidth: CGFloat = 320,
         customHeight: CGFloat = 400,
         userAgentMode: WebUserAgentMode = .auto,
@@ -100,7 +108,7 @@ public struct WebWidgetItem: Identifiable, Codable, Equatable {
         self.useFavicon = try container.decodeIfPresent(Bool.self, forKey: .useFavicon) ?? true
         self.selectedFaviconURL = try container.decodeIfPresent(String.self, forKey: .selectedFaviconURL)
         self.removeWhiteBackground = try container.decodeIfPresent(Bool.self, forKey: .removeWhiteBackground) ?? true
-        self.sizePreset = try container.decodeIfPresent(WebSizePreset.self, forKey: .sizePreset) ?? .widget
+        self.sizePreset = try container.decodeIfPresent(WebSizePreset.self, forKey: .sizePreset) ?? .custom
         self.customWidth = try container.decodeIfPresent(CGFloat.self, forKey: .customWidth) ?? 320
         self.customHeight = try container.decodeIfPresent(CGFloat.self, forKey: .customHeight) ?? 400
         self.userAgentMode = try container.decodeIfPresent(WebUserAgentMode.self, forKey: .userAgentMode) ?? .auto

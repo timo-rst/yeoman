@@ -455,6 +455,10 @@ public struct WebPanelView: View {
                             Button(action: {
                                 var updated = item
                                 updated.sizePreset = preset
+                                if preset != .custom {
+                                    updated.customWidth = preset.dimensions.width
+                                    updated.customHeight = preset.dimensions.height
+                                }
                                 // Automatically adjust zoom scale for widget mode if at default
                                 if preset == .widget && (updated.zoomScale == 1.0 || updated.zoomScale == 0) {
                                     updated.zoomScale = 0.85
