@@ -14,6 +14,7 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
         // Show main window on launch
         DispatchQueue.main.async {
             StatusItemController.shared.openSettingsWindow()
+            UpdateManager.shared.startAutoCheckIfEnabled()
         }
     }
     

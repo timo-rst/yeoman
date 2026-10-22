@@ -141,6 +141,9 @@ struct GeneralSettingsView: View {
                 .padding()
                 .background(RoundedRectangle(cornerRadius: 12).fill(Color(nsColor: .controlBackgroundColor)))
                 
+                // Software-Updates
+                UpdateSettingsSection(isDetailedView: false)
+                
                 VStack(alignment: .leading, spacing: 14) {
                     Text("Aktive Module & Menüleisten-Symbole")
                         .font(.headline)
@@ -341,38 +344,78 @@ struct ModuleToggleRow<ExtraContent: View>: View {
 }
 
 struct AboutView: View {
+    @ObservedObject var updater = UpdateManager.shared
+    
     var body: some View {
-        VStack(spacing: 16) {
-            Image(systemName: "slider.horizontal.3")
-                .font(.system(size: 64))
-                .foregroundColor(.accentColor)
-            
-            Text("MacCustomizer")
-                .font(.title)
-                .fontWeight(.bold)
-            
-            Text("Version 0.2.0")
-                .font(.subheadline)
-                .foregroundColor(.secondary)
-            
-            Text("Die modulare All-in-One Steuerzentrale für deine macOS Anpassungen.")
-                .font(.body)
-                .multilineTextAlignment(.center)
-                .foregroundColor(.secondary)
-                .padding(.horizontal, 40)
-            
-            Divider().frame(width: 280)
-            
-            VStack(spacing: 4) {
-                Text("Entwickelt für macOS mit Swift & SwiftUI")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-                Text("Modulares Icon- und Menüleistensystem")
-                    .font(.caption2)
-                    .foregroundColor(.secondary.opacity(0.8))
+        ScrollView {
+            VStack(spacing: 24) {
+                // Branding Header
+                VStack(spacing: 10) {
+                    Image(systemName: "slider.horizontal.3")
+                        .font(.system(size: 56))
+                        .foregroundColor(.accentColor)
+                        .padding(.top, 10)
+                    
+                    Text("MacCustomizer")
+                        .font(.title)
+                        .fontWeight(.bold)
+                    
+                    Text("Version \(updater.currentVersion)")
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                    
+                    Text("Die modulare All-in-One Steuerzentrale für deine macOS Anpassungen.")
+                        .font(.subheadline)
+                        .multilineTextAlignment(.center)
+                        .foregroundColor(.secondary)
+                        .frame(maxWidth: 440)
+                }
+                
+                // Updates Section
+                UpdateSettingsSection(isDetailedView: true)
+                    .frame(maxWidth: 600)
+                
+                // GitHub & Support Links
+                HStack(spacing: 16) {
+                    Button(action: {
+                        if let url = URL(string: "https://github.com/timo-rst/mac_customizer") {
+                            NSWorkspace.shared.open(url)
+                        }
+                    }) {
+                        HStack(spacing: 6) {
+                            Image(systemName: "link")
+                            Text("GitHub Repository")
+                        }
+                    }
+                    .buttonStyle(.bordered)
+                    
+                    Button(action: {
+                        if let url = URL(string: "https://github.com/timo-rst/mac_customizer/releases") {
+                            NSWorkspace.shared.open(url)
+                        }
+                    }) {
+                        HStack(spacing: 6) {
+                            Image(systemName: "tag")
+                            Text("Releases & Changelog")
+                        }
+                    }
+                    .buttonStyle(.bordered)
+                }
+                
+                VStack(spacing: 4) {
+                    Text("Entwickelt für macOS mit Swift & SwiftUI")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                    Text("Copyright © 2026 Timo Richstein. All rights reserved.")
+                        .font(.caption2)
+                        .foregroundColor(.secondary.opacity(0.8))
+                }
+                .padding(.top, 8)
+                .padding(.bottom, 20)
             }
+            .frame(maxWidth: .infinity)
+            .padding(.horizontal, 30)
+            .padding(.vertical, 20)
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .padding(40)
     }
 }

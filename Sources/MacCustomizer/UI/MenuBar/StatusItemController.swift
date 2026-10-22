@@ -145,6 +145,10 @@ public final class StatusItemController: NSObject, NSMenuDelegate {
         settingsItem.target = self
         menu.addItem(settingsItem)
         
+        let updateItem = NSMenuItem(title: "Nach Updates suchen...", action: #selector(checkForUpdatesMenuAction), keyEquivalent: "")
+        updateItem.target = self
+        menu.addItem(updateItem)
+        
         menu.addItem(NSMenuItem.separator())
         
         let quitItem = NSMenuItem(title: "MacCustomizer beenden", action: #selector(quitApp), keyEquivalent: "q")
@@ -152,6 +156,11 @@ public final class StatusItemController: NSObject, NSMenuDelegate {
         menu.addItem(quitItem)
         
         statusItem?.menu = menu
+    }
+    
+    @objc private func checkForUpdatesMenuAction() {
+        openSettingsWindow()
+        UpdateManager.shared.checkForUpdates(silent: false)
     }
     
     public func menuWillOpen(_ menu: NSMenu) {
