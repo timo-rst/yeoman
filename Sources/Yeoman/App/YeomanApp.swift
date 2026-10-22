@@ -6,12 +6,6 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
         let showDockIcon = UserDefaults.standard.object(forKey: "showDockIcon") as? Bool ?? true
         NSApp.setActivationPolicy(showDockIcon ? .regular : .accessory)
         
-        // Ensure Dock tile uses the bundle icon immediately
-        if let iconURL = Bundle.main.url(forResource: "AppIcon", withExtension: "icns"),
-           let icon = NSImage(contentsOf: iconURL) {
-            NSApp.applicationIconImage = icon
-        }
-        
         // Initialize ModuleManager
         ModuleManager.shared.startAllEnabled()
         ModuleManager.shared.recreateAllStatusItems()
