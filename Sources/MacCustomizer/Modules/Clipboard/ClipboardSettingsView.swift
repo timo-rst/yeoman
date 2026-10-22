@@ -4,10 +4,20 @@ public struct ClipboardSettingsView: View {
     @ObservedObject var module: ClipboardModule
     @ObservedObject var store = ClipboardHistoryStore.shared
     @ObservedObject var monitor = ClipboardMonitor.shared
+    @ObservedObject var l10nObj = LocalizationManager.shared
     
-    enum SettingsSubTab: String, CaseIterable {
-        case history = "Inhalte & Verlauf"
-        case options = "Optionen & Sicherheit"
+    enum SettingsSubTab: String, CaseIterable, Identifiable {
+        case history = "history"
+        case options = "options"
+        
+        var id: String { rawValue }
+        
+        var title: String {
+            switch self {
+            case .history: return l10n("clipboard.subtab_history")
+            case .options: return l10n("clipboard.subtab_options")
+            }
+        }
     }
     
     @State private var selectedTab: SettingsSubTab = .history
@@ -21,15 +31,15 @@ public struct ClipboardSettingsView: View {
             // Header
             VStack(alignment: .leading, spacing: 12) {
                 ModuleHeaderView(
-                    title: "Zwischenablage",
-                    subtitle: "Verlauf kopierter Texte, Links und Bilder mit Such- und Filterfunktion.",
+                    title: l10n("tab.clipboard"),
+                    subtitle: l10n("clipboard.subtitle"),
                     icon: "doc.on.clipboard",
                     isEnabled: $module.isEnabled
                 )
                 
                 Picker("", selection: $selectedTab) {
-                    ForEach(SettingsSubTab.allCases, id: \.self) { tab in
-                        Text(tab.rawValue).tag(tab)
+                    ForEach(SettingsSubTab.allCases) { tab in
+                        Text(tab.title).tag(tab)
                     }
                 }
                 .pickerStyle(.segmented)

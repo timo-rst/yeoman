@@ -31,6 +31,7 @@ public enum WebWidgetEditorMode: Identifiable {
 
 public struct WebPanelSettingsView: View {
     @ObservedObject var module: WebPanelModule
+    @ObservedObject var l10nObj = LocalizationManager.shared
     @State private var editorMode: WebWidgetEditorMode? = nil
     @State private var widgetToDelete: WebWidgetItem? = nil
     @State private var showingDeleteConfirm: Bool = false
@@ -43,8 +44,8 @@ public struct WebPanelSettingsView: View {
         VStack(spacing: 0) {
             // Header
             ModuleHeaderView(
-                title: "Web-Widgets",
-                subtitle: "Web-Apps direkt als Menüleisten-Symbole mit Live-Fenster nutzen.",
+                title: l10n("web_panel.title"),
+                subtitle: l10n("web_panel.subtitle"),
                 icon: "globe",
                 isEnabled: $module.isEnabled,
                 extraContent: {

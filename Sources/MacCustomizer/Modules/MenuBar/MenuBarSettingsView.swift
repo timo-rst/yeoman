@@ -1,10 +1,17 @@
 import SwiftUI
 
 public enum MenuBarSubTab: String, CaseIterable, Identifiable {
-    case items = "Symbole & Sichtbarkeit"
-    case spacing = "Symbol-Abstände"
+    case items = "items"
+    case spacing = "spacing"
     
     public var id: String { rawValue }
+    
+    public var title: String {
+        switch self {
+        case .items: return l10n("menubar.tab_items")
+        case .spacing: return l10n("menubar.tab_spacing")
+        }
+    }
     
     public var iconName: String {
         switch self {
@@ -16,6 +23,7 @@ public enum MenuBarSubTab: String, CaseIterable, Identifiable {
 
 public struct MenuBarSettingsView: View {
     @ObservedObject var module: MenuBarModule
+    @ObservedObject var l10nObj = LocalizationManager.shared
     @State private var selectedSubTab: MenuBarSubTab = .items
     
     public init(module: MenuBarModule) {
@@ -27,8 +35,8 @@ public struct MenuBarSettingsView: View {
             // Module Header & Sub-Navigation Picker
             VStack(spacing: 12) {
                 ModuleHeaderView(
-                    title: "Menüleiste",
-                    subtitle: "Symbole kompakter anordnen, Abstände anpassen und Monitore verwalten.",
+                    title: l10n("menubar.title"),
+                    subtitle: l10n("menubar.subtitle"),
                     icon: "menubar.rectangle",
                     isEnabled: $module.isEnabled
                 )
@@ -36,7 +44,7 @@ public struct MenuBarSettingsView: View {
                 // Sub-menu switcher for this module
                 Picker("", selection: $selectedSubTab) {
                     ForEach(MenuBarSubTab.allCases) { tab in
-                        Label(tab.rawValue, systemImage: tab.iconName).tag(tab)
+                        Label(tab.title, systemImage: tab.iconName).tag(tab)
                     }
                 }
                 .pickerStyle(.segmented)

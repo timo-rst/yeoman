@@ -7,6 +7,8 @@ public struct ModuleHeaderView<ExtraContent: View>: View {
     @Binding public var isEnabled: Bool
     public let extraContent: ExtraContent
     
+    @ObservedObject private var l10n = LocalizationManager.shared
+    
     public init(
         title: String,
         subtitle: String,
@@ -47,7 +49,7 @@ public struct ModuleHeaderView<ExtraContent: View>: View {
                 Spacer()
                 
                 HStack(spacing: 10) {
-                    Text(isEnabled ? "Aktiviert" : "Deaktiviert")
+                    Text(isEnabled ? l10n.localized("common.enabled") : l10n.localized("common.disabled"))
                         .font(.subheadline)
                         .fontWeight(.medium)
                         .foregroundColor(isEnabled ? .primary : .secondary)
@@ -63,7 +65,7 @@ public struct ModuleHeaderView<ExtraContent: View>: View {
                     Image(systemName: "pause.circle.fill")
                         .font(.caption)
                         .foregroundColor(.secondary)
-                    Text("Dieses Modul ist deaktiviert. Aktiviere den Schalter oben rechts, um es einzuschalten.")
+                    Text(l10n.localized("module.disabled_hint"))
                         .font(.caption)
                         .foregroundColor(.secondary)
                     Spacer()

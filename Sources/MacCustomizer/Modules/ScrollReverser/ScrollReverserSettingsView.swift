@@ -3,6 +3,7 @@ import SwiftUI
 public struct ScrollReverserSettingsView: View {
     @ObservedObject var module: ScrollReverserModule
     @ObservedObject var manager = ScrollReverserManager.shared
+    @ObservedObject var l10nObj = LocalizationManager.shared
     
     public init(module: ScrollReverserModule) {
         self.module = module
@@ -12,8 +13,8 @@ public struct ScrollReverserSettingsView: View {
         VStack(spacing: 0) {
             // Header
             ModuleHeaderView(
-                title: "Scroll-Richtung (Maus)",
-                subtitle: "Kehrt die Scrollrichtung der Maus um, während das Trackpad unverändert bleibt.",
+                title: l10n("scroll_reverser.title"),
+                subtitle: l10n("scroll_reverser.subtitle"),
                 icon: "computermouse",
                 isEnabled: $module.isEnabled
             )
@@ -84,20 +85,20 @@ public struct ScrollReverserSettingsView: View {
                             Image(systemName: "computermouse")
                                 .font(.title3)
                                 .foregroundColor(.accentColor)
-                            Text("Maus (Klassisches Scrollrad)")
+                            Text(l10n("scroll_reverser.mouse_header"))
                                 .font(.headline)
-                            InfoTooltip(text: "Gilt für herkömmliche USB-, Funk- und Bluetooth-Mäuse mit physischem Scrollrad.")
+                            InfoTooltip(text: l10n("scroll_reverser.mouse_tooltip"))
                         }
                         
                         Divider()
                         
                         HStack(spacing: 6) {
-                            Toggle("Vertikales Scrollen umkehren", isOn: $manager.reverseMouseVertical)
+                            Toggle(l10n("scroll_reverser.reverse_vertical"), isOn: $manager.reverseMouseVertical)
                                 .font(.subheadline)
                             InfoTooltip(text: "Empfohlen: Aktiviert. Wenn macOS auf 'Natürliches Scrollen' steht, scrollt die Maus hiermit gewohnt nach unten, während das Trackpad unverändert bleibt.")
                         }
                         
-                        Toggle("Horizontales Scrollen umkehren", isOn: $manager.reverseMouseHorizontal)
+                        Toggle(l10n("scroll_reverser.reverse_horizontal"), isOn: $manager.reverseMouseHorizontal)
                             .font(.subheadline)
                         
                         HStack(spacing: 6) {
@@ -124,20 +125,20 @@ public struct ScrollReverserSettingsView: View {
                             Image(systemName: "hand.draw")
                                 .font(.title3)
                                 .foregroundColor(.accentColor)
-                            Text("Trackpad")
+                            Text(l10n("scroll_reverser.trackpad_header"))
                                 .font(.headline)
-                            InfoTooltip(text: "Gilt für das integrierte MacBook-Trackpad und Apple Magic Trackpad.")
+                            InfoTooltip(text: l10n("scroll_reverser.trackpad_tooltip"))
                         }
                         
                         Divider()
                         
                         HStack(spacing: 6) {
-                            Toggle("Vertikales Scrollen umkehren", isOn: $manager.reverseTrackpadVertical)
+                            Toggle(l10n("scroll_reverser.reverse_vertical"), isOn: $manager.reverseTrackpadVertical)
                                 .font(.subheadline)
                             InfoTooltip(text: "Empfohlen: Deaktiviert. Das Trackpad behält so das native macOS-Verhalten (Zwei-Finger-Wischgeste wie auf Touchscreens).")
                         }
                         
-                        Toggle("Horizontales Scrollen umkehren", isOn: $manager.reverseTrackpadHorizontal)
+                        Toggle(l10n("scroll_reverser.reverse_horizontal"), isOn: $manager.reverseTrackpadHorizontal)
                             .font(.subheadline)
                     }
                     .padding()

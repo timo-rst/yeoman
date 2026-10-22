@@ -1,15 +1,31 @@
 import SwiftUI
 
 public enum SettingsTab: String, CaseIterable, Identifiable {
-    case general = "Allgemein"
-    case menuBar = "Menüleiste"
-    case scrollReverser = "Scroll-Richtung"
-    case webPanel = "Web-Widgets"
-    case clipboard = "Zwischenablage"
-    case systemStats = "System-Monitor"
-    case about = "Über MacCustomizer"
+    case general = "general"
+    case menuBar = "menuBar"
+    case scrollReverser = "scrollReverser"
+    case webPanel = "webPanel"
+    case clipboard = "clipboard"
+    case systemStats = "systemStats"
+    case about = "about"
     
     public var id: String { rawValue }
+    
+    public var localizationKey: String {
+        switch self {
+        case .general: return "tab.general"
+        case .menuBar: return "tab.menuBar"
+        case .scrollReverser: return "tab.scrollReverser"
+        case .webPanel: return "tab.webPanel"
+        case .clipboard: return "tab.clipboard"
+        case .systemStats: return "tab.systemStats"
+        case .about: return "tab.about"
+        }
+    }
+    
+    public var title: String {
+        LocalizationManager.shared.localized(localizationKey)
+    }
     
     public var iconName: String {
         switch self {
@@ -26,7 +42,8 @@ public enum SettingsTab: String, CaseIterable, Identifiable {
 
 public struct SettingsView: View {
     @ObservedObject var moduleManager = ModuleManager.shared
-    @State private var selectedTab: SettingsTab = .menuBar
+    @ObservedObject var l10n = LocalizationManager.shared
+    @State private var selectedTab: SettingsTab = .general
     
     public init() {}
     
@@ -39,7 +56,7 @@ public struct SettingsView: View {
                         Image(systemName: tab.iconName)
                             .frame(width: 18)
                             .foregroundColor(.accentColor)
-                        Text(tab.rawValue)
+                        Text(tab.title)
                     }
                     .tag(tab)
                 }
@@ -79,6 +96,7 @@ struct GeneralSettingsView: View {
     @AppStorage("showDockIcon") private var showDockIcon = true
     @AppStorage("showMainStatusItem") private var showMainStatusItem = true
     
+    @ObservedObject private var l10n = LocalizationManager.shared
     @ObservedObject private var mm = ModuleManager.shared
     @ObservedObject private var webPanel = ModuleManager.shared.webPanelModule
     @ObservedObject private var clipboard = ModuleManager.shared.clipboardModule
@@ -90,10 +108,10 @@ struct GeneralSettingsView: View {
         VStack(spacing: 0) {
             // Header
             VStack(alignment: .leading, spacing: 4) {
-                Text("Allgemeine Einstellungen")
+                Text(l10n.localized("general.title"))
                     .font(.title2)
                     .fontWeight(.bold)
-                Text("Grundkonfiguration für Startverhalten und Systemintegration.")
+                Text(l10n.localized("general.subtitle"))
                     .font(.subheadline)
                     .foregroundColor(.secondary)
             }
@@ -106,166 +124,201 @@ struct GeneralSettingsView: View {
             
             ScrollView {
                 VStack(alignment: .leading, spacing: 20) {
-                
-                VStack(alignment: .leading, spacing: 14) {
-                    Text("Start & Darstellung")
-                        .font(.headline)
                     
-                    HStack(spacing: 6) {
-                        Toggle("Beim Mac-Start automatisch öffnen", isOn: $launchAtLogin)
-                        InfoTooltip(text: "Startet MacCustomizer automatisch beim Hochfahren deines Macs (Launch at Login).")
-                    }
-                    
-                    HStack(spacing: 6) {
-                        Toggle("Dock-Symbol anzeigen", isOn: Binding(
-                            get: { showDockIcon },
-                            set: {
-                                showDockIcon = $0
-                                StatusItemController.shared.setDockIconVisible($0)
-                            }
-                        ))
-                        InfoTooltip(text: "Bestimmt, ob MacCustomizer im Dock sichtbar ist. Wenn deaktiviert, läuft die App rein in der Menüleiste.")
-                    }
-                    
-                    HStack(spacing: 6) {
-                        Toggle("Haupt-Symbol in der Menüleiste anzeigen", isOn: Binding(
-                            get: { showMainStatusItem },
-                            set: {
-                                showMainStatusItem = $0
-                                StatusItemController.shared.showsMainStatusItem = $0
-                            }
-                        ))
-                        InfoTooltip(text: "Zeigt das MacCustomizer Hauptsymbol (Launcher) in der Menüleiste an, über das du schnellen Zugriff auf alle Module hast.")
-                    }
-                }
-                .padding()
-                .background(RoundedRectangle(cornerRadius: 12).fill(Color(nsColor: .controlBackgroundColor)))
-                
-                // Software-Updates
-                UpdateSettingsSection(isDetailedView: false)
-                
-                VStack(alignment: .leading, spacing: 14) {
-                    Text("Aktive Module & Menüleisten-Symbole")
-                        .font(.headline)
-                    
-                    // 1. Menüleisten-Optimizer
-                    ModuleToggleRow(
-                        title: "Menüleisten-Optimizer",
-                        subtitle: "Icon-Abstand und Multi-Display-Management",
-                        icon: "menubar.rectangle",
-                        isOn: Binding(
-                            get: { menuBar.isEnabled },
-                            set: { mm.toggleModule(id: menuBar.id, enabled: $0) }
-                        ),
-                        showsDedicatedIcon: Binding(
-                            get: { menuBar.showsDedicatedStatusItem },
-                            set: { menuBar.showsDedicatedStatusItem = $0 }
-                        )
-                    )
-                    
-                    Divider()
-                    
-                    // 2. Scroll Reverser
-                    ModuleToggleRow(
-                        title: "Scroll-Richtung (Maus)",
-                        subtitle: "Kehrt die Scrollrichtung der Maus um, während das Trackpad unverändert bleibt",
-                        icon: "computermouse",
-                        isOn: Binding(
-                            get: { scrollReverser.isEnabled },
-                            set: { mm.toggleModule(id: scrollReverser.id, enabled: $0) }
-                        ),
-                        showsDedicatedIcon: Binding(
-                            get: { scrollReverser.showsDedicatedStatusItem },
-                            set: { scrollReverser.showsDedicatedStatusItem = $0 }
-                        )
-                    )
-                    
-                    Divider()
-                    
-                    // 3. Web-Widgets
-                    ModuleToggleRow(
-                        title: "Web-Widgets",
-                        subtitle: "Web-Apps (z.B. Kalender oder Notizen) direkt in der Menüleiste öffnen",
-                        icon: "globe",
-                        isOn: Binding(
-                            get: { webPanel.isEnabled },
-                            set: { mm.toggleModule(id: webPanel.id, enabled: $0) }
-                        ),
-                        showsDedicatedIcon: Binding(
-                            get: { webPanel.showsDedicatedStatusItem },
-                            set: { webPanel.showsDedicatedStatusItem = $0 }
-                        ),
-                        extraContent: {
-                            if webPanel.isEnabled && webPanel.showsDedicatedStatusItem && !webPanel.widgets.isEmpty {
-                                VStack(spacing: 6) {
-                                    ForEach(webPanel.widgets) { widget in
-                                        HStack(spacing: 8) {
-                                            Spacer().frame(width: 44)
-                                            Image(systemName: widget.iconName.isEmpty ? "globe" : widget.iconName)
-                                                .font(.caption)
-                                                .foregroundColor(.accentColor)
-                                                .frame(width: 14)
-                                            Text(widget.title)
-                                                .font(.caption)
-                                                .foregroundColor(.primary)
-                                            Spacer()
-                                            Toggle("", isOn: Binding(
-                                                get: { widget.isEnabled },
-                                                set: { enabled in
-                                                    webPanel.toggleWidget(id: widget.id, isEnabled: enabled)
-                                                }
-                                            ))
-                                            .toggleStyle(.switch)
-                                            .scaleEffect(0.75)
-                                        }
-                                        .padding(.vertical, 3)
-                                        .padding(.horizontal, 8)
-                                        .background(RoundedRectangle(cornerRadius: 6).fill(Color.primary.opacity(0.04)))
-                                    }
+                    // Language Selection Card
+                    VStack(alignment: .leading, spacing: 14) {
+                        Text(l10n.localized("general.language_section"))
+                            .font(.headline)
+                        
+                        HStack {
+                            VStack(alignment: .leading, spacing: 2) {
+                                HStack(spacing: 6) {
+                                    Text(l10n.localized("general.language_label"))
+                                        .fontWeight(.medium)
+                                    InfoTooltip(text: l10n.localized("general.language_tooltip"))
                                 }
-                                .padding(.leading, 8)
-                                .padding(.top, 4)
+                                Text(l10n.selectedLanguage == .system ? "\(l10n.localized("lang.system")) (\(l10n.effectiveLanguage.nativeName))" : l10n.selectedLanguage.nativeName)
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
                             }
+                            
+                            Spacer()
+                            
+                            Picker("", selection: $l10n.selectedLanguage) {
+                                ForEach(AppLanguage.allCases) { lang in
+                                    Text("\(lang.flag) \(lang.nativeName)")
+                                        .tag(lang)
+                                }
+                            }
+                            .labelsHidden()
+                            .pickerStyle(.menu)
+                            .frame(width: 190)
                         }
-                    )
+                    }
+                    .padding()
+                    .background(RoundedRectangle(cornerRadius: 12).fill(Color(nsColor: .controlBackgroundColor)))
                     
-                    Divider()
+                    // Startup & Appearance Card
+                    VStack(alignment: .leading, spacing: 14) {
+                        Text(l10n.localized("general.startup_appearance"))
+                            .font(.headline)
+                        
+                        HStack(spacing: 6) {
+                            Toggle(l10n.localized("general.launch_at_login"), isOn: $launchAtLogin)
+                            InfoTooltip(text: l10n.localized("general.launch_at_login_tooltip"))
+                        }
+                        
+                        HStack(spacing: 6) {
+                            Toggle(l10n.localized("general.show_dock_icon"), isOn: Binding(
+                                get: { showDockIcon },
+                                set: {
+                                    showDockIcon = $0
+                                    StatusItemController.shared.setDockIconVisible($0)
+                                }
+                            ))
+                            InfoTooltip(text: l10n.localized("general.show_dock_icon_tooltip"))
+                        }
+                        
+                        HStack(spacing: 6) {
+                            Toggle(l10n.localized("general.show_main_status_item"), isOn: Binding(
+                                get: { showMainStatusItem },
+                                set: {
+                                    showMainStatusItem = $0
+                                    StatusItemController.shared.showsMainStatusItem = $0
+                                }
+                            ))
+                            InfoTooltip(text: l10n.localized("general.show_main_status_item_tooltip"))
+                        }
+                    }
+                    .padding()
+                    .background(RoundedRectangle(cornerRadius: 12).fill(Color(nsColor: .controlBackgroundColor)))
                     
-                    // 4. Clipboard Manager
-                    ModuleToggleRow(
-                        title: "Zwischenablage-Manager",
-                        subtitle: "Verlauf kopierter Texte, Links und Bilder mit Suchfunktion",
-                        icon: "doc.on.clipboard",
-                        isOn: Binding(
-                            get: { clipboard.isEnabled },
-                            set: { mm.toggleModule(id: clipboard.id, enabled: $0) }
-                        ),
-                        showsDedicatedIcon: Binding(
-                            get: { clipboard.showsDedicatedStatusItem },
-                            set: { clipboard.showsDedicatedStatusItem = $0 }
+                    // Software-Updates
+                    UpdateSettingsSection(isDetailedView: false)
+                    
+                    // Active Modules Section
+                    VStack(alignment: .leading, spacing: 14) {
+                        Text(l10n.localized("general.active_modules"))
+                            .font(.headline)
+                        
+                        // 1. Menüleisten-Optimizer
+                        ModuleToggleRow(
+                            title: l10n.localized("general.menu_bar_opt_title"),
+                            subtitle: l10n.localized("general.menu_bar_opt_sub"),
+                            icon: "menubar.rectangle",
+                            isOn: Binding(
+                                get: { menuBar.isEnabled },
+                                set: { mm.toggleModule(id: menuBar.id, enabled: $0) }
+                            ),
+                            showsDedicatedIcon: Binding(
+                                get: { menuBar.showsDedicatedStatusItem },
+                                set: { menuBar.showsDedicatedStatusItem = $0 }
+                            )
                         )
-                    )
-                    
-                    Divider()
-                    
-                    // 5. System Stats Monitor
-                    ModuleToggleRow(
-                        title: "System-Monitor",
-                        subtitle: "Live-Auslastung von Prozessor, Arbeitsspeicher und Grafik in der Menüleiste",
-                        icon: "gauge.with.needle",
-                        isOn: Binding(
-                            get: { stats.isEnabled },
-                            set: { mm.toggleModule(id: stats.id, enabled: $0) }
+                        
+                        Divider()
+                        
+                        // 2. Scroll Reverser
+                        ModuleToggleRow(
+                            title: l10n.localized("general.scroll_reverser_title"),
+                            subtitle: l10n.localized("general.scroll_reverser_sub"),
+                            icon: "computermouse",
+                            isOn: Binding(
+                                get: { scrollReverser.isEnabled },
+                                set: { mm.toggleModule(id: scrollReverser.id, enabled: $0) }
+                            ),
+                            showsDedicatedIcon: Binding(
+                                get: { scrollReverser.showsDedicatedStatusItem },
+                                set: { scrollReverser.showsDedicatedStatusItem = $0 }
+                            )
                         )
-                    )
+                        
+                        Divider()
+                        
+                        // 3. Web-Widgets
+                        ModuleToggleRow(
+                            title: l10n.localized("general.web_panel_title"),
+                            subtitle: l10n.localized("general.web_panel_sub"),
+                            icon: "globe",
+                            isOn: Binding(
+                                get: { webPanel.isEnabled },
+                                set: { mm.toggleModule(id: webPanel.id, enabled: $0) }
+                            ),
+                            showsDedicatedIcon: Binding(
+                                get: { webPanel.showsDedicatedStatusItem },
+                                set: { webPanel.showsDedicatedStatusItem = $0 }
+                            ),
+                            extraContent: {
+                                if webPanel.isEnabled && webPanel.showsDedicatedStatusItem && !webPanel.widgets.isEmpty {
+                                    VStack(spacing: 6) {
+                                        ForEach(webPanel.widgets) { widget in
+                                            HStack(spacing: 8) {
+                                                Spacer().frame(width: 44)
+                                                Image(systemName: widget.iconName.isEmpty ? "globe" : widget.iconName)
+                                                    .font(.caption)
+                                                    .foregroundColor(.accentColor)
+                                                    .frame(width: 14)
+                                                Text(widget.title)
+                                                    .font(.caption)
+                                                    .foregroundColor(.primary)
+                                                Spacer()
+                                                Toggle("", isOn: Binding(
+                                                    get: { widget.isEnabled },
+                                                    set: { enabled in
+                                                        webPanel.toggleWidget(id: widget.id, isEnabled: enabled)
+                                                    }
+                                                ))
+                                                .toggleStyle(.switch)
+                                                .scaleEffect(0.75)
+                                            }
+                                            .padding(.vertical, 3)
+                                            .padding(.horizontal, 8)
+                                            .background(RoundedRectangle(cornerRadius: 6).fill(Color.primary.opacity(0.04)))
+                                        }
+                                    }
+                                    .padding(.leading, 8)
+                                    .padding(.top, 4)
+                                }
+                            }
+                        )
+                        
+                        Divider()
+                        
+                        // 4. Clipboard Manager
+                        ModuleToggleRow(
+                            title: l10n.localized("general.clipboard_title"),
+                            subtitle: l10n.localized("general.clipboard_sub"),
+                            icon: "doc.on.clipboard",
+                            isOn: Binding(
+                                get: { clipboard.isEnabled },
+                                set: { mm.toggleModule(id: clipboard.id, enabled: $0) }
+                            ),
+                            showsDedicatedIcon: Binding(
+                                get: { clipboard.showsDedicatedStatusItem },
+                                set: { clipboard.showsDedicatedStatusItem = $0 }
+                            )
+                        )
+                        
+                        Divider()
+                        
+                        // 5. System Stats Monitor
+                        ModuleToggleRow(
+                            title: l10n.localized("general.system_stats_title"),
+                            subtitle: l10n.localized("general.system_stats_sub"),
+                            icon: "gauge.with.needle",
+                            isOn: Binding(
+                                get: { stats.isEnabled },
+                                set: { mm.toggleModule(id: stats.id, enabled: $0) }
+                            )
+                        )
+                    }
+                    .padding()
+                    .background(RoundedRectangle(cornerRadius: 12).fill(Color(nsColor: .controlBackgroundColor)))
                 }
-                .padding()
-                .background(RoundedRectangle(cornerRadius: 12).fill(Color(nsColor: .controlBackgroundColor)))
+                .padding(20)
             }
-            .padding(20)
         }
     }
-}
 }
 
 struct ModuleToggleRow<ExtraContent: View>: View {
@@ -311,7 +364,7 @@ struct ModuleToggleRow<ExtraContent: View>: View {
                 Spacer()
                 
                 HStack(spacing: 10) {
-                    Text(isOn ? "Aktiviert" : "Deaktiviert")
+                    Text(isOn ? l10n("common.enabled") : l10n("common.disabled"))
                         .font(.subheadline)
                         .fontWeight(.medium)
                         .foregroundColor(isOn ? .primary : .secondary)
@@ -328,7 +381,7 @@ struct ModuleToggleRow<ExtraContent: View>: View {
                     Image(systemName: "menubar.arrow.up.rectangle")
                         .font(.caption)
                         .foregroundColor(.secondary)
-                    Text("Eigenes Symbol in der Menüleiste:")
+                    Text(l10n("general.status_icon_label"))
                         .font(.caption)
                         .foregroundColor(.secondary)
                     Spacer()
@@ -345,6 +398,7 @@ struct ModuleToggleRow<ExtraContent: View>: View {
 
 struct AboutView: View {
     @ObservedObject var updater = UpdateManager.shared
+    @ObservedObject var l10nObj = LocalizationManager.shared
     
     var body: some View {
         ScrollView {
@@ -364,7 +418,7 @@ struct AboutView: View {
                         .font(.subheadline)
                         .foregroundColor(.secondary)
                     
-                    Text("Die modulare All-in-One Steuerzentrale für deine macOS Anpassungen.")
+                    Text(l10n("about.tagline"))
                         .font(.subheadline)
                         .multilineTextAlignment(.center)
                         .foregroundColor(.secondary)
@@ -384,7 +438,7 @@ struct AboutView: View {
                     }) {
                         HStack(spacing: 6) {
                             Image(systemName: "link")
-                            Text("GitHub Repository")
+                            Text(l10n("about.github_repo"))
                         }
                     }
                     .buttonStyle(.bordered)
@@ -396,14 +450,14 @@ struct AboutView: View {
                     }) {
                         HStack(spacing: 6) {
                             Image(systemName: "tag")
-                            Text("Releases & Changelog")
+                            Text(l10n("about.releases_changelog"))
                         }
                     }
                     .buttonStyle(.bordered)
                 }
                 
                 VStack(spacing: 4) {
-                    Text("Entwickelt für macOS mit Swift & SwiftUI")
+                    Text(l10n("about.developed_for"))
                         .font(.caption)
                         .foregroundColor(.secondary)
                     Text("Copyright © 2026 Timo Richstein. All rights reserved.")

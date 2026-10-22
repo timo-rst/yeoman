@@ -2,12 +2,21 @@ import SwiftUI
 import AppKit
 
 public enum ClipboardTabFilter: String, CaseIterable, Identifiable {
-    case all = "Alle"
-    case text = "Texte"
-    case images = "Bilder"
-    case pinned = "Favoriten"
+    case all = "all"
+    case text = "text"
+    case images = "images"
+    case pinned = "pinned"
     
     public var id: String { rawValue }
+    
+    public var title: String {
+        switch self {
+        case .all: return l10n("clipboard.all")
+        case .text: return l10n("clipboard.texts")
+        case .images: return l10n("clipboard.images")
+        case .pinned: return l10n("clipboard.favorites")
+        }
+    }
     
     public var icon: String {
         switch self {
@@ -21,6 +30,7 @@ public enum ClipboardTabFilter: String, CaseIterable, Identifiable {
 
 public struct ClipboardView: View {
     @ObservedObject var store = ClipboardHistoryStore.shared
+    @ObservedObject var l10nObj = LocalizationManager.shared
     @State private var selectedTab: ClipboardTabFilter = .all
     @State private var previewItem: ClipboardItem? = nil
     public var onCopy: (() -> Void)?
@@ -61,7 +71,7 @@ public struct ClipboardView: View {
             HStack(spacing: 8) {
                 Image(systemName: "magnifyingglass")
                     .foregroundColor(.secondary)
-                TextField("Zwischenablage durchsuchen...", text: $store.searchQuery)
+                TextField(l10n("clipboard.search"), text: $store.searchQuery)
                     .textFieldStyle(.plain)
                     .font(.system(size: 13))
                 
@@ -74,10 +84,10 @@ public struct ClipboardView: View {
                 }
                 
                 Menu {
-                    Button("Nicht angepinnte löschen") {
+                    Button(l10n("clipboard.clear_unpinned")) {
                         store.clearUnpinned()
                     }
-                    Button("Gesamten Verlauf löschen", role: .destructive) {
+                    Button(l10n("clipboard.clear_all"), role: .destructive) {
                         store.clearAll()
                     }
                 } label: {
@@ -115,7 +125,7 @@ public struct ClipboardView: View {
                             HStack(spacing: 5) {
                                 Image(systemName: tab.icon)
                                     .font(.system(size: 11))
-                                Text(tab.rawValue)
+                                Text(tab.title)
                                     .font(.system(size: 11, weight: isSelected ? .semibold : .regular))
                                     .lineLimit(1)
                                 if count > 0 {
@@ -391,7 +401,7 @@ struct ClipboardRowView: View {
                 if isJustCopied {
                     HStack(spacing: 4) {
                         Image(systemName: "checkmark.circle.fill")
-                        Text("Kopiert!")
+                        Text(l10n("clipboard.copied"))
                     }
                     .font(.caption)
                     .fontWeight(.semibold)
@@ -409,7 +419,7 @@ struct ClipboardRowView: View {
                                     .foregroundColor(.secondary)
                             }
                             .buttonStyle(.plain)
-                            .help("Vergrößern")
+                            .help(l10n("clipboard.zoom"))
                         }
                         
                         Button(action: onTogglePin) {
@@ -418,7 +428,7 @@ struct ClipboardRowView: View {
                                 .foregroundColor(item.isPinned ? .accentColor : .secondary)
                         }
                         .buttonStyle(.plain)
-                        .help(item.isPinned ? "Lösen" : "Anpinnen")
+                        .help(item.isPinned ? l10n("clipboard.unpin") : l10n("clipboard.pin"))
                         
                         Button(action: onDelete) {
                             Image(systemName: "trash")
@@ -426,7 +436,7 @@ struct ClipboardRowView: View {
                                 .foregroundColor(.secondary)
                         }
                         .buttonStyle(.plain)
-                        .help("Löschen")
+                        .help(l10n("clipboard.delete"))
                     }
                 }
             }

@@ -359,12 +359,13 @@ public final class SystemStatsModule: NSObject, CustomizerModule, ObservableObje
 public struct SystemStatsSettingsView: View {
     @ObservedObject var module: SystemStatsModule
     @ObservedObject var provider = SystemMetricsProvider.shared
+    @ObservedObject var l10nObj = LocalizationManager.shared
     
     public var body: some View {
         VStack(spacing: 0) {
             ModuleHeaderView(
-                title: "System-Monitor",
-                subtitle: "Live-Auslastung von Prozessor, Arbeitsspeicher und Grafik in der Menüleiste.",
+                title: l10n("system_stats.title"),
+                subtitle: l10n("system_stats.subtitle"),
                 icon: "gauge.with.needle",
                 isEnabled: $module.isEnabled
             )

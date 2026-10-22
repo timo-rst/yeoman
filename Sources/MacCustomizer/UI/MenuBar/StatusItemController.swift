@@ -32,7 +32,15 @@ public final class StatusItemController: NSObject, NSMenuDelegate {
             button.toolTip = "MacCustomizer"
         }
         
+        NotificationCenter.default.removeObserver(self, name: .appLanguageDidChange, object: nil)
+        NotificationCenter.default.addObserver(self, selector: #selector(handleLanguageChange), name: .appLanguageDidChange, object: nil)
+        
         updateMenu()
+    }
+    
+    @objc private func handleLanguageChange() {
+        updateMenu()
+        settingsWindow?.title = l10n("window.settings_title")
     }
     
     public func removeStatusItem() {
@@ -103,12 +111,12 @@ public final class StatusItemController: NSObject, NSMenuDelegate {
         menu.addItem(spacingItem)
         
         // --- Clipboard Submenu ---
-        let clipItem = NSMenuItem(title: "Zwischenablage (Verlauf)", action: nil, keyEquivalent: "")
+        let clipItem = NSMenuItem(title: l10n("menu.clipboard_recent"), action: nil, keyEquivalent: "")
         let clipSubmenu = NSMenu()
         
         let recentItems = ClipboardHistoryStore.shared.items.prefix(8)
         if recentItems.isEmpty {
-            let emptyItem = NSMenuItem(title: "Keine Einträge vorhanden", action: nil, keyEquivalent: "")
+            let emptyItem = NSMenuItem(title: l10n("menu.empty"), action: nil, keyEquivalent: "")
             emptyItem.isEnabled = false
             clipSubmenu.addItem(emptyItem)
         } else {
@@ -122,7 +130,7 @@ public final class StatusItemController: NSObject, NSMenuDelegate {
         }
         
         clipSubmenu.addItem(NSMenuItem.separator())
-        let openClipItem = NSMenuItem(title: "Verlauf durchsuchen...", action: #selector(openClipboardWindow), keyEquivalent: "v")
+        let openClipItem = NSMenuItem(title: l10n("menu.clipboard_search"), action: #selector(openClipboardWindow), keyEquivalent: "v")
         openClipItem.keyEquivalentModifierMask = [.command, .shift]
         openClipItem.target = self
         clipSubmenu.addItem(openClipItem)
@@ -133,17 +141,17 @@ public final class StatusItemController: NSObject, NSMenuDelegate {
         menu.addItem(NSMenuItem.separator())
         
         // Settings & Quit
-        let settingsItem = NSMenuItem(title: "Einstellungen...", action: #selector(openSettingsWindow), keyEquivalent: ",")
+        let settingsItem = NSMenuItem(title: l10n("menu.settings"), action: #selector(openSettingsWindow), keyEquivalent: ",")
         settingsItem.target = self
         menu.addItem(settingsItem)
         
-        let updateItem = NSMenuItem(title: "Nach Updates suchen...", action: #selector(checkForUpdatesMenuAction), keyEquivalent: "")
+        let updateItem = NSMenuItem(title: l10n("menu.check_updates"), action: #selector(checkForUpdatesMenuAction), keyEquivalent: "")
         updateItem.target = self
         menu.addItem(updateItem)
         
         menu.addItem(NSMenuItem.separator())
         
-        let quitItem = NSMenuItem(title: "MacCustomizer beenden", action: #selector(quitApp), keyEquivalent: "q")
+        let quitItem = NSMenuItem(title: l10n("menu.quit"), action: #selector(quitApp), keyEquivalent: "q")
         quitItem.target = self
         menu.addItem(quitItem)
         
@@ -213,7 +221,7 @@ public final class StatusItemController: NSObject, NSMenuDelegate {
                 backing: .buffered,
                 defer: false
             )
-            window.title = "MacCustomizer Einstellungen"
+            window.title = l10n("window.settings_title")
             window.minSize = NSSize(width: minWidth, height: minHeight)
             window.collectionBehavior = [.fullScreenPrimary]
             window.contentView = NSHostingView(rootView: SettingsView())
@@ -222,6 +230,7 @@ public final class StatusItemController: NSObject, NSMenuDelegate {
             window.level = .normal
             self.settingsWindow = window
         } else if let window = settingsWindow {
+            window.title = l10n("window.settings_title")
             window.level = .normal
             window.minSize = NSSize(width: minWidth, height: minHeight)
             if window.frame.width < minWidth || window.frame.height < minHeight {

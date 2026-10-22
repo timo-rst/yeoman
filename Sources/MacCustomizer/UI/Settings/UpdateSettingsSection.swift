@@ -2,6 +2,7 @@ import SwiftUI
 
 public struct UpdateSettingsSection: View {
     @ObservedObject var updater = UpdateManager.shared
+    @ObservedObject var l10n = LocalizationManager.shared
     public var isDetailedView: Bool = false
     
     @State private var showingTokenConfig: Bool = false
@@ -17,7 +18,7 @@ public struct UpdateSettingsSection: View {
                 Image(systemName: "arrow.triangle.2.circlepath.circle.fill")
                     .font(.title3)
                     .foregroundColor(.accentColor)
-                Text("Software-Updates")
+                Text(l10n.localized("updates.title"))
                     .font(.headline)
                 
                 Spacer()
@@ -30,9 +31,9 @@ public struct UpdateSettingsSection: View {
             
             // Auto-Check Toggle
             HStack(spacing: 6) {
-                Toggle("Automatisch nach Updates suchen", isOn: $updater.autoCheckForUpdates)
+                Toggle(l10n.localized("updates.auto_check"), isOn: $updater.autoCheckForUpdates)
                     .font(.subheadline)
-                InfoTooltip(text: "Sucht im Hintergrund regelmäßig auf GitHub nach neuen Versionen und informiert dich, sobald ein Update bereitsteht.")
+                InfoTooltip(text: l10n.localized("updates.auto_check_tooltip"))
             }
             
             // Current Status & Last Checked Row
@@ -41,7 +42,7 @@ public struct UpdateSettingsSection: View {
                     statusDescriptionView
                     
                     if let lastChecked = updater.lastCheckedDate {
-                        Text("Zuletzt geprüft: \(formattedDate(lastChecked))")
+                        Text("\(l10n.localized("updates.last_checked")) \(formattedDate(lastChecked))")
                             .font(.caption2)
                             .foregroundColor(.secondary)
                     }
@@ -60,7 +61,7 @@ public struct UpdateSettingsSection: View {
                         } else {
                             Image(systemName: "arrow.clockwise")
                         }
-                        Text("Jetzt prüfen")
+                        Text(l10n.localized("updates.check_button"))
                     }
                 }
                 .buttonStyle(.bordered)
@@ -74,7 +75,7 @@ public struct UpdateSettingsSection: View {
                     HStack {
                         Image(systemName: "sparkles")
                             .foregroundColor(.yellow)
-                        Text("Neues Update verfügbar: **\(version)**")
+                        Text("\(l10n.localized("updates.available")) **\(version)**")
                             .font(.subheadline)
                             .fontWeight(.semibold)
                         Spacer()
@@ -94,13 +95,13 @@ public struct UpdateSettingsSection: View {
                     
                     HStack(spacing: 12) {
                         if let download = downloadUrl {
-                            Button("Jetzt herunterladen & aktualisieren") {
+                            Button(l10n.localized("updates.install_button")) {
                                 updater.downloadAndInstall(from: download)
                             }
                             .buttonStyle(.borderedProminent)
                         }
                         
-                        Button("Auf GitHub anzeigen") {
+                        Button(l10n.localized("updates.view_on_github")) {
                             NSWorkspace.shared.open(htmlUrl)
                         }
                         .buttonStyle(.bordered)
@@ -191,13 +192,13 @@ public struct UpdateSettingsSection: View {
     private var statusDescriptionView: some View {
         switch updater.status {
         case .idle:
-            Text("Aktuelle Version: v\(updater.currentVersion)")
+            Text("\(l10n.localized("updates.current_version")) v\(updater.currentVersion)")
                 .font(.subheadline)
                 .foregroundColor(.secondary)
                 
         case .checking:
             HStack(spacing: 6) {
-                Text("Prüfe auf Updates bei GitHub...")
+                Text(l10n.localized("updates.checking"))
                     .font(.subheadline)
                     .foregroundColor(.secondary)
             }
@@ -206,7 +207,7 @@ public struct UpdateSettingsSection: View {
             HStack(spacing: 6) {
                 Image(systemName: "checkmark.circle.fill")
                     .foregroundColor(.green)
-                Text("MacCustomizer ist auf dem neuesten Stand (v\(updater.currentVersion))")
+                Text("\(l10n.localized("updates.up_to_date")) (v\(updater.currentVersion))")
                     .font(.subheadline)
                     .fontWeight(.medium)
             }
@@ -215,18 +216,18 @@ public struct UpdateSettingsSection: View {
             HStack(spacing: 6) {
                 Image(systemName: "arrow.up.circle.fill")
                     .foregroundColor(.accentColor)
-                Text("Update auf \(version) verfügbar (Aktuell: v\(updater.currentVersion))")
+                Text("\(l10n.localized("updates.available")) \(version) (\(l10n.localized("updates.current_version")) v\(updater.currentVersion))")
                     .font(.subheadline)
                     .fontWeight(.medium)
             }
             
         case .downloading:
-            Text("Download läuft...")
+            Text(l10n.localized("updates.downloading"))
                 .font(.subheadline)
                 .foregroundColor(.secondary)
                 
         case .installing:
-            Text("Installation wird vorbereitet...")
+            Text(l10n.localized("updates.downloading"))
                 .font(.subheadline)
                 .foregroundColor(.secondary)
                 
