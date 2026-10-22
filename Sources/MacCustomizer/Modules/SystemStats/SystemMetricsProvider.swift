@@ -11,6 +11,7 @@ public struct ProcessTaskItem: Identifiable, Equatable {
     public let isUserApp: Bool
     public let bundleIdentifier: String?
     public let customIcon: NSImage?
+    public let widgetTitle: String?
     
     public init(
         id: Int,
@@ -20,7 +21,8 @@ public struct ProcessTaskItem: Identifiable, Equatable {
         memoryMB: Double,
         isUserApp: Bool,
         bundleIdentifier: String?,
-        customIcon: NSImage? = nil
+        customIcon: NSImage? = nil,
+        widgetTitle: String? = nil
     ) {
         self.id = id
         self.pid = pid
@@ -30,6 +32,7 @@ public struct ProcessTaskItem: Identifiable, Equatable {
         self.isUserApp = isUserApp
         self.bundleIdentifier = bundleIdentifier
         self.customIcon = customIcon
+        self.widgetTitle = widgetTitle
     }
     
     public var icon: NSImage? {
@@ -50,7 +53,8 @@ public struct ProcessTaskItem: Identifiable, Equatable {
         lhs.cpuPercent == rhs.cpuPercent &&
         lhs.memoryMB == rhs.memoryMB &&
         lhs.isUserApp == rhs.isUserApp &&
-        lhs.bundleIdentifier == rhs.bundleIdentifier
+        lhs.bundleIdentifier == rhs.bundleIdentifier &&
+        lhs.widgetTitle == rhs.widgetTitle
     }
 }
 
@@ -107,7 +111,10 @@ public final class SystemMetricsProvider: ObservableObject {
         let query = searchQuery.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
         if !query.isEmpty {
             list = list.filter {
-                $0.name.lowercased().contains(query) || "\($0.pid)".contains(query)
+                $0.name.lowercased().contains(query) ||
+                ($0.widgetTitle?.lowercased().contains(query) ?? false) ||
+                ($0.widgetTitle != nil && "maccustomizer".contains(query)) ||
+                "\($0.pid)".contains(query)
             }
         }
         
@@ -260,34 +267,40 @@ public final class SystemMetricsProvider: ObservableObject {
                     let memoryMB = rssKB / 1024.0
                     
                     let isApp = appMap[pid_t(pid)] != nil
-                    var friendlyName = appMap[pid_t(pid)]?.name ?? rawName
+                    let friendlyName = appMap[pid_t(pid)]?.name ?? rawName
                     let bundleId = appMap[pid_t(pid)]?.bundleId
+                    
                     var customIcon: NSImage? = nil
+                    var matchedWidgetTitle: String? = nil
                     
                     // Match with Web Widget info if this process is a WebWidget process
                     if let widgetInfo = widgetInfoMap[pid_t(pid)] {
-                        if !friendlyName.contains("(\(widgetInfo.title))") {
-                            friendlyName = "\(friendlyName) (\(widgetInfo.title))"
-                        }
+                        matchedWidgetTitle = widgetInfo.title
                         customIcon = widgetInfo.icon
                     } else if (friendlyName.contains("Web Content") || rawName.contains("WebKit.WebContent")),
                               !unassignedWidgets.isEmpty {
                         let fallback = unassignedWidgets.removeFirst()
-                        if !friendlyName.contains("(\(fallback.title))") {
-                            friendlyName = "\(friendlyName) (\(fallback.title))"
-                        }
+                        matchedWidgetTitle = fallback.title
                         customIcon = ModuleManager.shared.webPanelModule.getTaskIcon(for: fallback)
+                    }
+                    
+                    let displayName: String
+                    if let widgetTitle = matchedWidgetTitle {
+                        displayName = "Web Widget (\(widgetTitle))"
+                    } else {
+                        displayName = self?.sanitizeProcessName(friendlyName) ?? friendlyName
                     }
                     
                     items.append(ProcessTaskItem(
                         id: pid,
                         pid: pid,
-                        name: friendlyName,
+                        name: displayName,
                         cpuPercent: cpu,
                         memoryMB: memoryMB,
                         isUserApp: isApp,
                         bundleIdentifier: bundleId,
-                        customIcon: customIcon
+                        customIcon: customIcon,
+                        widgetTitle: matchedWidgetTitle
                     ))
                 }
                 
@@ -298,6 +311,23 @@ public final class SystemMetricsProvider: ObservableObject {
                 return
             }
         }
+    }
+    
+    private func sanitizeProcessName(_ name: String) -> String {
+        var cleaned = name
+        let unwantedSuffixes = [
+            " (Renderer)",
+            " (GPU)",
+            " (Alerts)",
+            " (Plugin)",
+            " (Networking)"
+        ]
+        for suffix in unwantedSuffixes {
+            if cleaned.hasSuffix(suffix) {
+                cleaned = String(cleaned.dropLast(suffix.count))
+            }
+        }
+        return cleaned
     }
     
     // MARK: - Kill / Force Quit Task

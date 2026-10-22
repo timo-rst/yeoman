@@ -315,15 +315,12 @@ struct TaskRowView: View {
             
             // Name + PID
             VStack(alignment: .leading, spacing: 1) {
-                if let openParen = item.name.range(of: " (", options: .backwards),
-                   item.name.hasSuffix(")") {
-                    let mainPart = String(item.name[..<openParen.lowerBound])
-                    let annotation = String(item.name[openParen.lowerBound...])
-                    HStack(spacing: 3) {
-                        Text(mainPart)
+                if let widgetTitle = item.widgetTitle {
+                    HStack(spacing: 4) {
+                        Text("Web Widget")
                             .font(.system(size: 12, weight: .medium))
                             .lineLimit(1)
-                        Text(annotation)
+                        Text("(\(widgetTitle))")
                             .font(.system(size: 11, weight: .semibold))
                             .foregroundColor(.accentColor)
                             .lineLimit(1)
