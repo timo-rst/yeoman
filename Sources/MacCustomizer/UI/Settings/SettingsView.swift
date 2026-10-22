@@ -404,8 +404,8 @@ struct LanguageSettingsCard: View {
                 
                 // Status Badge showing current active language
                 HStack(spacing: 5) {
-                    FlatFlagView(language: l10n.effectiveLanguage, size: CGSize(width: 14, height: 10))
-                    Text(l10n.selectedLanguage == .system ? l10n.localized("lang.system") : l10n.selectedLanguage.nativeName)
+                    FlatFlagView(language: l10n.selectedLanguage, size: CGSize(width: 14, height: 10))
+                    Text(l10n.selectedLanguage.nativeName)
                         .font(.caption2)
                         .fontWeight(.semibold)
                         .foregroundColor(.accentColor)
@@ -422,73 +422,9 @@ struct LanguageSettingsCard: View {
                 .font(.subheadline)
                 .foregroundColor(.secondary)
             
-            // System Default Option (Top-Tier Card)
-            let isSystemSelected = l10n.selectedLanguage == .system
-            Button(action: {
-                withAnimation(.easeInOut(duration: 0.15)) {
-                    l10n.selectedLanguage = .system
-                }
-            }) {
-                HStack(spacing: 12) {
-                    FlatFlagView(language: .system, size: CGSize(width: 26, height: 18))
-                    
-                    VStack(alignment: .leading, spacing: 2) {
-                        HStack(spacing: 6) {
-                            Text(l10n.localized("lang.system"))
-                                .font(.subheadline)
-                                .fontWeight(isSystemSelected ? .semibold : .medium)
-                                .foregroundColor(.primary)
-                            
-                            // Badge indicating the detected macOS language
-                            Text("macOS: \(l10n.systemLanguage.displayName(in: l10n.effectiveLanguage))")
-                                .font(.caption2)
-                                .fontWeight(.medium)
-                                .padding(.horizontal, 6)
-                                .padding(.vertical, 1.5)
-                                .background(
-                                    RoundedRectangle(cornerRadius: 4)
-                                        .fill(isSystemSelected ? Color.accentColor.opacity(0.18) : Color.primary.opacity(0.06))
-                                )
-                                .foregroundColor(isSystemSelected ? .accentColor : .secondary)
-                        }
-                        
-                        Text(l10n.localized("about.lang_system_desc"))
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                    }
-                    
-                    Spacer()
-                    
-                    if isSystemSelected {
-                        Image(systemName: "checkmark.circle.fill")
-                            .font(.system(size: 16, weight: .semibold))
-                            .foregroundColor(.accentColor)
-                    } else {
-                        Circle()
-                            .stroke(Color.primary.opacity(0.2), lineWidth: 1.5)
-                            .frame(width: 16, height: 16)
-                    }
-                }
-                .padding(.horizontal, 14)
-                .padding(.vertical, 10)
-                .background(
-                    RoundedRectangle(cornerRadius: 10)
-                        .fill(isSystemSelected ? Color.accentColor.opacity(0.12) : (hoveredLang == .system ? Color.primary.opacity(0.05) : Color(nsColor: .windowBackgroundColor)))
-                )
-                .overlay(
-                    RoundedRectangle(cornerRadius: 10)
-                        .stroke(isSystemSelected ? Color.accentColor : Color.primary.opacity(0.08), lineWidth: isSystemSelected ? 1.5 : 1.0)
-                )
-            }
-            .buttonStyle(.plain)
-            .onHover { isHovered in
-                hoveredLang = isHovered ? .system : nil
-            }
-            
-            // Bottom Tier: 4 Languages Grid
-            let languages: [AppLanguage] = [.german, .english, .spanish, .french]
+            // Languages Grid (4 Supported Languages)
             HStack(spacing: 10) {
-                ForEach(languages) { lang in
+                ForEach(AppLanguage.allCases) { lang in
                     let isSelected = l10n.selectedLanguage == lang
                     Button(action: {
                         withAnimation(.easeInOut(duration: 0.15)) {

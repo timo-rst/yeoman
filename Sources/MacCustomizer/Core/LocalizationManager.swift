@@ -3,7 +3,6 @@ import Combine
 import AppKit
 
 public enum AppLanguage: String, CaseIterable, Identifiable {
-    case system = "system"
     case german = "de"
     case english = "en"
     case spanish = "es"
@@ -13,7 +12,6 @@ public enum AppLanguage: String, CaseIterable, Identifiable {
     
     public var code: String {
         switch self {
-        case .system: return "SYS"
         case .german: return "DE"
         case .english: return "EN"
         case .spanish: return "ES"
@@ -27,8 +25,6 @@ public enum AppLanguage: String, CaseIterable, Identifiable {
     
     public func displayName(in language: AppLanguage) -> String {
         switch self {
-        case .system:
-            return LocalizationManager.shared.localized("lang.system", for: language)
         case .german:
             return "Deutsch"
         case .english:
@@ -41,7 +37,7 @@ public enum AppLanguage: String, CaseIterable, Identifiable {
     }
     
     public var nativeName: String {
-        displayName(in: LocalizationManager.shared.effectiveLanguage)
+        displayName(in: self)
     }
 }
 
@@ -66,25 +62,6 @@ public final class FlatFlagRenderer {
             path.addClip()
             
             switch language {
-            case .system:
-                // Clean minimalist globe badge on subtle tint
-                NSColor.controlAccentColor.withAlphaComponent(0.14).setFill()
-                rect.fill()
-                if let symbol = NSImage(systemSymbolName: "globe", accessibilityDescription: nil) {
-                    let config = NSImage.SymbolConfiguration(pointSize: 10, weight: .medium)
-                    if let configured = symbol.withSymbolConfiguration(config) {
-                        let iconSize: CGFloat = 11.5
-                        let iconRect = NSRect(
-                            x: (rect.width - iconSize) / 2,
-                            y: (rect.height - iconSize) / 2,
-                            width: iconSize,
-                            height: iconSize
-                        )
-                        NSColor.controlAccentColor.setFill()
-                        configured.draw(in: iconRect)
-                    }
-                }
-                
             case .german:
                 // Germany: 3 equal horizontal stripes (Black, Red, Gold)
                 let h = rect.height / 3.0
@@ -256,30 +233,15 @@ public struct FlatFlagView: View {
     }
     
     public var body: some View {
-        if language == .system {
-            ZStack {
-                RoundedRectangle(cornerRadius: 3.5)
-                    .fill(Color.accentColor.opacity(0.12))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 3.5)
-                            .stroke(Color.accentColor.opacity(0.35), lineWidth: 0.6)
-                    )
-                Image(systemName: "globe")
-                    .font(.system(size: size.height * 0.62, weight: .semibold))
-                    .foregroundColor(.accentColor)
-            }
+        Image(nsImage: FlatFlagRenderer.flagImage(for: language, size: size))
+            .resizable()
             .frame(width: size.width, height: size.height)
-        } else {
-            Image(nsImage: FlatFlagRenderer.flagImage(for: language, size: size))
-                .resizable()
-                .frame(width: size.width, height: size.height)
-                .clipShape(RoundedRectangle(cornerRadius: 3.5))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 3.5)
-                        .stroke(Color.primary.opacity(0.15), lineWidth: 0.5)
-                )
-                .shadow(color: Color.black.opacity(0.08), radius: 1, x: 0, y: 0.5)
-        }
+            .clipShape(RoundedRectangle(cornerRadius: 3.5))
+            .overlay(
+                RoundedRectangle(cornerRadius: 3.5)
+                    .stroke(Color.primary.opacity(0.15), lineWidth: 0.5)
+            )
+            .shadow(color: Color.black.opacity(0.08), radius: 1, x: 0, y: 0.5)
     }
 }
 
@@ -288,7 +250,20 @@ public final class LocalizationManager: ObservableObject {
     
     private let storageKey = "app_language"
     
-    @Published public var selectedLanguage: AppLanguage = .system {
+    /// Resolves the default language matching the macOS system setting.
+    /// German for German, Spanish for Spanish, French for French, otherwise English as fallback.
+    public static var defaultLanguageForSystem: AppLanguage {
+        let preferred = Locale.preferredLanguages.first ?? Locale.current.identifier
+        let code = preferred.prefix(2).lowercased()
+        switch code {
+        case "de": return .german
+        case "es": return .spanish
+        case "fr": return .french
+        default: return .english
+        }
+    }
+    
+    @Published public var selectedLanguage: AppLanguage {
         didSet {
             UserDefaults.standard.set(selectedLanguage.rawValue, forKey: storageKey)
             NotificationCenter.default.post(name: .appLanguageDidChange, object: nil)
@@ -300,26 +275,16 @@ public final class LocalizationManager: ObservableObject {
            let lang = AppLanguage(rawValue: stored) {
             self.selectedLanguage = lang
         } else {
-            self.selectedLanguage = .system
+            self.selectedLanguage = Self.defaultLanguageForSystem
         }
     }
     
     public var systemLanguage: AppLanguage {
-        let preferred = Locale.preferredLanguages.first ?? Locale.current.identifier
-        let code = preferred.prefix(2).lowercased()
-        switch code {
-        case "de": return .german
-        case "es": return .spanish
-        case "fr": return .french
-        default: return .english
-        }
+        Self.defaultLanguageForSystem
     }
     
     public var effectiveLanguage: AppLanguage {
-        if selectedLanguage != .system {
-            return selectedLanguage
-        }
-        return systemLanguage
+        selectedLanguage
     }
     
     public func localized(_ key: String, for language: AppLanguage? = nil) -> String {
