@@ -232,6 +232,30 @@ public final class StatusItemController: NSObject, NSMenuDelegate {
         NSApp.activate(ignoringOtherApps: true)
     }
     
+    public func setDockIconVisible(_ visible: Bool) {
+        let policy: NSApplication.ActivationPolicy = visible ? .regular : .accessory
+        NSApp.setActivationPolicy(policy)
+        
+        let bringToFront = { [weak self] in
+            NSRunningApplication.current.activate(options: [.activateAllWindows])
+            if #available(macOS 14.0, *) {
+                NSApp.activate()
+            } else {
+                NSApp.activate(ignoringOtherApps: true)
+            }
+            if let window = self?.settingsWindow ?? NSApp.windows.first(where: { !($0 is NSPanel) && $0.isVisible }) {
+                window.orderFrontRegardless()
+                window.makeKeyAndOrderFront(nil)
+            }
+        }
+        
+        // Changing activation policy causes WindowServer to yield focus to background apps.
+        // Re-assert focus and bring window front across multiple ticks until WindowServer stabilizes.
+        DispatchQueue.main.async(execute: bringToFront)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.05, execute: bringToFront)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.15, execute: bringToFront)
+    }
+    
     @objc private func quitApp() {
         NSApplication.shared.terminate(nil)
     }

@@ -121,7 +121,7 @@ struct GeneralSettingsView: View {
                             get: { showDockIcon },
                             set: {
                                 showDockIcon = $0
-                                NSApp.setActivationPolicy($0 ? .regular : .accessory)
+                                StatusItemController.shared.setDockIconVisible($0)
                             }
                         ))
                         InfoTooltip(text: "Bestimmt, ob MacCustomizer im Dock sichtbar ist. Wenn deaktiviert, läuft die App rein in der Menüleiste.")
