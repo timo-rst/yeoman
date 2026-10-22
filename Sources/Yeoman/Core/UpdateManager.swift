@@ -196,10 +196,10 @@ public final class UpdateManager: ObservableObject {
                     let release = try JSONDecoder().decode(GitHubRelease.self, from: data)
                     self.availableRelease = release
                     
-                    let remoteVersion = self.cleanVersionString(release.tagName)
-                    let current = self.cleanVersionString(self.currentVersion)
+                    let remoteVersion = Self.cleanVersionString(release.tagName)
+                    let current = Self.cleanVersionString(self.currentVersion)
                     
-                    if self.isVersion(remoteVersion, newerThan: current) {
+                    if Self.isVersion(remoteVersion, newerThan: current) {
                         let downloadUrl = release.assets.first(where: {
                             $0.name.hasSuffix(".zip") || $0.name.hasSuffix(".dmg")
                         }).flatMap { URL(string: $0.browserDownloadUrl) }
@@ -227,14 +227,9 @@ public final class UpdateManager: ObservableObject {
     
     // MARK: - Download & Install
     
-    public func downloadAndInstall(from downloadUrl: URL) {
-        // Enforce secure HTTPS protocol
-        guard downloadUrl.scheme?.lowercased() == "https" else {
-            self.status = .failed(message: "Sicherheitsprüfung fehlgeschlagen: Unsichere Download-URL (nur HTTPS erlaubt).")
-            return
-        }
+    public static func isTrustedUpdateHost(_ downloadUrl: URL) -> Bool {
+        guard downloadUrl.scheme?.lowercased() == "https" else { return false }
         
-        // Whitelist verified GitHub release distribution hosts
         let trustedHosts = [
             "github.com",
             "api.github.com",
@@ -243,8 +238,18 @@ public final class UpdateManager: ObservableObject {
             "github-production-release-asset-2e65be.s3.amazonaws.com"
         ]
         
-        guard let host = downloadUrl.host?.lowercased(),
-              trustedHosts.contains(where: { host == $0 || host.hasSuffix("." + $0) }) else {
+        guard let host = downloadUrl.host?.lowercased() else { return false }
+        return trustedHosts.contains(where: { host == $0 || host.hasSuffix("." + $0) })
+    }
+    
+    public func downloadAndInstall(from downloadUrl: URL) {
+        // Enforce secure HTTPS protocol and trusted host whitelist
+        guard downloadUrl.scheme?.lowercased() == "https" else {
+            self.status = .failed(message: "Sicherheitsprüfung fehlgeschlagen: Unsichere Download-URL (nur HTTPS erlaubt).")
+            return
+        }
+        
+        guard Self.isTrustedUpdateHost(downloadUrl) else {
             self.status = .failed(message: "Sicherheitsprüfung fehlgeschlagen: Nicht autorisierter Download-Host (\(downloadUrl.host ?? "unbekannt")).")
             return
         }
@@ -396,7 +401,7 @@ public final class UpdateManager: ObservableObject {
     
     // MARK: - Version Comparison
     
-    private func cleanVersionString(_ version: String) -> String {
+    public static func cleanVersionString(_ version: String) -> String {
         var v = version.trimmingCharacters(in: .whitespacesAndNewlines)
         if v.lowercased().hasPrefix("v") {
             v.removeFirst()
@@ -404,7 +409,7 @@ public final class UpdateManager: ObservableObject {
         return v
     }
     
-    private func isVersion(_ remote: String, newerThan current: String) -> Bool {
+    public static func isVersion(_ remote: String, newerThan current: String) -> Bool {
         let remoteComponents = remote.split(separator: ".").compactMap { Int($0) }
         let currentComponents = current.split(separator: ".").compactMap { Int($0) }
         

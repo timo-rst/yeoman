@@ -7,17 +7,25 @@ let package = Package(
         .macOS(.v14)
     ],
     products: [
-        .executable(
-            name: "Yeoman",
-            targets: ["Yeoman"]
-        ),
+        .executable(name: "Yeoman", targets: ["Yeoman"]),
     ],
     dependencies: [],
     targets: [
+        .target(
+            name: "YeomanCore",
+            dependencies: [],
+            path: "Sources/Yeoman",
+            exclude: ["App/YeomanApp.swift"]
+        ),
         .executableTarget(
             name: "Yeoman",
-            dependencies: [],
-            path: "Sources/Yeoman"
+            dependencies: ["YeomanCore"],
+            path: "Sources/Yeoman/App"
+        ),
+        .executableTarget(
+            name: "YeomanTests",
+            dependencies: ["YeomanCore"],
+            path: "Tests"
         )
     ]
 )

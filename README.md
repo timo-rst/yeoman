@@ -1,6 +1,6 @@
-# Yeoman 🛡️
+# Yeoman 💂
 
-**Yeoman** is a modular, native all-in-one menu bar companion and system suite for macOS. Built with 100% pure Swift, AppKit, and SwiftUI with **zero external dependencies**.
+**Yeoman** is a fast, modular, native menu bar companion and system customizer for macOS. Built with 100% pure Swift, AppKit, and SwiftUI with **zero external dependencies**.
 
 ---
 
@@ -31,19 +31,32 @@
 
 ---
 
-## Build & Run
+## Development & Testing
 
-### Quickstart with Swift Package Manager:
+### Run Automated Tests
+
+Yeoman includes a zero-dependency native test harness covering version resolution, security whitelists, privacy filters, and module lifecycles:
 
 ```bash
-# Debug build
-swift build
+swift run YeomanTests
+```
 
-# Build signed macOS application bundle (.app)
+### Build App Bundle Locally
+
+```bash
+# Compile and create signed dist/Yeoman.app bundle
 ./Scripts/build_app.sh
 
 # Launch application
 open dist/Yeoman.app
+```
+
+### Package for Release
+
+To execute all tests, build the optimized release binary, and generate distribution archives (`.dmg` with `/Applications` drag-and-drop installer + `.zip`):
+
+```bash
+./Scripts/package_release.sh
 ```
 
 ---
@@ -53,16 +66,19 @@ open dist/Yeoman.app
 ```
 yeoman/
 ├── Package.swift                    # Swift Package Manager Manifest
+├── LICENSE                          # MIT License
 ├── Resources/
 │   ├── AppIcon.icns                 # Native macOS App Icon
 │   └── AppIcon.png                  # High-res icon preview
 ├── Scripts/
-│   ├── build_app.sh                 # Builds and signs the release .app bundle
-│   └── generate_yeoman_icon.swift   # Generates AppIcon.icns from source artwork
+│   ├── build_app.sh                 # Builds and signs the local .app bundle
+│   ├── package_release.sh           # Runs tests, builds .app, and generates .dmg & .zip
+│   ├── ci.yml                       # GitHub Actions CI workflow template
+│   └── generate_yeoman_icon.swift   # Icon generation tool
 ├── Sources/
 │   └── Yeoman/
 │       ├── App/                     # App entry point & AppDelegate
-│       ├── Core/                    # Module management, updates, and localization
+│       ├── Core/                    # Module management, auto-updates & localization
 │       ├── Modules/
 │       │   ├── MenuBar/             # Spacing, item scanning & menu bar controller
 │       │   ├── WebPanel/            # Web widgets, WKWebView controller & favicon manager
@@ -70,7 +86,14 @@ yeoman/
 │       │   ├── SystemStats/         # System metrics, process table & task manager
 │       │   └── ScrollReverser/      # CGEventTap scroll direction controller
 │       └── UI/                      # StatusItemController, settings & submenus
-├── IMPLEMENTATION_PLAN.md           # Architecture documentation
+├── Tests/                           # Zero-dependency native unit & integration tests
+│   ├── TestHarness.swift            # Lightweight assertion engine
+│   ├── UpdateManagerTests.swift     # Semver & trusted host security tests
+│   ├── ClipboardTests.swift         # Privacy & password manager detection tests
+│   ├── WebPanelTests.swift          # Widget model serialization tests
+│   ├── LocalizationTests.swift      # Multi-language coverage tests
+│   ├── ModuleManagerTests.swift     # Module registry verification tests
+│   └── main.swift                   # Test suite runner entry point
 └── README.md
 ```
 
@@ -78,5 +101,5 @@ yeoman/
 
 ## License
 
-Copyright © 2026 Timo Richstein. All rights reserved.
-Distributed under the MIT License.
+Distributed under the [MIT License](LICENSE). Copyright © 2024-2026 Timo Richstein.
+
