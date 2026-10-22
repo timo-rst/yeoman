@@ -146,7 +146,7 @@ public final class UpdateManager: ObservableObject {
         
         var request = URLRequest(url: url)
         request.setValue("application/vnd.github.v3+json", forHTTPHeaderField: "Accept")
-        request.setValue("MacCustomizer/\(currentVersion)", forHTTPHeaderField: "User-Agent")
+        request.setValue("Yeoman/\(currentVersion)", forHTTPHeaderField: "User-Agent")
         request.cachePolicy = .reloadIgnoringLocalCacheData
         
         let token = githubToken.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -300,7 +300,7 @@ public final class UpdateManager: ObservableObject {
                 try ditto.run()
                 ditto.waitUntilExit()
                 
-                // Find MacCustomizer.app inside extracted directory
+                // Find Yeoman.app inside extracted directory
                 let contents = try fileManager.contentsOfDirectory(atPath: extractDir.path)
                 var newAppPath: String?
                 
@@ -323,16 +323,16 @@ public final class UpdateManager: ObservableObject {
                 
                 guard let validNewAppPath = newAppPath else {
                     DispatchQueue.main.async {
-                        self.status = .failed(message: "Das Archiv enthielt keine gültige MacCustomizer.app.")
+                        self.status = .failed(message: "Das Archiv enthielt keine gültige Yeoman.app.")
                     }
                     return
                 }
                 
                 // Verify bundle identifier of the extracted app before applying
                 guard let bundle = Bundle(path: validNewAppPath),
-                      bundle.bundleIdentifier == "de.trst.MacCustomizer" || bundle.bundleIdentifier == Bundle.main.bundleIdentifier else {
+                      bundle.bundleIdentifier == "de.trst.Yeoman" || bundle.bundleIdentifier == "de.trst.MacCustomizer" || bundle.bundleIdentifier == Bundle.main.bundleIdentifier else {
                     DispatchQueue.main.async {
-                        self.status = .failed(message: "Sicherheitsprüfung fehlgeschlagen: Die extrahierte App besitzt keine gültige MacCustomizer Bundle-ID.")
+                        self.status = .failed(message: "Sicherheitsprüfung fehlgeschlagen: Die extrahierte App besitzt keine gültige Yeoman Bundle-ID.")
                     }
                     return
                 }
@@ -348,7 +348,7 @@ public final class UpdateManager: ObservableObject {
                 let currentPid = ProcessInfo.processInfo.processIdentifier
                 
                 // Create a standalone relaunch script taking arguments safely without shell string interpolation
-                let updateScriptPath = fileManager.temporaryDirectory.appendingPathComponent("maccustomizer_update.sh").path
+                let updateScriptPath = fileManager.temporaryDirectory.appendingPathComponent("yeoman_update.sh").path
                 let scriptContent = """
                 #!/bin/bash
                 PID="$1"

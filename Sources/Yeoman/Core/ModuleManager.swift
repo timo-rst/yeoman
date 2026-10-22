@@ -82,7 +82,7 @@ public final class ModuleManager: ObservableObject {
             self.webPanelModule.recreateStatusItems()
             // Next: Menu Bar spacing quick-picker (if enabled)
             self.menuBarModule.setupStatusItem()
-            // Leftmost: Main MacCustomizer launcher
+            // Leftmost: Main Yeoman launcher
             StatusItemController.shared.setup()
         }
     }

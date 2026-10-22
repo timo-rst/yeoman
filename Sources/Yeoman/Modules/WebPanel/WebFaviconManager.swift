@@ -3,7 +3,7 @@ import SwiftUI
 import WebKit
 
 public extension Notification.Name {
-    static let webFaviconDidUpdate = Notification.Name("de.trst.MacCustomizer.webFaviconDidUpdate")
+    static let webFaviconDidUpdate = Notification.Name("de.trst.Yeoman.webFaviconDidUpdate")
 }
 
 public struct FaviconOption: Identifiable, Equatable, Hashable {
@@ -32,9 +32,8 @@ public final class WebFaviconManager: ObservableObject {
     
     private init() {
         let appSupport = fileManager.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
-        self.cacheDirectory = appSupport
-            .appendingPathComponent("MacCustomizer", isDirectory: true)
-            .appendingPathComponent("favicons", isDirectory: true)
+        let directory = appSupport.appendingPathComponent("Yeoman", isDirectory: true)
+        self.cacheDirectory = directory.appendingPathComponent("favicons", isDirectory: true)
         
         try? fileManager.createDirectory(at: cacheDirectory, withIntermediateDirectories: true)
     }

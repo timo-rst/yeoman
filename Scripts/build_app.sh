@@ -4,10 +4,10 @@ set -e
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$DIR"
 
-echo "==> Building MacCustomizer in release mode..."
+echo "==> Building Yeoman in release mode..."
 swift build -c release
 
-APP_NAME="MacCustomizer"
+APP_NAME="Yeoman"
 BUILD_BIN=".build/release/$APP_NAME"
 APP_BUNDLE="dist/$APP_NAME.app"
 CONTENTS_DIR="$APP_BUNDLE/Contents"
@@ -34,7 +34,7 @@ cat <<EOF > "$CONTENTS_DIR/Info.plist"
     <key>CFBundleExecutable</key>
     <string>$APP_NAME</string>
     <key>CFBundleIdentifier</key>
-    <string>de.trst.MacCustomizer</string>
+    <string>de.trst.Yeoman</string>
     <key>CFBundleName</key>
     <string>$APP_NAME</string>
     <key>CFBundlePackageType</key>
@@ -60,7 +60,7 @@ cat <<EOF > "$CONTENTS_DIR/Info.plist"
 EOF
 
 echo "==> Signing macOS App Bundle with stable designated requirement..."
-codesign -s - -f --deep -r='designated => identifier "de.trst.MacCustomizer"' "$APP_BUNDLE"
+codesign -s - -f --deep -r='designated => identifier "de.trst.Yeoman"' "$APP_BUNDLE"
 
 echo "==> Successfully created and signed $APP_BUNDLE!"
 echo "You can launch it with: open $APP_BUNDLE"

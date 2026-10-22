@@ -5,7 +5,7 @@ public enum MenuBarItemType: String, CaseIterable, Codable {
     case all = "Alle"
     case system = "macOS System"
     case thirdParty = "Drittanbieter"
-    case internalModule = "MacCustomizer"
+    case internalModule = "Yeoman"
 }
 
 public struct MenuBarAppItem: Identifiable, Equatable {
@@ -71,7 +71,7 @@ public final class MenuBarItemScanner: ObservableObject {
             // 2. Installed & Running Third-Party Menu Bar Apps (filesystem scan)
             scanned.append(contentsOf: self.scanThirdPartyApps())
             
-            // 3. Internal MacCustomizer Modules
+            // 3. Internal Yeoman Modules
             scanned.append(contentsOf: internalItems)
             
             DispatchQueue.main.async {
@@ -155,7 +155,7 @@ public final class MenuBarItemScanner: ObservableObject {
                 
                 let bundleId = dict["CFBundleIdentifier"] as? String ?? ""
                 guard !bundleId.isEmpty && !seenBundleIds.contains(bundleId) else { continue }
-                if bundleId == "de.trst.MacCustomizer" { continue } // skip self
+                if bundleId == "de.trst.Yeoman" || bundleId == "de.trst.MacCustomizer" { continue } // skip self
                 
                 let lsUIElement = dict["LSUIElement"] as? Bool ?? false || (dict["LSUIElement"] as? String == "1")
                 let name = dict["CFBundleDisplayName"] as? String ?? dict["CFBundleName"] as? String ?? (item as NSString).deletingPathExtension
@@ -193,7 +193,7 @@ public final class MenuBarItemScanner: ObservableObject {
                 id: "module_clipboard",
                 name: "Zwischenablage",
                 type: .internalModule,
-                bundleIdentifier: "de.trst.MacCustomizer.clipboard",
+                bundleIdentifier: "de.trst.Yeoman.clipboard",
                 appPath: nil,
                 sfSymbol: "doc.on.clipboard",
                 isVisibleInMenuBar: mm.clipboardModule.isEnabled && mm.clipboardModule.showsDedicatedStatusItem,
@@ -203,7 +203,7 @@ public final class MenuBarItemScanner: ObservableObject {
                 id: "module_stats",
                 name: "System-Monitor",
                 type: .internalModule,
-                bundleIdentifier: "de.trst.MacCustomizer.systemstats",
+                bundleIdentifier: "de.trst.Yeoman.systemstats",
                 appPath: nil,
                 sfSymbol: "gauge.with.needle",
                 isVisibleInMenuBar: mm.systemStatsModule.isEnabled,
@@ -213,7 +213,7 @@ public final class MenuBarItemScanner: ObservableObject {
                 id: "module_spacing",
                 name: "Menüleisten-Abstände",
                 type: .internalModule,
-                bundleIdentifier: "de.trst.MacCustomizer.menubar",
+                bundleIdentifier: "de.trst.Yeoman.menubar",
                 appPath: nil,
                 sfSymbol: "arrow.left.and.line.vertical.and.arrow.right",
                 isVisibleInMenuBar: mm.menuBarModule.isEnabled && mm.menuBarModule.showsDedicatedStatusItem,
@@ -221,9 +221,9 @@ public final class MenuBarItemScanner: ObservableObject {
             ),
             MenuBarAppItem(
                 id: "module_hub",
-                name: "MacCustomizer Menü",
+                name: "Yeoman Menü",
                 type: .internalModule,
-                bundleIdentifier: "de.trst.MacCustomizer.hub",
+                bundleIdentifier: "de.trst.Yeoman.hub",
                 appPath: nil,
                 sfSymbol: "slider.horizontal.3",
                 isVisibleInMenuBar: StatusItemController.shared.showsMainStatusItem,
@@ -233,7 +233,7 @@ public final class MenuBarItemScanner: ObservableObject {
                 id: "module_scrollreverser",
                 name: "Scroll-Richtung (Maus)",
                 type: .internalModule,
-                bundleIdentifier: "de.trst.MacCustomizer.scrollreverser",
+                bundleIdentifier: "de.trst.Yeoman.scrollreverser",
                 appPath: nil,
                 sfSymbol: "computermouse",
                 isVisibleInMenuBar: mm.scrollReverserModule.isEnabled && mm.scrollReverserModule.showsDedicatedStatusItem,
@@ -247,7 +247,7 @@ public final class MenuBarItemScanner: ObservableObject {
                 id: "web_widget_\(widget.id.uuidString)",
                 name: "\(widget.title) (Web-Widget)",
                 type: .internalModule,
-                bundleIdentifier: "de.trst.MacCustomizer.webwidget.\(widget.id.uuidString)",
+                bundleIdentifier: "de.trst.Yeoman.webwidget.\(widget.id.uuidString)",
                 appPath: nil,
                 sfSymbol: widget.iconName.isEmpty ? "globe" : widget.iconName,
                 isVisibleInMenuBar: mm.webPanelModule.isEnabled && mm.webPanelModule.showsDedicatedStatusItem && widget.isEnabled,

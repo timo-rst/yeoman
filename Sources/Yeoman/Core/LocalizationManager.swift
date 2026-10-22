@@ -307,10 +307,10 @@ public final class LocalizationManager: ObservableObject {
         
         // Window Title
         "window.settings_title": [
-            .german: "MacCustomizer Einstellungen",
-            .english: "MacCustomizer Settings",
-            .spanish: "Configuración de MacCustomizer",
-            .french: "Paramètres de MacCustomizer"
+            .german: "Yeoman Einstellungen",
+            .english: "Yeoman Settings",
+            .spanish: "Configuración de Yeoman",
+            .french: "Paramètres de Yeoman"
         ],
         
         // Settings Tabs
@@ -351,10 +351,10 @@ public final class LocalizationManager: ObservableObject {
             .french: "Moniteur système"
         ],
         "tab.about": [
-            .german: "Über MacCustomizer",
-            .english: "About MacCustomizer",
-            .spanish: "Acerca de MacCustomizer",
-            .french: "À propos de MacCustomizer"
+            .german: "Über Yeoman",
+            .english: "About Yeoman",
+            .spanish: "Acerca de Yeoman",
+            .french: "À propos de Yeoman"
         ],
         
         // General Settings View
@@ -401,10 +401,10 @@ public final class LocalizationManager: ObservableObject {
             .french: "Ouvrir automatiquement au démarrage du Mac"
         ],
         "general.launch_at_login_tooltip": [
-            .german: "Startet MacCustomizer automatisch beim Hochfahren deines Macs (Launch at Login).",
-            .english: "Starts MacCustomizer automatically when your Mac boots up (Launch at Login).",
-            .spanish: "Inicia MacCustomizer automáticamente cuando tu Mac se enciende (Launch at Login).",
-            .french: "Lance MacCustomizer automatiquement au démarrage de votre Mac (Launch at Login)."
+            .german: "Startet Yeoman automatisch beim Hochfahren deines Macs (Launch at Login).",
+            .english: "Starts Yeoman automatically when your Mac boots up (Launch at Login).",
+            .spanish: "Inicia Yeoman automáticamente cuando tu Mac se enciende (Launch at Login).",
+            .french: "Lance Yeoman automatiquement au démarrage de votre Mac (Launch at Login)."
         ],
         "general.show_dock_icon": [
             .german: "Dock-Symbol anzeigen",
@@ -413,10 +413,10 @@ public final class LocalizationManager: ObservableObject {
             .french: "Afficher l'icône dans le Dock"
         ],
         "general.show_dock_icon_tooltip": [
-            .german: "Bestimmt, ob MacCustomizer im Dock sichtbar ist. Wenn deaktiviert, läuft die App rein in der Menüleiste.",
-            .english: "Determines whether MacCustomizer is visible in the Dock. When disabled, the app runs purely in the menu bar.",
-            .spanish: "Determina si MacCustomizer es visible en el Dock. Si se desactiva, la aplicación solo se ejecuta en la barra de menús.",
-            .french: "Détermine si MacCustomizer est visible dans le Dock. Si désactivé, l'application fonctionne uniquement dans la barre des menus."
+            .german: "Bestimmt, ob Yeoman im Dock sichtbar ist. Wenn deaktiviert, läuft die App rein in der Menüleiste.",
+            .english: "Determines whether Yeoman is visible in the Dock. When disabled, the app runs purely in the menu bar.",
+            .spanish: "Determina si Yeoman es visible en el Dock. Si se desactiva, la aplicación solo se ejecuta en la barra de menús.",
+            .french: "Détermine si Yeoman est visible dans le Dock. Si désactivé, l'application fonctionne uniquement dans la barre des menus."
         ],
         "general.show_main_status_item": [
             .german: "Haupt-Symbol in der Menüleiste anzeigen",
@@ -425,10 +425,10 @@ public final class LocalizationManager: ObservableObject {
             .french: "Afficher l'icône principale dans la barre des menus"
         ],
         "general.show_main_status_item_tooltip": [
-            .german: "Zeigt das MacCustomizer Hauptsymbol (Launcher) in der Menüleiste an, über das du schnellen Zugriff auf alle Module hast.",
-            .english: "Shows the MacCustomizer main launcher icon in the menu bar for quick access to all modules.",
-            .spanish: "Muestra el icono principal de MacCustomizer en la barra de menús para acceder rápidamente a todos los módulos.",
-            .french: "Affiche l'icône principale de MacCustomizer dans la barre des menus pour un accès rapide à tous les modules."
+            .german: "Zeigt das Yeoman Hauptsymbol (Launcher) in der Menüleiste an, über das du schnellen Zugriff auf alle Module hast.",
+            .english: "Shows the Yeoman main launcher icon in the menu bar for quick access to all modules.",
+            .spanish: "Muestra el icono principal de Yeoman en la barra de menús para acceder rápidamente a todos los módulos.",
+            .french: "Affiche l'icône principale de Yeoman dans la barre des menus pour un accès rapide à tous les modules."
         ],
         "general.active_modules": [
             .german: "Aktive Module & Menüleisten-Symbole",
@@ -517,10 +517,10 @@ public final class LocalizationManager: ObservableObject {
             .french: "Rechercher des mises à jour..."
         ],
         "menu.quit": [
-            .german: "MacCustomizer beenden",
-            .english: "Quit MacCustomizer",
-            .spanish: "Salir de MacCustomizer",
-            .french: "Quitter MacCustomizer"
+            .german: "Yeoman beenden",
+            .english: "Quit Yeoman",
+            .spanish: "Salir de Yeoman",
+            .french: "Quitter Yeoman"
         ],
         "menu.clipboard_recent": [
             .german: "Neueste Zwischenablage",
@@ -585,10 +585,10 @@ public final class LocalizationManager: ObservableObject {
             .french: "Installer maintenant et redémarrer"
         ],
         "updates.up_to_date": [
-            .german: "MacCustomizer ist auf dem neuesten Stand",
-            .english: "MacCustomizer is up to date",
-            .spanish: "MacCustomizer está actualizado",
-            .french: "MacCustomizer est à jour"
+            .german: "Yeoman ist auf dem neuesten Stand",
+            .english: "Yeoman is up to date",
+            .spanish: "Yeoman está actualizado",
+            .french: "Yeoman est à jour"
         ],
         "updates.available": [
             .german: "Neue Version verfügbar:",

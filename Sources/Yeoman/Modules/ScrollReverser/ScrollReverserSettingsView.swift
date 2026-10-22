@@ -66,7 +66,7 @@ public struct ScrollReverserSettingsView: View {
                                 Image(systemName: "info.circle")
                                     .font(.caption)
                                     .foregroundColor(.secondary)
-                                Text("Hinweis: Falls MacCustomizer in den Systemeinstellungen bereits auf AN steht, bitte den Schalter dort einmal kurz **AUS und wieder AN** schalten (oder mit '-' entfernen und neu hinzufügen), damit macOS die Signatur des App-Updates übernimmt.")
+                                Text("Hinweis: Falls Yeoman in den Systemeinstellungen bereits auf AN steht, bitte den Schalter dort einmal kurz **AUS und wieder AN** schalten (oder mit '-' entfernen und neu hinzufügen), damit macOS die Signatur des App-Updates übernimmt.")
                                     .font(.caption2)
                                     .foregroundColor(.secondary)
                             }

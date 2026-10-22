@@ -81,10 +81,21 @@ public struct ClipboardItem: Identifiable, Codable, Equatable {
     public var imageURL: URL? {
         guard let fileName = imageFileName else { return nil }
         let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
-        return appSupport
+        let newURL = appSupport
+            .appendingPathComponent("Yeoman", isDirectory: true)
+            .appendingPathComponent("clipboard_images", isDirectory: true)
+            .appendingPathComponent(fileName)
+        if FileManager.default.fileExists(atPath: newURL.path) {
+            return newURL
+        }
+        let legacyURL = appSupport
             .appendingPathComponent("MacCustomizer", isDirectory: true)
             .appendingPathComponent("clipboard_images", isDirectory: true)
             .appendingPathComponent(fileName)
+        if FileManager.default.fileExists(atPath: legacyURL.path) {
+            return legacyURL
+        }
+        return newURL
     }
     
     public var image: NSImage? {

@@ -136,7 +136,7 @@ public struct UpdateSettingsSection: View {
                 HStack(spacing: 8) {
                     ProgressView()
                         .scaleEffect(0.7)
-                    Text("Update wird installiert & MacCustomizer neu gestartet...")
+                    Text("Update wird installiert & Yeoman neu gestartet...")
                         .font(.caption)
                         .foregroundColor(.secondary)
                 }

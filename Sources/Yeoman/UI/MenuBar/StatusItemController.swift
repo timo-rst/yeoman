@@ -33,10 +33,10 @@ public final class StatusItemController: NSObject, ObservableObject, NSMenuDeleg
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         
         if let button = statusItem?.button {
-            let image = NSImage(systemSymbolName: "slider.horizontal.3", accessibilityDescription: "MacCustomizer")
+            let image = NSImage(systemSymbolName: "slider.horizontal.3", accessibilityDescription: "Yeoman")
             image?.isTemplate = true
             button.image = image
-            button.toolTip = "MacCustomizer"
+            button.toolTip = "Yeoman"
         }
         
         NotificationCenter.default.removeObserver(self, name: .appLanguageDidChange, object: nil)
@@ -82,7 +82,7 @@ public final class StatusItemController: NSObject, ObservableObject, NSMenuDeleg
         menu.delegate = self
         
         // Header
-        let titleItem = NSMenuItem(title: "MacCustomizer", action: nil, keyEquivalent: "")
+        let titleItem = NSMenuItem(title: "Yeoman", action: nil, keyEquivalent: "")
         titleItem.isEnabled = false
         menu.addItem(titleItem)
         

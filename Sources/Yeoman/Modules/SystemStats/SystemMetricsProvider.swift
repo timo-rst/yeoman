@@ -113,7 +113,7 @@ public final class SystemMetricsProvider: ObservableObject {
             list = list.filter {
                 $0.name.lowercased().contains(query) ||
                 ($0.widgetTitle?.lowercased().contains(query) ?? false) ||
-                ($0.widgetTitle != nil && "maccustomizer".contains(query)) ||
+                ($0.widgetTitle != nil && ("yeoman".contains(query) || "maccustomizer".contains(query))) ||
                 "\($0.pid)".contains(query)
             }
         }
@@ -365,6 +365,7 @@ public final class SystemMetricsProvider: ObservableObject {
             if let bundleId = app.bundleIdentifier,
                bundleId == "com.apple.loginwindow" ||
                bundleId == "com.apple.WindowServer" ||
+               bundleId == "de.trst.Yeoman" ||
                bundleId == "de.trst.MacCustomizer" ||
                bundleId == Bundle.main.bundleIdentifier {
                 return false

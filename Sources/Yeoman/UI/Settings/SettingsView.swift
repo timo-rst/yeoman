@@ -679,12 +679,22 @@ struct AboutView: View {
             VStack(spacing: 24) {
                 // Branding Header
                 VStack(spacing: 10) {
-                    Image(systemName: "slider.horizontal.3")
-                        .font(.system(size: 56))
-                        .foregroundColor(.accentColor)
-                        .padding(.top, 10)
+                    if let appIcon = NSImage(named: "AppIcon") {
+                        Image(nsImage: appIcon)
+                            .resizable()
+                            .aspectRatio(contentMode: .fit)
+                            .frame(width: 72, height: 72)
+                            .cornerRadius(16)
+                            .shadow(color: .black.opacity(0.2), radius: 6, x: 0, y: 3)
+                            .padding(.top, 10)
+                    } else {
+                        Image(systemName: "shield.lefthalf.filled")
+                            .font(.system(size: 56))
+                            .foregroundColor(.accentColor)
+                            .padding(.top, 10)
+                    }
                     
-                    Text("MacCustomizer")
+                    Text("Yeoman")
                         .font(.title)
                         .fontWeight(.bold)
                     

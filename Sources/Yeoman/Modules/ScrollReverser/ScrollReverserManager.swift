@@ -79,11 +79,13 @@ public final class ScrollReverserManager: ObservableObject {
     }
     
     public func resetTCCPermission() {
-        let p = Process()
-        p.executableURL = URL(fileURLWithPath: "/usr/bin/tccutil")
-        p.arguments = ["reset", "Accessibility", "de.trst.MacCustomizer"]
-        try? p.run()
-        p.waitUntilExit()
+        for bundleId in ["de.trst.Yeoman", "de.trst.MacCustomizer"] {
+            let p = Process()
+            p.executableURL = URL(fileURLWithPath: "/usr/bin/tccutil")
+            p.arguments = ["reset", "Accessibility", bundleId]
+            try? p.run()
+            p.waitUntilExit()
+        }
         
         checkAccessibility(prompt: true)
         openAccessibilitySettings()

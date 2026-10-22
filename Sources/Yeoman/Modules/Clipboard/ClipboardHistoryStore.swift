@@ -14,7 +14,12 @@ public final class ClipboardHistoryStore: ObservableObject {
     
     public init() {
         let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
-        let directory = appSupport.appendingPathComponent("MacCustomizer", isDirectory: true)
+        let directory = appSupport.appendingPathComponent("Yeoman", isDirectory: true)
+        let legacyDirectory = appSupport.appendingPathComponent("MacCustomizer", isDirectory: true)
+        if !FileManager.default.fileExists(atPath: directory.path) && FileManager.default.fileExists(atPath: legacyDirectory.path) {
+            try? FileManager.default.moveItem(at: legacyDirectory, to: directory)
+        }
+        
         self.imagesDirectory = directory.appendingPathComponent("clipboard_images", isDirectory: true)
         
         let dirAttributes: [FileAttributeKey: Any] = [.posixPermissions: 0o700]

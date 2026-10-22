@@ -2,22 +2,22 @@
 import PackageDescription
 
 let package = Package(
-    name: "MacCustomizer",
+    name: "Yeoman",
     platforms: [
         .macOS(.v14)
     ],
     products: [
         .executable(
-            name: "MacCustomizer",
-            targets: ["MacCustomizer"]
+            name: "Yeoman",
+            targets: ["Yeoman"]
         ),
     ],
     dependencies: [],
     targets: [
         .executableTarget(
-            name: "MacCustomizer",
+            name: "Yeoman",
             dependencies: [],
-            path: "Sources/MacCustomizer"
+            path: "Sources/Yeoman"
         )
     ]
 )

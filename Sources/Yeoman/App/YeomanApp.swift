@@ -32,7 +32,7 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
 }
 
 @main
-struct MacCustomizerApp: App {
+struct YeomanApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
     
     var body: some Scene {

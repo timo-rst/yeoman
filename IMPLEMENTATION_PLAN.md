@@ -1,81 +1,77 @@
-# MacCustomizer – Implementierungsplan & Architektur
+# Yeoman – Architecture & Implementation Plan
 
-## 1. Vision & Zielsetzung
+## 1. Vision & Objectives
 
-**MacCustomizer** ist eine modulare, native macOS-Steuerzentrale (Menüleisten-Applikation), die mehrere spezialisierte Einzel-Apps in einer schlanken, hochgradig konfigurierbaren Anwendung vereint:
+**Yeoman** is a modular, native macOS control center and menu bar companion that unites specialized system utilities into a single, high-performance, lightweight application:
 
-1. **Menüleisten-Optimizer (Ice / Bartender Alternative):**
-   - Anpassen der Menüleisten-Abstände (Kompakter Look wie im Ice Dock).
-   - Sauberes Beheben des bekannten **Multi-Monitor-Bugs** (verschiedene Monitorauflösungen, Notch-Diskrepanzen zwischen MacBook-Display und externen Monitoren).
-   - Ausblenden/Einblenden von sekundären Menüleisten-Symbolen.
+1. **Menu Bar Optimizer:**
+   - Custom menu bar item spacing and selection padding.
+   - Robust multi-monitor and MacBook notch detection.
+   - Clean ControlCenter process restart for instant system-wide rendering updates.
 
-2. **Clipboard Manager ("Clippy" / Maccy Alternative):**
-   - Lückenlose Historie der Zwischenablage mit Instant-Suche.
-   - Favoriten/Pinning-Funktion.
-   - Intelligenter Schutz vor dem Speichern sensibler Passwörter (1Password, Bitwarden, KeePass etc.).
-   - Globaler Hotkey (`Cmd + Shift + V`) für ein Spotlight-ähnliches Floating Panel.
+2. **Web Widgets (Micro-Web-Apps):**
+   - Persistent web applications embedded directly into the menu bar.
+   - Memory throttling and automatic cache eviction when closed.
+   - Automatic favicon resolution and menu bar icon generation.
 
-3. **System Stats Monitor (Menüleisten-Metriken):**
-   - Kompakte GPU-, RAM- und CPU-Metriken direkt in der Menüleiste (wie im Screenshot).
+3. **Privacy-First Clipboard Manager ("Clippy"):**
+   - Seamless clipboard history with instant search across text, code, and screenshots.
+   - Pinning and favorites.
+   - Unconditional exclusion of sensitive password managers and transient pasteboard types.
+   - Restricted local file permissions (`0600`/`0700`).
 
-4. **Modulare Erweiterbarkeit:**
-   - Klare Schnittstelle (`CustomizerModule`), über die zukünftige Features (Window Tiling, Quick Launcher, Audio Switcher etc.) ohne Eingriff in den App-Kern ergänzt werden können.
+4. **System Stats Monitor & Task Manager:**
+   - Real-time CPU, RAM, Network, and Disk metrics in the menu bar.
+   - Popover task manager with web-widget identification and safe process termination.
+
+5. **Scroll Reverser:**
+   - Independent reverse scrolling for mouse wheel vs. trackpad without macOS restarts.
+
+6. **Modular Extensibility:**
+   - Unified `CustomizerModule` lifecycle protocol allowing features to be toggled, configured, or extended cleanly.
 
 ---
 
-## 2. Architekturübersicht
+## 2. Architecture Overview
 
 ```mermaid
 graph TD
-    App[MacCustomizer App / NSApplication] --> MM[ModuleManager]
-    App --> DM[DisplayManager]
-    App --> SIC[StatusItemController (Menüleiste)]
+    App[Yeoman App / NSApplication] --> MM[ModuleManager]
+    App --> SIC[StatusItemController (Menu Bar)]
     
     MM --> M1[MenuBarModule]
     MM --> M2[ClipboardModule]
     MM --> M3[SystemStatsModule]
-    MM --> M4[Zukünftige Module...]
+    MM --> M4[WebPanelModule]
+    MM --> M5[ScrollReverserModule]
     
     M1 --> MBSM[MenuBarSpacingManager]
     M1 --> MBSV[MenuBarSettingsView]
-    DM -. Event-Benachrichtigung .-> M1
     
     M2 --> CM[ClipboardMonitor]
     M2 --> CHS[ClipboardHistoryStore]
     M2 --> CV[ClipboardView]
     
-    SIC --> Menu[Menüleisten-Dropdown & Quick-Access]
+    SIC --> Menu[Menu Bar Dropdown & Quick Access]
     SIC --> Prefs[Settings Window (SwiftUI)]
 ```
 
-### Kernkomponenten:
-- **`CustomizerModule` Protocol:** Einheitlicher Lebenszyklus (`start()`, `stop()`, `isEnabled`, `settingsView()`).
-- **`DisplayManager`:** Reagiert auf `NSApplication.didChangeScreenParametersNotification`, erfasst Display-Geometrie, Skalierung und Notch-Präsenz.
-- **`StatusItemController`:** Das native Menüleisten-Symbol mit dynamischem Statusmenü und Schnellzugriff auf alle Module.
+### Core Components:
+- **`CustomizerModule` Protocol:** Standardized lifecycle (`start()`, `stop()`, `isEnabled`, `settingsView()`).
+- **`StatusItemController`:** Native status item controller with dynamic menu and quick access to modules.
+- **`ModuleManager`:** Central coordinator managing all active modules and preferences.
 
 ---
 
-## 3. Die Multi-Monitor-Problematik & Lösung
+## 3. Milestones & Status
 
-### Warum scheitert Ice oft bei externen Monitoren?
-1. **Notch vs. Flat Bezel:** Das MacBook-Display besitzt eine Aussparung (Notch), die Menüleisten-Elemente nach links und rechts trennt. Externe Displays haben keine Notch.
-2. **Display Re-ordering:** Beim Anstecken/Abziehen ändern sich die absoluten CoreGraphics-Koordinaten. Feste Offset-Berechnungen treffen dann die falsche Position.
-3. **Displays have separate Spaces:** Je nachdem, ob macOS "Displays have separate Spaces" aktiviert hat, existieren Menüleisten mehrfach oder nur auf dem Hauptbildschirm.
-
-### MacCustomizer-Lösungsansatz:
-- **Event-basierte Neukalibrierung:** Überwachung von `NSApplication.didChangeScreenParametersNotification`.
-- **Host-Präferenzen:** Nutzen von systemweiten `-currentHost write -globalDomain NSStatusItemSpacing` und `NSStatusItemSelectionPadding`, die Display-unabhängig die native Apple-Menüleisten-Engine steuern, anstatt zerbrechliche Overlay-Tricks zu verwenden.
-- **Automatischer ControlCenter-Restart:** Aktualisiert die Menüleisten-Renderer sofort auf allen angeschlossenen Displays.
-
----
-
-## 4. Meilensteine & Roadmap
-
-| Phase | Fokus | Status |
+| Phase | Focus | Status |
 |---|---|---|
-| **Phase 1: Grundlagen & Setup** | • Swift Package Manager Struktur<br>• Git Repository & GitHub CLI Setup (privat)<br>• Modul-Protokoll & Lebenszyklus<br>• App Bundle Packaging Script (`build_app.sh`) | ✅ Abgeschlossen |
-| **Phase 2: Menüleisten-Optimizer** | • `NSStatusItemSpacing` Presets & Slider<br>• `DisplayManager` mit Notch-Erkennung<br>• ControlCenter Restart Trigger<br>• Menüleisten-UI & Settings | ✅ Abgeschlossen |
-| **Phase 3: Clipboard Manager** | • `NSPasteboard` Überwachung & ChangeCount<br>• Filterung von Passwort-Managern (Transient Types)<br>• JSON-Persistenz im Application Support Verzeichnis<br>• Suchfenster & Pinning | ✅ Abgeschlossen |
-| **Phase 4: Erweiterte Menüleisten-Steuerung** | • Verstecken/Ausblenden ungenutzter Icons (Secondary Bar)<br>• Globaler Hotkey / Klick auf Trenn-Icon zum Ein-/Ausklappen | ⏳ Geplant |
-| **Phase 5: System Stats & Dashboard** | • Mach Kernel CPU & Speicher-Abfrage<br>• GPU Utilization Abfrage via IOKit/Metal<br>• Miniatur-Graphen direkt im Menüleisten-Item | ⏳ Geplant |
-| **Phase 6: Global Shortcuts & Window Tiling** | • Global Hotkey Registration (Carbon Events / CGEventTap)<br>• Tastenkürzel für Clipboard (`Cmd+Shift+V`)<br>• Optional: Window Snapping Shortcuts | ⏳ Geplant |
+| Phase 1 | Project setup, module protocol & architecture | Completed |
+| Phase 2 | Menu bar spacing & multi-monitor support | Completed |
+| Phase 3 | Clipboard monitor, image caching & privacy guards | Completed |
+| Phase 4 | System metrics & protected task manager | Completed |
+| Phase 5 | Web widgets, WKWebView throttling & favicon manager | Completed |
+| Phase 6 | Scroll reverser with low-level event tap | Completed |
+| Phase 7 | Security audit, strict file permissions & hardening | Completed |
+| Phase 8 | Rebranding to Yeoman & modern icon generation | Completed |

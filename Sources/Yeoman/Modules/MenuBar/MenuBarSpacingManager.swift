@@ -111,7 +111,7 @@ public final class MenuBarSpacingManager: ObservableObject {
         // 1. Immediately apply to in-process CFPreferences and UserDefaults
         applyInProcessPreferences(spacing: spacing, padding: selectionPadding)
         
-        // 2. Immediately recreate all MacCustomizer menu bar status items live
+        // 2. Immediately recreate all Yeoman menu bar status items live
         // Since contentPadding is hooked to currentSpacing, all newly created items immediately use the exact spacing!
         DispatchQueue.main.async {
             ModuleManager.shared.recreateAllStatusItems()
@@ -149,7 +149,7 @@ public final class MenuBarSpacingManager: ObservableObject {
         // 1. Clear in-process CFPreferences and UserDefaults immediately
         clearInProcessPreferences()
         
-        // 2. Immediately recreate all MacCustomizer menu bar status items live
+        // 2. Immediately recreate all Yeoman menu bar status items live
         DispatchQueue.main.async {
             ModuleManager.shared.recreateAllStatusItems()
         }
