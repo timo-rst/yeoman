@@ -44,8 +44,6 @@ public struct WebPanelSettingsView: View {
         VStack(spacing: 0) {
             if let error = module.storageError { Text(error).font(.caption).foregroundColor(.red).padding() }
             if let error = WebFaviconManager.shared.legacyCleanupError { Text(error).font(.caption).foregroundColor(.red).padding() }
-            Text("Widgets verwenden getrennte Browserprofile. Nach der Umstellung ist eine erneute Anmeldung nötig. Icons werden aus geöffneten Webseiten geladen.")
-                .font(.caption).foregroundColor(.secondary).padding(.horizontal)
             // Header
             ModuleHeaderView(
                 title: l10n("web_panel.title"),

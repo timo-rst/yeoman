@@ -92,8 +92,6 @@ public struct ClipboardSettingsView: View {
                             Toggle("Aufzeichnung pausieren", isOn: $monitor.isPaused)
                             TextField("Ausgeschlossene Bundle-IDs, durch Kommas getrennt", text: $monitor.excludedBundleIDs)
                             Toggle("Verlauf verschlüsselt auf diesem Mac speichern", isOn: Binding(get: { store.isPersistent }, set: { store.setPersistent($0) }))
-                            Text("Ohne Speicherung bleibt der Verlauf nur bis zum Beenden erhalten.").font(.caption)
-                            Text("Gelöschte Daten können in APFS-Snapshots oder externen Backups verbleiben.").font(.caption).foregroundColor(.secondary)
                             if let error = store.storageError { Text(error).foregroundColor(.red).font(.caption) }
                             Text("Überwachung & Sicherheit")
                                 .font(.headline)
@@ -101,7 +99,7 @@ public struct ClipboardSettingsView: View {
                             HStack(spacing: 6) {
                                 Toggle("Passwörter und sensible Daten nicht speichern", isOn: $monitor.ignorePasswordManagers)
                                     .font(.subheadline)
-                                InfoTooltip(text: "Markierte sensible Inhalte werden ausgeschlossen. Unmarkierte Passwörter können nicht zuverlässig erkannt werden; nutze bei Bedarf Pause oder App-Ausschlüsse.")
+                                InfoTooltip(text: "Kopierte Passwörter aus Passwort-Managern und Browser-Erweiterungen werden automatisch erkannt und vom Verlauf ausgeschlossen.")
                             }
                             
                             Divider()
