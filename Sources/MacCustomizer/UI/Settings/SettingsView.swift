@@ -163,6 +163,9 @@ struct GeneralSettingsView: View {
                     // Software-Updates
                     UpdateSettingsSection(isDetailedView: false)
                     
+                    // Language Selection Card
+                    LanguageSettingsCard()
+                    
                     // Active Modules Section
                     VStack(alignment: .leading, spacing: 14) {
                         Text(l10n.localized("general.active_modules"))
@@ -549,10 +552,6 @@ struct AboutView: View {
                         .foregroundColor(.secondary)
                         .frame(maxWidth: 440)
                 }
-                
-                // Language Selection Card
-                LanguageSettingsCard()
-                    .frame(maxWidth: 600)
                 
                 // Updates Section
                 UpdateSettingsSection(isDetailedView: true)

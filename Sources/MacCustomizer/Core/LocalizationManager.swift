@@ -98,69 +98,128 @@ public final class FlatFlagRenderer {
                 NSRect(x: 0, y: 0, width: rect.width, height: h).fill()
                 
             case .english:
-                // UK Flag (Union Jack) crisp flat geometric
-                NSColor(srgbRed: 0.08, green: 0.18, blue: 0.45, alpha: 1.0).setFill()
+                // UK Flag (Union Jack) - clean mathematical geometry
+                // 1. Royal Navy Blue field
+                NSColor(srgbRed: 0.01, green: 0.14, blue: 0.45, alpha: 1.0).setFill()
                 rect.fill()
                 
-                // Diagonals white
-                let diagWhite = NSBezierPath()
-                diagWhite.lineWidth = 2.6
-                diagWhite.move(to: NSPoint(x: 0, y: 0))
-                diagWhite.line(to: NSPoint(x: rect.width, y: rect.height))
-                diagWhite.move(to: NSPoint(x: 0, y: rect.height))
-                diagWhite.line(to: NSPoint(x: rect.width, y: 0))
+                let cx = rect.width / 2.0
+                let cy = rect.height / 2.0
+                let h = rect.height
+                let w = rect.width
+                
+                // 2. White Saltire (St. Andrew diagonals)
+                let whiteDiag = NSBezierPath()
+                whiteDiag.lineWidth = round(h * 0.24)
+                whiteDiag.lineCapStyle = .square
+                whiteDiag.move(to: NSPoint(x: 0, y: 0))
+                whiteDiag.line(to: NSPoint(x: w, y: h))
+                whiteDiag.move(to: NSPoint(x: 0, y: h))
+                whiteDiag.line(to: NSPoint(x: w, y: 0))
                 NSColor.white.setStroke()
-                diagWhite.stroke()
+                whiteDiag.stroke()
                 
-                // Diagonals red
-                let diagRed = NSBezierPath()
-                diagRed.lineWidth = 1.3
-                diagRed.move(to: NSPoint(x: 0, y: 0))
-                diagRed.line(to: NSPoint(x: rect.width, y: rect.height))
-                diagRed.move(to: NSPoint(x: 0, y: rect.height))
-                diagRed.line(to: NSPoint(x: rect.width, y: 0))
-                NSColor(srgbRed: 0.86, green: 0.15, blue: 0.15, alpha: 1.0).setStroke()
-                diagRed.stroke()
+                // 3. Red Saltire (St. Patrick rays to center)
+                let redDiag = NSBezierPath()
+                redDiag.lineWidth = max(1.2, round(h * 0.10))
+                redDiag.lineCapStyle = .square
+                redDiag.move(to: NSPoint(x: 0, y: 0))
+                redDiag.line(to: NSPoint(x: cx, y: cy))
+                redDiag.move(to: NSPoint(x: w, y: 0))
+                redDiag.line(to: NSPoint(x: cx, y: cy))
+                redDiag.move(to: NSPoint(x: 0, y: h))
+                redDiag.line(to: NSPoint(x: cx, y: cy))
+                redDiag.move(to: NSPoint(x: w, y: h))
+                redDiag.line(to: NSPoint(x: cx, y: cy))
+                NSColor(srgbRed: 0.82, green: 0.10, blue: 0.15, alpha: 1.0).setStroke()
+                redDiag.stroke()
                 
-                // White cross
-                let crossW = rect.width * 0.28
-                let crossH = rect.height * 0.32
+                // 4. White St. George Cross
+                let whiteCrossW = round(h * 0.34)
                 NSColor.white.setFill()
-                NSRect(x: (rect.width - crossW) / 2, y: 0, width: crossW, height: rect.height).fill()
-                NSRect(x: 0, y: (rect.height - crossH) / 2, width: rect.width, height: crossH).fill()
+                NSRect(x: round(cx - whiteCrossW / 2.0), y: 0, width: whiteCrossW, height: h).fill()
+                NSRect(x: 0, y: round(cy - whiteCrossW / 2.0), width: w, height: whiteCrossW).fill()
                 
-                // Red cross
-                let rCrossW = rect.width * 0.16
-                let rCrossH = rect.height * 0.20
-                NSColor(srgbRed: 0.86, green: 0.15, blue: 0.15, alpha: 1.0).setFill()
-                NSRect(x: (rect.width - rCrossW) / 2, y: 0, width: rCrossW, height: rect.height).fill()
-                NSRect(x: 0, y: (rect.height - rCrossH) / 2, width: rCrossW, height: rCrossH).fill()
+                // 5. Red St. George Cross
+                let redCrossW = max(2.0, round(h * 0.20))
+                NSColor(srgbRed: 0.82, green: 0.10, blue: 0.15, alpha: 1.0).setFill()
+                NSRect(x: round(cx - redCrossW / 2.0), y: 0, width: redCrossW, height: h).fill()
+                NSRect(x: 0, y: round(cy - redCrossW / 2.0), width: w, height: redCrossW).fill()
                 
             case .spanish:
-                // Spain: Red (25%), Yellow (50%), Red (25%)
-                let hRed = rect.height * 0.25
-                let hYellow = rect.height * 0.50
-                NSColor(srgbRed: 0.86, green: 0.15, blue: 0.15, alpha: 1.0).setFill()
+                // Spain (La Rojigualda): Red (25%), Yellow (50%), Red (25%)
+                let hRed = round(rect.height * 0.25)
+                let hYellow = rect.height - (hRed * 2.0)
+                
+                // Top Red
+                NSColor(srgbRed: 0.80, green: 0.08, blue: 0.15, alpha: 1.0).setFill()
                 NSRect(x: 0, y: rect.height - hRed, width: rect.width, height: hRed).fill()
                 
-                NSColor(srgbRed: 1.0, green: 0.76, blue: 0.05, alpha: 1.0).setFill()
+                // Middle Yellow
+                NSColor(srgbRed: 1.00, green: 0.77, blue: 0.00, alpha: 1.0).setFill()
                 NSRect(x: 0, y: hRed, width: rect.width, height: hYellow).fill()
                 
-                NSColor(srgbRed: 0.86, green: 0.15, blue: 0.15, alpha: 1.0).setFill()
+                // Bottom Red
+                NSColor(srgbRed: 0.80, green: 0.08, blue: 0.15, alpha: 1.0).setFill()
                 NSRect(x: 0, y: 0, width: rect.width, height: hRed).fill()
                 
-                // Minimalist flat crest badge
-                let crestH: CGFloat = rect.height * 0.26
-                let crestW: CGFloat = crestH * 0.75
-                let crestRect = NSRect(
-                    x: rect.width * 0.26,
-                    y: hRed + (hYellow - crestH) / 2,
-                    width: crestW,
-                    height: crestH
+                // Stylized Spanish Coat of Arms
+                let crestX = round(rect.width * 0.26)
+                let crestY = hRed + round(hYellow * 0.10)
+                let crestH = round(hYellow * 0.80)
+                let crestW = round(crestH * 0.82)
+                
+                // Pillars of Hercules
+                let pillarW = max(0.8, round(crestW * 0.15))
+                let pillarH = crestH * 0.85
+                let pillarY = crestY + (crestH - pillarH) / 2.0
+                NSColor(srgbRed: 0.75, green: 0.55, blue: 0.10, alpha: 0.9).setFill()
+                NSRect(x: crestX - pillarW - 1.2, y: pillarY, width: pillarW, height: pillarH).fill()
+                NSRect(x: crestX + crestW + 1.2, y: pillarY, width: pillarW, height: pillarH).fill()
+                
+                // Crown on top
+                let crownH = round(crestH * 0.28)
+                let crownY = crestY + crestH - crownH
+                let crown = NSBezierPath()
+                crown.move(to: NSPoint(x: crestX, y: crownY))
+                crown.line(to: NSPoint(x: crestX, y: crownY + crownH))
+                crown.line(to: NSPoint(x: crestX + crestW * 0.5, y: crownY + crownH * 0.4))
+                crown.line(to: NSPoint(x: crestX + crestW, y: crownY + crownH))
+                crown.line(to: NSPoint(x: crestX + crestW, y: crownY))
+                crown.close()
+                NSColor(srgbRed: 0.90, green: 0.70, blue: 0.10, alpha: 1.0).setFill()
+                crown.fill()
+                
+                // Shield
+                let shieldH = crestH - crownH - 0.5
+                let shieldRect = NSRect(x: crestX, y: crestY, width: crestW, height: shieldH)
+                let r = shieldRect.width / 2.0
+                let shield = NSBezierPath()
+                shield.move(to: NSPoint(x: shieldRect.minX, y: shieldRect.maxY))
+                shield.line(to: NSPoint(x: shieldRect.maxX, y: shieldRect.maxY))
+                shield.line(to: NSPoint(x: shieldRect.maxX, y: shieldRect.minY + r))
+                shield.appendArc(
+                    withCenter: NSPoint(x: shieldRect.minX + r, y: shieldRect.minY + r),
+                    radius: r,
+                    startAngle: 0,
+                    endAngle: 180,
+                    clockwise: true
                 )
-                let crest = NSBezierPath(roundedRect: crestRect, xRadius: 1, yRadius: 1)
-                NSColor(srgbRed: 0.75, green: 0.12, blue: 0.12, alpha: 0.85).setFill()
-                crest.fill()
+                shield.close()
+                NSColor(srgbRed: 0.80, green: 0.08, blue: 0.15, alpha: 1.0).setFill()
+                shield.fill()
+                
+                // Gold inner charge / emblem on shield
+                let innerW = shieldRect.width * 0.45
+                let innerH = shieldH * 0.45
+                let innerRect = NSRect(
+                    x: shieldRect.midX - innerW / 2.0,
+                    y: shieldRect.midY - innerH / 2.0 + 0.3,
+                    width: innerW,
+                    height: innerH
+                )
+                NSColor(srgbRed: 1.00, green: 0.85, blue: 0.20, alpha: 1.0).setFill()
+                innerRect.fill()
                 
             case .french:
                 // France: 3 equal vertical stripes (Blue, White, Red)
