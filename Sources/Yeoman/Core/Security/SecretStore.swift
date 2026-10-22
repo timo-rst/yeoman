@@ -54,6 +54,61 @@ public struct KeychainSecretStore: SecretStore {
     }
 }
 
+/// Local, file-based secret store that manages encryption keys in a private 0700 directory
+/// with 0600 file permissions. Avoids intrusive and scary macOS Keychain prompts for open
+/// source ad-hoc builds while keeping stored documents AES-GCM encrypted.
+public struct SecureFileSecretStore: SecretStore {
+    public let directoryURL: URL
+
+    public init(directoryURL: URL? = nil) {
+        if let directoryURL {
+            self.directoryURL = directoryURL
+        } else {
+            let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
+            self.directoryURL = appSupport.appendingPathComponent("Yeoman/.secrets", isDirectory: true)
+        }
+    }
+
+    private func sanitize(_ account: String) throws -> String {
+        guard !account.isEmpty, account.utf8.count <= 128 else {
+            throw SecurityFailure.rejected("Ungültige Kontobezeichnung.")
+        }
+        let safeScalars = account.unicodeScalars.map { scalar -> Character in
+            if CharacterSet.alphanumerics.contains(scalar) || scalar == "-" || scalar == "_" {
+                return Character(scalar)
+            }
+            return "_"
+        }
+        let safe = String(safeScalars)
+        guard !safe.isEmpty, safe != ".", safe != ".." else {
+            throw SecurityFailure.rejected("Ungültige Kontobezeichnung.")
+        }
+        return safe + ".key"
+    }
+
+    public func read(_ account: String) throws -> Data? {
+        guard FileManager.default.fileExists(atPath: directoryURL.path) else { return nil }
+        let dir = try SecureDirectory(directoryURL, create: false)
+        let name = try sanitize(account)
+        guard try dir.exists(name) else { return nil }
+        return try dir.read(name, limit: 4096)
+    }
+
+    public func write(_ data: Data, account: String) throws {
+        guard data.count <= 4096 else { throw SecurityFailure.rejected("Schlüsseldaten zu groß.") }
+        let dir = try SecureDirectory(directoryURL, create: true)
+        let name = try sanitize(account)
+        try dir.write(data, name: name)
+    }
+
+    public func delete(_ account: String) throws {
+        guard FileManager.default.fileExists(atPath: directoryURL.path) else { return }
+        let dir = try SecureDirectory(directoryURL, create: false)
+        let name = try sanitize(account)
+        try dir.remove(name)
+    }
+}
+
 public enum SecretMigration {
     public static func validatedToken(_ raw: String) throws -> String {
         let token = raw.trimmingCharacters(in: .whitespacesAndNewlines)

@@ -285,6 +285,18 @@ func runSecurityTests() {
             rejects { _ = try SecretMigration.token(defaults: defaults, secrets: keys) }
             assertEqual(defaults.string(forKey: "update_github_token"), "bad\ntoken")
         }
+        h.test("SecureFileSecretStore writes 0600 keys in private directory and roundtrips") {
+            try temporary { root in
+                let secretsDir = root.url.appendingPathComponent(".secrets")
+                let store = SecureFileSecretStore(directoryURL: secretsDir)
+                let sampleKey = Data([1, 2, 3, 4, 5, 6, 7, 8, 9, 10])
+                assertNil(try store.read("test-key"))
+                try store.write(sampleKey, account: "test-key")
+                assertEqual(try store.read("test-key"), sampleKey)
+                try store.delete("test-key")
+                assertNil(try store.read("test-key"))
+            }
+        }
         h.test("Authenticated encryption binds record identity and rejects tampering") {
             let cipher = try RecordCipher(key: Data(repeating: 7, count: 32))
             var encrypted = try cipher.seal(Data("synthetic-secret".utf8), record: "id1")

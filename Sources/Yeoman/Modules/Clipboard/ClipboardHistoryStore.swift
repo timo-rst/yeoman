@@ -57,7 +57,7 @@ public final class ClipboardHistoryStore: ObservableObject {
     private let defaults: UserDefaults
 
     public init(directory: URL? = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!.appendingPathComponent("Yeoman"),
-                secrets: SecretStore = KeychainSecretStore(), defaults: UserDefaults = .standard) {
+                secrets: SecretStore = SecureFileSecretStore(), defaults: UserDefaults = .standard) {
         self.directoryURL = directory; self.secrets = secrets; self.defaults = defaults
         queue.async { self.load() }
     }

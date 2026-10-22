@@ -80,13 +80,13 @@ public final class UpdateManager: ObservableObject {
     public var currentVersion: String {
         Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "0.2.0"
     }
-    public init(defaults: UserDefaults = .standard, secrets: SecretStore = KeychainSecretStore()) {
+    public init(defaults: UserDefaults = .standard, secrets: SecretStore = SecureFileSecretStore()) {
         self.defaults = defaults; self.secrets = secrets
         autoCheckForUpdates = defaults.object(forKey: "update_auto_check_enabled") as? Bool ?? true
         lastCheckedDate = defaults.object(forKey: "update_last_checked_date") as? Date
         loadingToken = true
         do { githubToken = try SecretMigration.token(defaults: defaults, secrets: secrets) }
-        catch { status = .failed(message: error.localizedDescription) }
+        catch { /* token is optional for public releases */ }
         loadingToken = false
     }
     public func startAutoCheckIfEnabled() {

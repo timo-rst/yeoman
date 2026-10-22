@@ -8,7 +8,7 @@ public final class WidgetStorage {
     private var document: EncryptedDocument?
     private var failed = false
     public init(url: URL = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!.appendingPathComponent("Yeoman"),
-                defaults: UserDefaults = .standard, secrets: SecretStore = KeychainSecretStore()) {
+                defaults: UserDefaults = .standard, secrets: SecretStore = SecureFileSecretStore()) {
         self.url = url; self.defaults = defaults; self.secrets = secrets
     }
     public static func decode(_ data: Data) throws -> [WebWidgetItem] {
