@@ -1,3 +1,5 @@
+import AppKit
+import ObjectiveC
 import Foundation
 import Combine
 
@@ -23,12 +25,39 @@ public final class MenuBarSpacingManager: ObservableObject {
     private let paddingKey = "NSStatusItemSelectionPadding"
     
     private var debounceTimer: AnyCancellable?
+    private static var isHookInstalled = false
     
     public init() {
         self.autoRestartControlCenter = UserDefaults.standard.object(forKey: "spacing_auto_restart_cc") as? Bool ?? true
         readCurrentPreferences()
+        MenuBarSpacingManager.installAppKitSpacingHooks()
         if currentSpacing != 16 || currentSelectionPadding != 16 {
             applyInProcessPreferences(spacing: currentSpacing, padding: currentSelectionPadding)
+        }
+    }
+    
+    /// Swizzles AppKit NSSystemStatusBar/NSStatusBar contentPadding & backgroundSelectionInset
+    /// so newly created NSStatusItems in this process dynamically use our active spacing/padding
+    /// instead of the static value cached at AppKit initialization time.
+    public static func installAppKitSpacingHooks() {
+        guard !isHookInstalled else { return }
+        isHookInstalled = true
+        
+        let paddingBlock: @convention(block) (AnyObject) -> CGFloat = { _ in
+            return CGFloat(MenuBarSpacingManager.shared.currentSpacing)
+        }
+        let insetBlock: @convention(block) (AnyObject) -> NSSize = { _ in
+            return NSSize(width: -CGFloat(MenuBarSpacingManager.shared.currentSelectionPadding), height: -1.0)
+        }
+        
+        for className in ["NSSystemStatusBar", "NSStatusBar"] {
+            guard let cls = NSClassFromString(className) else { continue }
+            if let m = class_getInstanceMethod(cls, NSSelectorFromString("contentPadding")) {
+                method_setImplementation(m, imp_implementationWithBlock(paddingBlock))
+            }
+            if let m = class_getInstanceMethod(cls, NSSelectorFromString("backgroundSelectionInset")) {
+                method_setImplementation(m, imp_implementationWithBlock(insetBlock))
+            }
         }
     }
     
@@ -76,12 +105,17 @@ public final class MenuBarSpacingManager: ObservableObject {
     
     public func commitSpacing(spacing: Int, selectionPadding: Int, restartNow: Bool) {
         isApplying = true
+        self.currentSpacing = spacing
+        self.currentSelectionPadding = selectionPadding
         
         // 1. Immediately apply to in-process CFPreferences and UserDefaults
         applyInProcessPreferences(spacing: spacing, padding: selectionPadding)
         
         // 2. Immediately recreate all MacCustomizer menu bar status items live
-        ModuleManager.shared.recreateAllStatusItems()
+        // Since contentPadding is hooked to currentSpacing, all newly created items immediately use the exact spacing!
+        DispatchQueue.main.async {
+            ModuleManager.shared.recreateAllStatusItems()
+        }
         
         // 3. Persist system-wide and reload ControlCenter in background
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
@@ -99,7 +133,8 @@ public final class MenuBarSpacingManager: ObservableObject {
                 deliverImmediately: true
             )
             
-            DispatchQueue.main.async {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+                ModuleManager.shared.recreateAllStatusItems()
                 self.isApplying = false
             }
         }
@@ -114,8 +149,10 @@ public final class MenuBarSpacingManager: ObservableObject {
         // 1. Clear in-process CFPreferences and UserDefaults immediately
         clearInProcessPreferences()
         
-        // 2. Immediately recreate all MacCustomizer menu bar status items
-        ModuleManager.shared.recreateAllStatusItems()
+        // 2. Immediately recreate all MacCustomizer menu bar status items live
+        DispatchQueue.main.async {
+            ModuleManager.shared.recreateAllStatusItems()
+        }
         
         // 3. Clear system-wide defaults and reload ControlCenter
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
@@ -130,7 +167,8 @@ public final class MenuBarSpacingManager: ObservableObject {
                 deliverImmediately: true
             )
             
-            DispatchQueue.main.async {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+                ModuleManager.shared.recreateAllStatusItems()
                 self.isApplying = false
             }
         }
