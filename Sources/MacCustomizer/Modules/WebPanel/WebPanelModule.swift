@@ -160,7 +160,8 @@ public final class WebPanelModule: NSObject, CustomizerModule, ObservableObject 
     
     public override init() {
         self.isEnabled = UserDefaults.standard.object(forKey: "web_panel_is_enabled") as? Bool ?? true
-        self.showsDedicatedStatusItem = UserDefaults.standard.object(forKey: "web_panel_shows_status_item") as? Bool ?? true
+        self.showsDedicatedStatusItem = true
+        UserDefaults.standard.set(true, forKey: "web_panel_shows_status_item")
         super.init()
         
         loadWidgets()

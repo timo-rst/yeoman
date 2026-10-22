@@ -215,12 +215,8 @@ struct GeneralSettingsView: View {
                                 get: { webPanel.isEnabled },
                                 set: { mm.toggleModule(id: webPanel.id, enabled: $0) }
                             ),
-                            showsDedicatedIcon: Binding(
-                                get: { webPanel.showsDedicatedStatusItem },
-                                set: { webPanel.showsDedicatedStatusItem = $0 }
-                            ),
                             extraContent: {
-                                if webPanel.isEnabled && webPanel.showsDedicatedStatusItem && !webPanel.widgets.isEmpty {
+                                if webPanel.isEnabled && !webPanel.widgets.isEmpty {
                                     VStack(spacing: 6) {
                                         ForEach(webPanel.widgets) { widget in
                                             HStack(spacing: 8) {
@@ -363,19 +359,21 @@ struct ModuleToggleRow<ExtraContent: View>: View {
                 }
             }
             
-            if isOn, let dedicatedBinding = showsDedicatedIcon {
-                HStack {
-                    Spacer().frame(width: 40)
-                    Image(systemName: "menubar.arrow.up.rectangle")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                    Text(l10n("general.status_icon_label"))
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                    Spacer()
-                    Toggle("", isOn: dedicatedBinding)
-                        .toggleStyle(.switch)
-                        .scaleEffect(0.85)
+            if isOn {
+                if let dedicatedBinding = showsDedicatedIcon {
+                    HStack {
+                        Spacer().frame(width: 40)
+                        Image(systemName: "menubar.arrow.up.rectangle")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                        Text(l10n("general.status_icon_label"))
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                        Spacer()
+                        Toggle("", isOn: dedicatedBinding)
+                            .toggleStyle(.switch)
+                            .scaleEffect(0.85)
+                    }
                 }
                 
                 extraContent
