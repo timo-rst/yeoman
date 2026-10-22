@@ -43,7 +43,7 @@ This project started because several utilities I relied on broke or became incom
 
 Nothing here is reinventing the wheel—it is simply a collection of tools tailored to my personal preferences and daily workflow.
 
-> **AI Transparency:** This project was developed with the assistance of AI pair-programming tools for scaffolding, implementation, and test coverage, directed and reviewed by the author.
+> **AI Transparency:** This project was created by prompting and guiding an AI coding assistant, which generated the implementation and automated tests. While guided in good faith with privacy and security as explicit priorities, the code was AI-generated rather than written or formally audited by hand.
 
 ---
 
