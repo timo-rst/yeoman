@@ -1,8 +1,11 @@
 import AppKit
 import SwiftUI
 
-public final class StatusItemController: NSObject, NSMenuDelegate {
+public final class StatusItemController: NSObject, ObservableObject, NSMenuDelegate {
     public static let shared = StatusItemController()
+    
+    @Published public var isChangingDockPolicy: Bool = false
+    private var pendingDockPolicy: NSApplication.ActivationPolicy?
     
     private var statusItem: NSStatusItem?
     private var clipboardWindow: NSWindow?
@@ -251,7 +254,32 @@ public final class StatusItemController: NSObject, NSMenuDelegate {
     }
     
     public func setDockIconVisible(_ visible: Bool) {
-        let policy: NSApplication.ActivationPolicy = visible ? .regular : .accessory
+        let desiredPolicy: NSApplication.ActivationPolicy = visible ? .regular : .accessory
+        
+        // If a transition is already in flight, queue the desired state instead of spamming WindowServer/Dock
+        if isChangingDockPolicy {
+            pendingDockPolicy = desiredPolicy
+            return
+        }
+        
+        guard NSApp.activationPolicy() != desiredPolicy else {
+            pendingDockPolicy = nil
+            return
+        }
+        
+        applyDockPolicy(desiredPolicy)
+    }
+    
+    private func applyDockPolicy(_ policy: NSApplication.ActivationPolicy) {
+        guard NSApp.activationPolicy() != policy else {
+            isChangingDockPolicy = false
+            pendingDockPolicy = nil
+            return
+        }
+        
+        isChangingDockPolicy = true
+        pendingDockPolicy = nil
+        
         let targetWindow = settingsWindow ?? NSApp.windows.first(where: { !($0 is NSPanel) && $0.isVisible })
         
         // Temporarily elevate to .floating during the transition so WindowServer
@@ -278,16 +306,27 @@ public final class StatusItemController: NSObject, NSMenuDelegate {
         // Changing activation policy causes WindowServer to yield focus to background apps.
         // Re-assert focus and bring window front across multiple ticks until WindowServer stabilizes.
         DispatchQueue.main.async(execute: bringToFront)
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.05, execute: bringToFront)
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.15, execute: bringToFront)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.08, execute: bringToFront)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.18, execute: bringToFront)
         
-        // As soon as the transition is complete, restore .normal level so clicking on another window
-        // naturally allows that window to come to the front!
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { [weak self] in
-            if let window = self?.settingsWindow ?? NSApp.windows.first(where: { !($0 is NSPanel) && $0.isVisible }) {
+        // Allow WindowServer and Dock.app sufficient time (400ms) to complete tile animation & state sync
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.40) { [weak self] in
+            guard let self = self else { return }
+            
+            if let window = self.settingsWindow ?? NSApp.windows.first(where: { !($0 is NSPanel) && $0.isVisible }) {
                 window.level = .normal
                 window.orderFrontRegardless()
                 window.makeKeyAndOrderFront(nil)
+            }
+            
+            self.isChangingDockPolicy = false
+            
+            // If the user toggled while the transition was running, apply the final requested state cleanly
+            if let nextPolicy = self.pendingDockPolicy {
+                self.pendingDockPolicy = nil
+                if NSApp.activationPolicy() != nextPolicy {
+                    self.applyDockPolicy(nextPolicy)
+                }
             }
         }
     }

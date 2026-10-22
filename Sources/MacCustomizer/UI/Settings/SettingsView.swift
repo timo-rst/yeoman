@@ -296,6 +296,7 @@ struct GeneralSettingsView: View {
     @ObservedObject private var scrollReverser = ModuleManager.shared.scrollReverserModule
     @ObservedObject private var menuBar = ModuleManager.shared.menuBarModule
     @ObservedObject private var faviconManager = WebFaviconManager.shared
+    @ObservedObject private var statusController = StatusItemController.shared
     
     var body: some View {
         VStack(spacing: 0) {
@@ -336,6 +337,7 @@ struct GeneralSettingsView: View {
                                     StatusItemController.shared.setDockIconVisible($0)
                                 }
                             ))
+                            .disabled(statusController.isChangingDockPolicy)
                             InfoTooltip(text: l10n.localized("general.show_dock_icon_tooltip"))
                         }
                         
