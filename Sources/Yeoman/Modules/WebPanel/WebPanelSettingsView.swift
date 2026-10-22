@@ -744,7 +744,6 @@ struct WebWidgetEditorSheet: View {
                     InfoTooltip(text: "Konfiguriere URL, Größe und Ansicht mit interaktiver Live-Vorschau.")
                 }
                 Spacer()
-                Button("Abbrechen", action: onCancel)
             }
             .padding(.horizontal, 20)
             .padding(.vertical, 14)
@@ -1349,6 +1348,7 @@ struct WebWidgetEditorSheet: View {
             // Bottom Action Bar
             HStack {
                 Button("Abbrechen", action: onCancel)
+                    .keyboardShortcut(.cancelAction)
                 Spacer()
                 Button(isEditing ? "Änderungen speichern" : "Web-Widget erstellen") {
                     var finalURL = url.trimmingCharacters(in: .whitespacesAndNewlines)
