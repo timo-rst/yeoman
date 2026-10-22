@@ -8,6 +8,7 @@ public final class WebPanelController: NSObject, ObservableObject, WKNavigationD
     @Published public var canGoBack: Bool = false
     @Published public var canGoForward: Bool = false
     @Published public var zoomScale: Double = 1.0
+    @Published public var isPopoverVisible: Bool = false
     
     public var userAgentMode: WebUserAgentMode
     public var targetWidth: CGFloat
@@ -41,8 +42,19 @@ public final class WebPanelController: NSObject, ObservableObject, WKNavigationD
         let prefs = WKWebpagePreferences()
         prefs.allowsContentJavaScript = true
         config.defaultWebpagePreferences = prefs
-        config.preferences.javaScriptCanOpenWindowsAutomatically = true
-        config.preferences.isElementFullscreenEnabled = true
+        
+        let preferences = config.preferences
+        preferences.javaScriptCanOpenWindowsAutomatically = true
+        preferences.isElementFullscreenEnabled = true
+        
+        // Memory & Background optimizations:
+        if #available(macOS 14.0, *) {
+            preferences.inactiveSchedulingPolicy = .throttle
+        }
+        preferences.setValue(false, forKey: "usesPageCache")
+        preferences.setValue(true, forKey: "hiddenPageDOMTimerThrottlingEnabled")
+        preferences.setValue(true, forKey: "pageVisibilityBasedProcessSuppressionEnabled")
+        preferences.setValue(false, forKey: "aggressiveTileRetentionEnabled")
         
         // Inject responsive viewport script so web content scales properly to widget bounds
         let viewportScript = """
@@ -166,7 +178,51 @@ public final class WebPanelController: NSObject, ObservableObject, WKNavigationD
             if let item = self.associatedItem, item.useFavicon {
                 WebFaviconManager.shared.extractFaviconFromWebView(webView, for: item)
             }
+            
+            // If the popover is currently closed (e.g. during background preload),
+            // immediately enter background mode to flush transient load caches
+            if !self.isPopoverVisible {
+                self.onPopoverClosed()
+            }
         }
+    }
+    
+    // MARK: - Memory & Background Lifecycle Optimization
+    
+    public func onPopoverOpened() {
+        isPopoverVisible = true
+        webView?.setAllMediaPlaybackSuspended(false)
+        let js = "if (document.hidden !== undefined) { Object.defineProperty(document, 'hidden', {value: false, configurable: true}); document.dispatchEvent(new Event('visibilitychange')); }"
+        webView?.evaluateJavaScript(js, completionHandler: nil)
+    }
+    
+    public func onPopoverClosed() {
+        isPopoverVisible = false
+        
+        // 1. Pause active audio/video to release media buffers
+        webView?.pauseAllMediaPlayback()
+        webView?.setAllMediaPlaybackSuspended(true)
+        
+        // 2. Notify the webpage that it is hidden (causes SPAs to pause animation loops, render queues, and heavy background tasks)
+        let js = "if (document.hidden !== undefined) { Object.defineProperty(document, 'hidden', {value: true, configurable: true}); document.dispatchEvent(new Event('visibilitychange')); }"
+        webView?.evaluateJavaScript(js, completionHandler: nil)
+        
+        // 3. Purge volatile in-memory WebKit caches
+        purgeMemoryCache()
+        
+        // 4. Secondary sweep after webpage finishes its background transition
+        DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) { [weak self] in
+            guard let self = self, !self.isPopoverVisible else { return }
+            self.purgeMemoryCache()
+        }
+    }
+    
+    public func purgeMemoryCache() {
+        let types: Set<String> = [
+            WKWebsiteDataTypeMemoryCache,
+            WKWebsiteDataTypeFetchCache
+        ]
+        WKWebsiteDataStore.default().removeData(ofTypes: types, modifiedSince: Date.distantPast) { }
     }
     
     public func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) {

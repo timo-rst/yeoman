@@ -315,7 +315,7 @@ public final class WebPanelModule: NSObject, CustomizerModule, ObservableObject 
 
 // MARK: - Individual Instance Controller
 
-public final class WebWidgetInstanceController: NSObject, ObservableObject {
+public final class WebWidgetInstanceController: NSObject, ObservableObject, NSPopoverDelegate {
     @Published public var item: WebWidgetItem
     @Published public var fittedSize: NSSize
     @Published public var autoFitScale: Double = 1.0
@@ -495,6 +495,7 @@ public final class WebWidgetInstanceController: NSObject, ObservableObject {
         if popover == nil {
             updateFittedDimensions()
             let p = NSPopover()
+            p.delegate = self
             p.contentSize = fittedSize
             p.behavior = item.isPinned ? .applicationDefined : .transient
             p.animates = true
@@ -562,8 +563,10 @@ public final class WebWidgetInstanceController: NSObject, ObservableObject {
         if let p = popover, p.isShown {
             p.performClose(nil)
         }
+        popover?.delegate = nil
         popover = nil
         webController.stopLoading()
+        webController.onPopoverClosed()
     }
     
     @objc private func statusItemClicked(_ sender: NSStatusBarButton) {
@@ -640,5 +643,15 @@ public final class WebWidgetInstanceController: NSObject, ObservableObject {
     
     @objc private func openSettingsAction() {
         StatusItemController.shared.openSettingsWindow()
+    }
+    
+    // MARK: - NSPopoverDelegate
+    
+    public func popoverWillShow(_ notification: Notification) {
+        webController.onPopoverOpened()
+    }
+    
+    public func popoverDidClose(_ notification: Notification) {
+        webController.onPopoverClosed()
     }
 }
