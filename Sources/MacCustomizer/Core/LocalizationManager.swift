@@ -1,5 +1,6 @@
 import SwiftUI
 import Combine
+import AppKit
 
 public enum AppLanguage: String, CaseIterable, Identifiable {
     case system = "system"
@@ -10,14 +11,18 @@ public enum AppLanguage: String, CaseIterable, Identifiable {
     
     public var id: String { rawValue }
     
-    public var flag: String {
+    public var code: String {
         switch self {
-        case .system: return "🌐"
-        case .german: return "🇩🇪"
-        case .english: return "🇬🇧"
-        case .spanish: return "🇪🇸"
-        case .french: return "🇫🇷"
+        case .system: return "SYS"
+        case .german: return "DE"
+        case .english: return "EN"
+        case .spanish: return "ES"
+        case .french: return "FR"
         }
+    }
+    
+    public var flatFlagImage: NSImage {
+        FlatFlagRenderer.flagImage(for: self)
     }
     
     public func displayName(in language: AppLanguage) -> String {
@@ -37,6 +42,185 @@ public enum AppLanguage: String, CaseIterable, Identifiable {
     
     public var nativeName: String {
         displayName(in: LocalizationManager.shared.effectiveLanguage)
+    }
+}
+
+// MARK: - Clean Flat Flag Vector Graphics
+public final class FlatFlagRenderer {
+    private static var cache: [String: NSImage] = [:]
+    
+    public static func flagImage(for language: AppLanguage, size: CGSize = CGSize(width: 22, height: 15)) -> NSImage {
+        let key = "\(language.rawValue)_\(Int(size.width))x\(Int(size.height))"
+        if let cached = cache[key] {
+            return cached
+        }
+        let img = render(language: language, size: size)
+        cache[key] = img
+        return img
+    }
+    
+    private static func render(language: AppLanguage, size: CGSize) -> NSImage {
+        let image = NSImage(size: size, flipped: false) { rect in
+            let cornerRadius: CGFloat = 3.0
+            let path = NSBezierPath(roundedRect: rect, xRadius: cornerRadius, yRadius: cornerRadius)
+            path.addClip()
+            
+            switch language {
+            case .system:
+                // Clean minimalist globe badge on subtle tint
+                NSColor.controlAccentColor.withAlphaComponent(0.14).setFill()
+                rect.fill()
+                if let symbol = NSImage(systemSymbolName: "globe", accessibilityDescription: nil) {
+                    let config = NSImage.SymbolConfiguration(pointSize: 10, weight: .medium)
+                    if let configured = symbol.withSymbolConfiguration(config) {
+                        let iconSize: CGFloat = 11.5
+                        let iconRect = NSRect(
+                            x: (rect.width - iconSize) / 2,
+                            y: (rect.height - iconSize) / 2,
+                            width: iconSize,
+                            height: iconSize
+                        )
+                        NSColor.controlAccentColor.setFill()
+                        configured.draw(in: iconRect)
+                    }
+                }
+                
+            case .german:
+                // Germany: 3 equal horizontal stripes (Black, Red, Gold)
+                let h = rect.height / 3.0
+                NSColor(srgbRed: 0.12, green: 0.12, blue: 0.12, alpha: 1.0).setFill()
+                NSRect(x: 0, y: 2 * h, width: rect.width, height: h).fill()
+                
+                NSColor(srgbRed: 0.86, green: 0.15, blue: 0.15, alpha: 1.0).setFill()
+                NSRect(x: 0, y: h, width: rect.width, height: h).fill()
+                
+                NSColor(srgbRed: 1.0, green: 0.78, blue: 0.15, alpha: 1.0).setFill()
+                NSRect(x: 0, y: 0, width: rect.width, height: h).fill()
+                
+            case .english:
+                // UK Flag (Union Jack) crisp flat geometric
+                NSColor(srgbRed: 0.08, green: 0.18, blue: 0.45, alpha: 1.0).setFill()
+                rect.fill()
+                
+                // Diagonals white
+                let diagWhite = NSBezierPath()
+                diagWhite.lineWidth = 2.6
+                diagWhite.move(to: NSPoint(x: 0, y: 0))
+                diagWhite.line(to: NSPoint(x: rect.width, y: rect.height))
+                diagWhite.move(to: NSPoint(x: 0, y: rect.height))
+                diagWhite.line(to: NSPoint(x: rect.width, y: 0))
+                NSColor.white.setStroke()
+                diagWhite.stroke()
+                
+                // Diagonals red
+                let diagRed = NSBezierPath()
+                diagRed.lineWidth = 1.3
+                diagRed.move(to: NSPoint(x: 0, y: 0))
+                diagRed.line(to: NSPoint(x: rect.width, y: rect.height))
+                diagRed.move(to: NSPoint(x: 0, y: rect.height))
+                diagRed.line(to: NSPoint(x: rect.width, y: 0))
+                NSColor(srgbRed: 0.86, green: 0.15, blue: 0.15, alpha: 1.0).setStroke()
+                diagRed.stroke()
+                
+                // White cross
+                let crossW = rect.width * 0.28
+                let crossH = rect.height * 0.32
+                NSColor.white.setFill()
+                NSRect(x: (rect.width - crossW) / 2, y: 0, width: crossW, height: rect.height).fill()
+                NSRect(x: 0, y: (rect.height - crossH) / 2, width: rect.width, height: crossH).fill()
+                
+                // Red cross
+                let rCrossW = rect.width * 0.16
+                let rCrossH = rect.height * 0.20
+                NSColor(srgbRed: 0.86, green: 0.15, blue: 0.15, alpha: 1.0).setFill()
+                NSRect(x: (rect.width - rCrossW) / 2, y: 0, width: rCrossW, height: rect.height).fill()
+                NSRect(x: 0, y: (rect.height - rCrossH) / 2, width: rCrossW, height: rCrossH).fill()
+                
+            case .spanish:
+                // Spain: Red (25%), Yellow (50%), Red (25%)
+                let hRed = rect.height * 0.25
+                let hYellow = rect.height * 0.50
+                NSColor(srgbRed: 0.86, green: 0.15, blue: 0.15, alpha: 1.0).setFill()
+                NSRect(x: 0, y: rect.height - hRed, width: rect.width, height: hRed).fill()
+                
+                NSColor(srgbRed: 1.0, green: 0.76, blue: 0.05, alpha: 1.0).setFill()
+                NSRect(x: 0, y: hRed, width: rect.width, height: hYellow).fill()
+                
+                NSColor(srgbRed: 0.86, green: 0.15, blue: 0.15, alpha: 1.0).setFill()
+                NSRect(x: 0, y: 0, width: rect.width, height: hRed).fill()
+                
+                // Minimalist flat crest badge
+                let crestH: CGFloat = rect.height * 0.26
+                let crestW: CGFloat = crestH * 0.75
+                let crestRect = NSRect(
+                    x: rect.width * 0.26,
+                    y: hRed + (hYellow - crestH) / 2,
+                    width: crestW,
+                    height: crestH
+                )
+                let crest = NSBezierPath(roundedRect: crestRect, xRadius: 1, yRadius: 1)
+                NSColor(srgbRed: 0.75, green: 0.12, blue: 0.12, alpha: 0.85).setFill()
+                crest.fill()
+                
+            case .french:
+                // France: 3 equal vertical stripes (Blue, White, Red)
+                let w = rect.width / 3.0
+                NSColor(srgbRed: 0.08, green: 0.28, blue: 0.72, alpha: 1.0).setFill()
+                NSRect(x: 0, y: 0, width: w, height: rect.height).fill()
+                
+                NSColor.white.setFill()
+                NSRect(x: w, y: 0, width: w, height: rect.height).fill()
+                
+                NSColor(srgbRed: 0.90, green: 0.18, blue: 0.22, alpha: 1.0).setFill()
+                NSRect(x: 2 * w, y: 0, width: w, height: rect.height).fill()
+            }
+            
+            // Crisp 0.5pt subtle border for clean contrast on any background
+            let border = NSBezierPath(roundedRect: rect.insetBy(dx: 0.25, dy: 0.25), xRadius: cornerRadius, yRadius: cornerRadius)
+            border.lineWidth = 0.5
+            NSColor.black.withAlphaComponent(0.18).setStroke()
+            border.stroke()
+            
+            return true
+        }
+        return image
+    }
+}
+
+public struct FlatFlagView: View {
+    public let language: AppLanguage
+    public var size: CGSize
+    
+    public init(language: AppLanguage, size: CGSize = CGSize(width: 22, height: 15)) {
+        self.language = language
+        self.size = size
+    }
+    
+    public var body: some View {
+        if language == .system {
+            ZStack {
+                RoundedRectangle(cornerRadius: 3.5)
+                    .fill(Color.accentColor.opacity(0.12))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 3.5)
+                            .stroke(Color.accentColor.opacity(0.35), lineWidth: 0.6)
+                    )
+                Image(systemName: "globe")
+                    .font(.system(size: size.height * 0.62, weight: .semibold))
+                    .foregroundColor(.accentColor)
+            }
+            .frame(width: size.width, height: size.height)
+        } else {
+            Image(nsImage: FlatFlagRenderer.flagImage(for: language, size: size))
+                .resizable()
+                .frame(width: size.width, height: size.height)
+                .clipShape(RoundedRectangle(cornerRadius: 3.5))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 3.5)
+                        .stroke(Color.primary.opacity(0.15), lineWidth: 0.5)
+                )
+                .shadow(color: Color.black.opacity(0.08), radius: 1, x: 0, y: 0.5)
+        }
     }
 }
 
@@ -61,10 +245,7 @@ public final class LocalizationManager: ObservableObject {
         }
     }
     
-    public var effectiveLanguage: AppLanguage {
-        if selectedLanguage != .system {
-            return selectedLanguage
-        }
+    public var systemLanguage: AppLanguage {
         let preferred = Locale.preferredLanguages.first ?? Locale.current.identifier
         let code = preferred.prefix(2).lowercased()
         switch code {
@@ -73,6 +254,13 @@ public final class LocalizationManager: ObservableObject {
         case "fr": return .french
         default: return .english
         }
+    }
+    
+    public var effectiveLanguage: AppLanguage {
+        if selectedLanguage != .system {
+            return selectedLanguage
+        }
+        return systemLanguage
     }
     
     public func localized(_ key: String, for language: AppLanguage? = nil) -> String {
@@ -153,10 +341,10 @@ public final class LocalizationManager: ObservableObject {
             .french: "Paramètres généraux"
         ],
         "general.subtitle": [
-            .german: "Grundkonfiguration für Sprache, Startverhalten und Systemintegration.",
-            .english: "Basic configuration for language, startup behavior, and system integration.",
-            .spanish: "Configuración básica para idioma, inicio e integración con el sistema.",
-            .french: "Configuration de base pour la langue, le démarrage et l'intégration système."
+            .german: "Grundkonfiguration für Startverhalten und Systemintegration.",
+            .english: "Basic configuration for startup behavior and system integration.",
+            .spanish: "Configuración básica para inicio e integración con el sistema.",
+            .french: "Configuration de base pour le démarrage et l'intégration système."
         ],
         "general.language_section": [
             .german: "Sprache",
@@ -631,6 +819,24 @@ public final class LocalizationManager: ObservableObject {
             .english: "Releases & Changelog",
             .spanish: "Versiones y registro de cambios",
             .french: "Versions et journal des modifications"
+        ],
+        "about.language_title": [
+            .german: "Sprache",
+            .english: "Language",
+            .spanish: "Idioma",
+            .french: "Langue"
+        ],
+        "about.language_subtitle": [
+            .german: "Wähle deine bevorzugte Sprache für die Benutzeroberfläche.",
+            .english: "Choose your preferred interface language.",
+            .spanish: "Elige tu idioma preferido para la interfaz.",
+            .french: "Choisissez votre langue préférée pour l'interface."
+        ],
+        "about.lang_system_desc": [
+            .german: "Verwendet automatisch die macOS-Systemsprache",
+            .english: "Automatically uses macOS system language",
+            .spanish: "Utiliza automáticamente el idioma del sistema macOS",
+            .french: "Utilise automatiquement la langue du système macOS"
         ],
 
         // Menu Bar Sub-Tabs

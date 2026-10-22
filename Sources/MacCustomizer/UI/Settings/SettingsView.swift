@@ -125,41 +125,6 @@ struct GeneralSettingsView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 20) {
                     
-                    // Language Selection Card
-                    VStack(alignment: .leading, spacing: 14) {
-                        Text(l10n.localized("general.language_section"))
-                            .font(.headline)
-                        
-                        HStack {
-                            VStack(alignment: .leading, spacing: 2) {
-                                HStack(spacing: 6) {
-                                    Text(l10n.localized("general.language_label"))
-                                        .fontWeight(.medium)
-                                    InfoTooltip(text: l10n.localized("general.language_tooltip"))
-                                }
-                                Text(l10n.selectedLanguage == .system ? "\(l10n.localized("lang.system")) (\(l10n.effectiveLanguage.nativeName))" : l10n.selectedLanguage.nativeName)
-                                    .font(.caption)
-                                    .foregroundColor(.secondary)
-                            }
-                            
-                            Spacer()
-                            
-                            Picker("", selection: $l10n.selectedLanguage) {
-                                ForEach(AppLanguage.allCases) { lang in
-                                    Text("\(lang.flag) \(lang.displayName(in: l10n.effectiveLanguage))")
-                                        .tag(lang)
-                                        .id("\(lang.rawValue)_\(l10n.effectiveLanguage.rawValue)")
-                                }
-                            }
-                            .labelsHidden()
-                            .pickerStyle(.menu)
-                            .frame(minWidth: 190, maxWidth: 220)
-                            .id("app_language_picker_\(l10n.selectedLanguage.rawValue)_\(l10n.effectiveLanguage.rawValue)")
-                        }
-                    }
-                    .padding()
-                    .background(RoundedRectangle(cornerRadius: 12).fill(Color(nsColor: .controlBackgroundColor)))
-                    
                     // Startup & Appearance Card
                     VStack(alignment: .leading, spacing: 14) {
                         Text(l10n.localized("general.startup_appearance"))
@@ -398,6 +363,164 @@ struct ModuleToggleRow<ExtraContent: View>: View {
     }
 }
 
+struct LanguageSettingsCard: View {
+    @ObservedObject private var l10n = LocalizationManager.shared
+    @State private var hoveredLang: AppLanguage? = nil
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            // Header
+            HStack(spacing: 8) {
+                Image(systemName: "globe")
+                    .font(.title3)
+                    .foregroundColor(.accentColor)
+                Text(l10n.localized("about.language_title"))
+                    .font(.headline)
+                
+                Spacer()
+                
+                // Status Badge showing current active language
+                HStack(spacing: 5) {
+                    FlatFlagView(language: l10n.effectiveLanguage, size: CGSize(width: 14, height: 10))
+                    Text(l10n.selectedLanguage == .system ? l10n.localized("lang.system") : l10n.selectedLanguage.nativeName)
+                        .font(.caption2)
+                        .fontWeight(.semibold)
+                        .foregroundColor(.accentColor)
+                }
+                .padding(.horizontal, 8)
+                .padding(.vertical, 3)
+                .background(Capsule().fill(Color.accentColor.opacity(0.12)))
+            }
+            
+            Divider()
+            
+            // Subtitle / Info
+            Text(l10n.localized("about.language_subtitle"))
+                .font(.subheadline)
+                .foregroundColor(.secondary)
+            
+            // System Default Option (Top-Tier Card)
+            let isSystemSelected = l10n.selectedLanguage == .system
+            Button(action: {
+                withAnimation(.easeInOut(duration: 0.15)) {
+                    l10n.selectedLanguage = .system
+                }
+            }) {
+                HStack(spacing: 12) {
+                    FlatFlagView(language: .system, size: CGSize(width: 26, height: 18))
+                    
+                    VStack(alignment: .leading, spacing: 2) {
+                        HStack(spacing: 6) {
+                            Text(l10n.localized("lang.system"))
+                                .font(.subheadline)
+                                .fontWeight(isSystemSelected ? .semibold : .medium)
+                                .foregroundColor(.primary)
+                            
+                            // Badge indicating the detected macOS language
+                            Text("macOS: \(l10n.systemLanguage.displayName(in: l10n.effectiveLanguage))")
+                                .font(.caption2)
+                                .fontWeight(.medium)
+                                .padding(.horizontal, 6)
+                                .padding(.vertical, 1.5)
+                                .background(
+                                    RoundedRectangle(cornerRadius: 4)
+                                        .fill(isSystemSelected ? Color.accentColor.opacity(0.18) : Color.primary.opacity(0.06))
+                                )
+                                .foregroundColor(isSystemSelected ? .accentColor : .secondary)
+                        }
+                        
+                        Text(l10n.localized("about.lang_system_desc"))
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                    
+                    Spacer()
+                    
+                    if isSystemSelected {
+                        Image(systemName: "checkmark.circle.fill")
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundColor(.accentColor)
+                    } else {
+                        Circle()
+                            .stroke(Color.primary.opacity(0.2), lineWidth: 1.5)
+                            .frame(width: 16, height: 16)
+                    }
+                }
+                .padding(.horizontal, 14)
+                .padding(.vertical, 10)
+                .background(
+                    RoundedRectangle(cornerRadius: 10)
+                        .fill(isSystemSelected ? Color.accentColor.opacity(0.12) : (hoveredLang == .system ? Color.primary.opacity(0.05) : Color(nsColor: .windowBackgroundColor)))
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 10)
+                        .stroke(isSystemSelected ? Color.accentColor : Color.primary.opacity(0.08), lineWidth: isSystemSelected ? 1.5 : 1.0)
+                )
+            }
+            .buttonStyle(.plain)
+            .onHover { isHovered in
+                hoveredLang = isHovered ? .system : nil
+            }
+            
+            // Bottom Tier: 4 Languages Grid
+            let languages: [AppLanguage] = [.german, .english, .spanish, .french]
+            HStack(spacing: 10) {
+                ForEach(languages) { lang in
+                    let isSelected = l10n.selectedLanguage == lang
+                    Button(action: {
+                        withAnimation(.easeInOut(duration: 0.15)) {
+                            l10n.selectedLanguage = lang
+                        }
+                    }) {
+                        VStack(spacing: 8) {
+                            HStack {
+                                FlatFlagView(language: lang, size: CGSize(width: 24, height: 16))
+                                Spacer()
+                                if isSelected {
+                                    Image(systemName: "checkmark")
+                                        .font(.system(size: 11, weight: .bold))
+                                        .foregroundColor(.accentColor)
+                                } else {
+                                    Text(lang.code)
+                                        .font(.system(size: 10, weight: .semibold))
+                                        .foregroundColor(.secondary.opacity(0.7))
+                                }
+                            }
+                            
+                            HStack {
+                                Text(lang.displayName(in: lang))
+                                    .font(.subheadline)
+                                    .fontWeight(isSelected ? .semibold : .regular)
+                                    .foregroundColor(.primary)
+                                    .lineLimit(1)
+                                    .minimumScaleFactor(0.85)
+                                Spacer()
+                            }
+                        }
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 10)
+                        .frame(maxWidth: .infinity)
+                        .background(
+                            RoundedRectangle(cornerRadius: 10)
+                                .fill(isSelected ? Color.accentColor.opacity(0.12) : (hoveredLang == lang ? Color.primary.opacity(0.05) : Color(nsColor: .windowBackgroundColor)))
+                        )
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 10)
+                                .stroke(isSelected ? Color.accentColor : Color.primary.opacity(0.08), lineWidth: isSelected ? 1.5 : 1.0)
+                        )
+                    }
+                    .buttonStyle(.plain)
+                    .onHover { isHovered in
+                        hoveredLang = isHovered ? lang : nil
+                    }
+                }
+            }
+        }
+        .padding()
+        .background(RoundedRectangle(cornerRadius: 12).fill(Color(nsColor: .controlBackgroundColor)))
+    }
+}
+
 struct AboutView: View {
     @ObservedObject var updater = UpdateManager.shared
     @ObservedObject var l10nObj = LocalizationManager.shared
@@ -426,6 +549,10 @@ struct AboutView: View {
                         .foregroundColor(.secondary)
                         .frame(maxWidth: 440)
                 }
+                
+                // Language Selection Card
+                LanguageSettingsCard()
+                    .frame(maxWidth: 600)
                 
                 // Updates Section
                 UpdateSettingsSection(isDetailedView: true)
