@@ -224,8 +224,6 @@ struct GeneralSettingsView: View {
                                     VStack(spacing: 6) {
                                         ForEach(webPanel.widgets) { widget in
                                             HStack(spacing: 8) {
-                                                Spacer().frame(width: 44)
-                                                
                                                 // Preferred Favicon with Fallback to SF Symbol
                                                 Group {
                                                     if let icon = faviconManager.previewIcon(for: widget.url, widgetId: widget.id, selectedFaviconURL: widget.selectedFaviconURL, removeWhite: widget.removeWhiteBackground) {
@@ -256,8 +254,8 @@ struct GeneralSettingsView: View {
                                                 .toggleStyle(.switch)
                                                 .scaleEffect(0.75)
                                             }
-                                            .padding(.vertical, 3)
-                                            .padding(.horizontal, 8)
+                                            .padding(.vertical, 4)
+                                            .padding(.horizontal, 10)
                                             .background(RoundedRectangle(cornerRadius: 6).fill(Color.primary.opacity(0.04)))
                                             .onAppear {
                                                 if !widget.url.isEmpty && faviconManager.options(for: widget.url).isEmpty {
@@ -266,7 +264,7 @@ struct GeneralSettingsView: View {
                                             }
                                         }
                                     }
-                                    .padding(.leading, 8)
+                                    .padding(.leading, 40)
                                     .padding(.top, 4)
                                 }
                             }
