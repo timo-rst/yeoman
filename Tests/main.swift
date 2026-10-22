@@ -8,6 +8,8 @@ runClipboardTests()
 runWebPanelTests()
 runLocalizationTests()
 runModuleManagerTests()
+runSecurityTests()
+removeTestDefaults()
 
 let exitCode = TestHarness.shared.printSummary()
 exit(exitCode)

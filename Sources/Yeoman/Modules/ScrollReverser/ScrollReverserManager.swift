@@ -21,11 +21,12 @@ public final class ScrollReverserManager: ObservableObject {
         didSet { UserDefaults.standard.set(reverseTrackpadHorizontal, forKey: "sr_reverse_trackpad_horizontal") }
     }
     @Published public var mouseStepMultiplier: Int {
-        didSet { UserDefaults.standard.set(mouseStepMultiplier, forKey: "sr_mouse_step_multiplier") }
+        didSet { mouseStepMultiplier = min(5, max(1, mouseStepMultiplier)); UserDefaults.standard.set(mouseStepMultiplier, forKey: "sr_mouse_step_multiplier") }
     }
     
     // Live Diagnostics for User Feedback
     @Published public var hasAccessibilityPermission: Bool = false
+    @Published public private(set) var permissionError: String?
     @Published public var lastEventDevice: String = "Noch keine Events empfangen"
     @Published public var lastEventSummary: String = "Warte auf Scroll-Vorgang..."
     @Published public var lastEventTimestamp: Date?
@@ -41,11 +42,21 @@ public final class ScrollReverserManager: ObservableObject {
         self.reverseMouseHorizontal = UserDefaults.standard.object(forKey: "sr_reverse_mouse_horizontal") as? Bool ?? false
         self.reverseTrackpadVertical = UserDefaults.standard.object(forKey: "sr_reverse_trackpad_vertical") as? Bool ?? false
         self.reverseTrackpadHorizontal = UserDefaults.standard.object(forKey: "sr_reverse_trackpad_horizontal") as? Bool ?? false
-        self.mouseStepMultiplier = UserDefaults.standard.object(forKey: "sr_mouse_step_multiplier") as? Int ?? 1
+        self.mouseStepMultiplier = min(5, max(1, UserDefaults.standard.object(forKey: "sr_mouse_step_multiplier") as? Int ?? 1))
         
-        checkAccessibility(prompt: false)
+        NotificationCenter.default.addObserver(self, selector: #selector(applicationActivated), name: NSApplication.didBecomeActiveNotification, object: nil)
     }
-    
+    deinit { NotificationCenter.default.removeObserver(self) }
+    @objc private func applicationActivated() { if lifecycle.requested { reconcilePermission() } }
+    private let lifecycle = TapLifecycle()
+    private func reconcilePermission() {
+        precondition(Thread.isMainThread)
+        let permission = AXIsProcessTrusted()
+        hasAccessibilityPermission = permission
+        lifecycle.reconcile(permission: permission, create: { self.installTap() }, destroy: { self.tearDownTap() })
+        isRunning = lifecycle.running
+    }
+
     // MARK: - Accessibility
     
     @discardableResult
@@ -58,14 +69,10 @@ public final class ScrollReverserManager: ObservableObject {
             trusted = AXIsProcessTrusted()
         }
         
-        DispatchQueue.main.async {
-            self.hasAccessibilityPermission = trusted
-            if trusted {
-                self.stopPermissionPolling()
-                if !self.isRunning && ModuleManager.shared.scrollReverserModule.isEnabled {
-                    self.start()
-                }
-            }
+        hasAccessibilityPermission = trusted
+        if !trusted {
+            lifecycle.reconcile(permission: false, create: { false }, destroy: { self.tearDownTap() })
+            isRunning = lifecycle.running
         }
         return trusted
     }
@@ -79,31 +86,35 @@ public final class ScrollReverserManager: ObservableObject {
     }
     
     public func resetTCCPermission() {
-        for bundleId in ["de.trst.Yeoman", "de.trst.MacCustomizer"] {
-            let p = Process()
-            p.executableURL = URL(fileURLWithPath: "/usr/bin/tccutil")
-            p.arguments = ["reset", "Accessibility", bundleId]
-            try? p.run()
-            p.waitUntilExit()
+        DispatchQueue.global(qos: .utility).async { [weak self] in
+            var failure: Error?
+            for bundleId in ["de.trst.Yeoman", "de.trst.MacCustomizer"] {
+                do {
+                    let result = try BoundedProcess.run("/usr/bin/tccutil", ["reset", "Accessibility", bundleId], timeout: 5, limit: 16_384)
+                    guard result.status == 0 else { throw SecurityFailure.rejected("TCC-Berechtigung konnte nicht zurückgesetzt werden.") }
+                } catch { failure = failure ?? error }
+            }
+            let errorMessage = failure?.localizedDescription
+            DispatchQueue.main.async {
+                self?.permissionError = errorMessage
+                self?.checkAccessibility(prompt: true)
+                if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility") {
+                    NSWorkspace.shared.open(url)
+                }
+            }
         }
-        
-        checkAccessibility(prompt: true)
-        openAccessibilitySettings()
     }
     
     // MARK: - Event Tap Lifecycle
     
     public func start() {
-        guard !isRunning else { return }
-        guard checkAccessibility(prompt: false) else {
-            // Start polling for permission grant
-            startPermissionPolling()
-            return
-        }
-        
-        stopPermissionPolling()
-        
-        let mask = CGEventMask(1 << CGEventType.scrollWheel.rawValue)
+        precondition(Thread.isMainThread)
+        lifecycle.requested = true
+        startPermissionPolling()
+        reconcilePermission()
+    }
+    private func installTap() -> Bool {
+        let mask = Self.eventMask
         let callback: CGEventTapCallBack = { proxy, type, event, refcon in
             guard let refcon = refcon else { return Unmanaged.passUnretained(event) }
             let manager = Unmanaged<ScrollReverserManager>.fromOpaque(refcon).takeUnretainedValue()
@@ -118,9 +129,9 @@ public final class ScrollReverserManager: ObservableObject {
             callback: callback,
             userInfo: Unmanaged.passUnretained(self).toOpaque()
         ) else {
-            return
+            return false
         }
-        
+
         self.eventTapPort = tap
         let source = CFMachPortCreateRunLoopSource(kCFAllocatorDefault, tap, 0)
         self.runLoopSource = source
@@ -128,13 +139,17 @@ public final class ScrollReverserManager: ObservableObject {
         CFRunLoopAddSource(CFRunLoopGetMain(), source, .commonModes)
         CGEvent.tapEnable(tap: tap, enable: true)
         
-        DispatchQueue.main.async {
-            self.isRunning = true
-        }
+        return true
     }
     
     public func stop() {
+        precondition(Thread.isMainThread)
+        lifecycle.requested = false
         stopPermissionPolling()
+        lifecycle.reconcile(permission: hasAccessibilityPermission, create: { false }, destroy: { self.tearDownTap() })
+        isRunning = lifecycle.running
+    }
+    private func tearDownTap() {
         
         if let tap = eventTapPort {
             CGEvent.tapEnable(tap: tap, enable: false)
@@ -147,32 +162,23 @@ public final class ScrollReverserManager: ObservableObject {
             runLoopSource = nil
         }
         
-        DispatchQueue.main.async {
-            self.isRunning = false
-        }
+        isRunning = false
     }
     
     public func reEnableTap() {
+        guard lifecycle.requested, checkAccessibility() else { tearDownTap(); return }
         if let tap = eventTapPort {
             CGEvent.tapEnable(tap: tap, enable: true)
         }
     }
     
     public func startPermissionPolling() {
-        permissionCheckTimer?.cancel()
-        permissionCheckTimer = Timer.publish(every: 1.0, on: .main, in: .common)
-            .autoconnect()
-            .sink { [weak self] _ in
-                guard let self = self else { return }
-                if self.checkAccessibility(prompt: false) {
-                    self.stopPermissionPolling()
-                    if ModuleManager.shared.scrollReverserModule.isEnabled {
-                        self.start()
-                    }
-                }
-            }
+        guard permissionCheckTimer == nil else { return }
+        permissionCheckTimer = Timer.publish(every: 3, on: .main, in: .common).autoconnect().sink { [weak self] _ in
+            self?.reconcilePermission()
+        }
     }
-    
+
     public func stopPermissionPolling() {
         permissionCheckTimer?.cancel()
         permissionCheckTimer = nil
@@ -182,11 +188,11 @@ public final class ScrollReverserManager: ObservableObject {
     
     private func handleTapEvent(proxy: CGEventTapProxy, type: CGEventType, event: CGEvent) -> Unmanaged<CGEvent>? {
         if type == .tapDisabledByTimeout || type == .tapDisabledByUserInput {
-            reEnableTap()
+            DispatchQueue.main.async { [weak self] in self?.reEnableTap() }
             return Unmanaged.passUnretained(event)
         }
         
-        guard type == .scrollWheel else {
+        guard Self.shouldTransform(type) else {
             return Unmanaged.passUnretained(event)
         }
         
@@ -198,7 +204,7 @@ public final class ScrollReverserManager: ObservableObject {
         // 2. Determine inversion configuration
         let reverseV = isContinuous ? reverseTrackpadVertical : reverseMouseVertical
         let reverseH = isContinuous ? reverseTrackpadHorizontal : reverseMouseHorizontal
-        let stepMultiplier = isContinuous ? 1 : max(1, mouseStepMultiplier)
+        let stepMultiplier = isContinuous ? 1 : min(5, max(1, mouseStepMultiplier))
         
         let vmul = reverseV ? -stepMultiplier : stepMultiplier
         let hmul = reverseH ? -stepMultiplier : stepMultiplier
@@ -211,19 +217,26 @@ public final class ScrollReverserManager: ObservableObject {
         let fixedPtAxis1 = event.getDoubleValueField(.scrollWheelEventFixedPtDeltaAxis1)
         let fixedPtAxis2 = event.getDoubleValueField(.scrollWheelEventFixedPtDeltaAxis2)
         
+        guard let vertical = SecurityPolicy.multiply(axis1, by: vmul),
+              let horizontal = SecurityPolicy.multiply(axis2, by: hmul),
+              let verticalPoint = SecurityPolicy.multiply(pointAxis1, by: vmul),
+              let horizontalPoint = SecurityPolicy.multiply(pointAxis2, by: hmul),
+              (fixedPtAxis1 * Double(vmul)).isFinite,
+              (fixedPtAxis2 * Double(hmul)).isFinite else { return Unmanaged.passUnretained(event) }
+
         // 4. Invert axes if required
         // Note: setting DeltaAxis first causes macOS to recompute
         // PointDeltaAxis internally, so we set DeltaAxis first, then restore the multiplied Point and FixedPt deltas.
         if vmul != 1 {
-            event.setIntegerValueField(.scrollWheelEventDeltaAxis1, value: axis1 * Int64(vmul))
+            event.setIntegerValueField(.scrollWheelEventDeltaAxis1, value: vertical)
             event.setDoubleValueField(.scrollWheelEventFixedPtDeltaAxis1, value: fixedPtAxis1 * Double(vmul))
-            event.setIntegerValueField(.scrollWheelEventPointDeltaAxis1, value: pointAxis1 * Int64(vmul))
+            event.setIntegerValueField(.scrollWheelEventPointDeltaAxis1, value: verticalPoint)
         }
         
         if hmul != 1 {
-            event.setIntegerValueField(.scrollWheelEventDeltaAxis2, value: axis2 * Int64(hmul))
+            event.setIntegerValueField(.scrollWheelEventDeltaAxis2, value: horizontal)
             event.setDoubleValueField(.scrollWheelEventFixedPtDeltaAxis2, value: fixedPtAxis2 * Double(hmul))
-            event.setIntegerValueField(.scrollWheelEventPointDeltaAxis2, value: pointAxis2 * Int64(hmul))
+            event.setIntegerValueField(.scrollWheelEventPointDeltaAxis2, value: horizontalPoint)
         }
         
         // 5. Update Diagnostics (throttled)
@@ -237,6 +250,9 @@ public final class ScrollReverserManager: ObservableObject {
         
         return Unmanaged.passUnretained(event)
     }
+
+    public static let eventMask = CGEventMask(1 << CGEventType.scrollWheel.rawValue)
+    public static func shouldTransform(_ type: CGEventType) -> Bool { type == .scrollWheel }
     
     private var lastDiagnosticUpdateTime: TimeInterval = 0
     

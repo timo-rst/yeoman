@@ -2,202 +2,307 @@ import Foundation
 import Combine
 import AppKit
 
+public struct ClipboardSnapshot: Codable {
+    public var items: [ClipboardItem] = []
+    public var images: [String: Data] = [:]
+    public init() {}
+    public func validate() throws {
+        guard items.count <= 500, Set(items.map(\.id)).count == items.count else { throw SecurityFailure.rejected("Ungültiger Clipboard-Verlauf.") }
+        var bytes = 0
+        for item in items {
+            guard item.content.utf8.count <= SecurityPolicy.textBytes,
+                  (item.sourceApp?.utf8.count ?? 0) <= 1024 else { throw SecurityFailure.rejected("Clipboard-Eintrag zu groß.") }
+            bytes += item.content.utf8.count
+            if item.type == .image {
+                guard item.imageFileName == "\(item.id.uuidString).png", let image = images[item.id.uuidString],
+                      image.count <= SecurityPolicy.imageBytes,
+                      let w = item.imageWidth, let h = item.imageHeight, w > 0, h > 0,
+                      w <= SecurityPolicy.imagePixels / h else { throw SecurityFailure.rejected("Ungültiger Bildverweis.") }
+                bytes += image.count
+            } else if item.imageFileName != nil { throw SecurityFailure.rejected("Unerwarteter Bildverweis.") }
+        }
+        guard images.count == items.filter({ $0.type == .image }).count,
+              bytes <= 70 * 1_048_576 else { throw SecurityFailure.rejected("Clipboard-Gesamtgrenze überschritten.") }
+    }
+}
+
 public final class ClipboardHistoryStore: ObservableObject {
     public static let shared = ClipboardHistoryStore()
-    
-    @Published public var items: [ClipboardItem] = []
-    @Published public var searchQuery: String = ""
-    @Published public var maxItems: Int = 100
-    
-    private let storageURL: URL
-    private let imagesDirectory: URL
-    
-    public init() {
-        let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
-        let directory = appSupport.appendingPathComponent("Yeoman", isDirectory: true)
-        let legacyDirectory = appSupport.appendingPathComponent("MacCustomizer", isDirectory: true)
-        if !FileManager.default.fileExists(atPath: directory.path) && FileManager.default.fileExists(atPath: legacyDirectory.path) {
-            try? FileManager.default.moveItem(at: legacyDirectory, to: directory)
+    @Published public private(set) var items: [ClipboardItem] = []
+    @Published public private(set) var storageError: String?
+    @Published public private(set) var isPersistent = false
+    @Published public var searchQuery = ""
+    @Published public var maxItems = 100 {
+        didSet {
+            let count = min(500, max(1, maxItems))
+            queue.async { self.itemLimit = count; self.mutate { _ in } }
         }
-        
-        self.imagesDirectory = directory.appendingPathComponent("clipboard_images", isDirectory: true)
-        
-        let dirAttributes: [FileAttributeKey: Any] = [.posixPermissions: 0o700]
-        try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true, attributes: dirAttributes)
-        try? FileManager.default.createDirectory(at: imagesDirectory, withIntermediateDirectories: true, attributes: dirAttributes)
-        try? FileManager.default.setAttributes(dirAttributes, ofItemAtPath: directory.path)
-        try? FileManager.default.setAttributes(dirAttributes, ofItemAtPath: imagesDirectory.path)
-        
-        self.storageURL = directory.appendingPathComponent("clipboard_history.json")
-        load()
     }
-    
+    private let queue = DispatchQueue(label: "de.trst.Yeoman.clipboard.persistence", qos: .utility)
+    private let imageQueue: OperationQueue = {
+        let q = OperationQueue(); q.maxConcurrentOperationCount = 2; return q
+    }()
+    private let imageLock = NSLock()
+    private var publishedImages: [String: Data] = [:]
+    private var state = ClipboardSnapshot()
+    private var itemLimit = 100
+    private var persistent = false
+    private var document: EncryptedDocument?
+    private var blocked = false
+    private var generation = 0
+    private var commitScheduled = false
+    private var committed = ClipboardSnapshot()
+    private let directoryURL: URL?
+    private let secrets: SecretStore
+    private let defaults: UserDefaults
+
+    public init(directory: URL? = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!.appendingPathComponent("Yeoman"),
+                secrets: SecretStore = KeychainSecretStore(), defaults: UserDefaults = .standard) {
+        self.directoryURL = directory; self.secrets = secrets; self.defaults = defaults
+        queue.async { self.load() }
+    }
     public var filteredItems: [ClipboardItem] {
-        let trimmedQuery = searchQuery.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-        if trimmedQuery.isEmpty {
-            return items
-        }
-        return items.filter { item in
-            if item.content.lowercased().contains(trimmedQuery) { return true }
-            if let app = item.sourceApp, app.lowercased().contains(trimmedQuery) { return true }
-            if item.type == .image && item.formattedDimensions.lowercased().contains(trimmedQuery) { return true }
-            return false
+        let query = searchQuery.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        return query.isEmpty ? items : items.filter { $0.content.lowercased().contains(query) || ($0.sourceApp?.lowercased().contains(query) ?? false) }
+    }
+    public func setPersistent(_ enabled: Bool) {
+        queue.async {
+            do {
+                guard !self.blocked else { throw SecurityFailure.rejected("Speicher gesperrt; vorhandene Daten bleiben unverändert.") }
+                if enabled { try self.ensureDocument(); try self.persist(self.state) }
+                else if let document = self.document {
+                    try document.write(JSONEncoder().encode(ClipboardSnapshot()))
+                }
+                self.persistent = enabled
+                self.defaults.set(enabled, forKey: "clipboard_encrypted_persistence")
+                DispatchQueue.main.async { self.isPersistent = enabled }
+            } catch { self.report(error) }
         }
     }
-    
     public func addItem(content: String, type: ClipboardContentType = .text, sourceApp: String? = nil) {
-        let trimmed = content.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty else { return }
-        
-        // Remove existing identical item if not pinned, so it jumps to top
-        if let existingIndex = items.firstIndex(where: { $0.content == content && $0.type != .image }) {
-            let existing = items[existingIndex]
-            if existing.isPinned {
-                return
+        guard type != .image, content.utf8.count <= SecurityPolicy.textBytes,
+              !content.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
+        queue.async {
+            self.mutate { next in
+                if next.items.contains(where: { $0.content == content && $0.isPinned }) { return }
+                next.items.removeAll { $0.type != .image && $0.content == content }
+                next.items.insert(ClipboardItem(content: content, type: type, sourceApp: sourceApp.map { String($0.prefix(256)) }), at: 0)
             }
-            items.remove(at: existingIndex)
         }
-        
-        let newItem = ClipboardItem(content: content, type: type, sourceApp: sourceApp)
-        items.insert(newItem, at: 0)
-        
-        trimExcessItems()
-        save()
     }
-    
-    public func addImageItem(image: NSImage, sourceApp: String? = nil, isScreenshot: Bool? = nil) {
-        guard let tiff = image.tiffRepresentation,
-              let rep = NSBitmapImageRep(data: tiff),
-              let pngData = rep.representation(using: .png, properties: [:]) else { return }
-        
-        let width = rep.pixelsWide
-        let height = rep.pixelsHigh
-        let byteSize = pngData.count
-        
-        // Avoid duplicate spam if identical image size was copied in the last entry
-        if let first = items.first, first.type == .image, first.imageByteSize == byteSize, first.imageWidth == width, first.imageHeight == height {
-            return
+    public func addImageData(_ data: Data, sourceApp: String? = nil, isScreenshot: Bool? = nil) {
+        guard data.count <= SecurityPolicy.imageBytes else { return }
+        scheduleImage(sourceApp: sourceApp, isScreenshot: isScreenshot) { data }
+    }
+    public func addImageFile(_ url: URL, sourceApp: String? = nil, isScreenshot: Bool? = nil) {
+        guard url.isFileURL,
+              ["png", "jpg", "jpeg", "heic", "webp", "tiff", "bmp", "ico"].contains(url.pathExtension.lowercased()) else { return }
+        scheduleImage(sourceApp: sourceApp, isScreenshot: isScreenshot) {
+            try SecureDirectory.readExternal(url, limit: SecurityPolicy.imageBytes)
         }
-        
-        let id = UUID()
-        let fileName = "\(id.uuidString).png"
-        let fileURL = imagesDirectory.appendingPathComponent(fileName)
-        
-        do {
-            try pngData.write(to: fileURL, options: [.atomic, .completeFileProtection])
-            try? FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: fileURL.path)
-        } catch {
-            return
-        }
-        
-        let isScreen = isScreenshot ?? {
-            if let app = sourceApp?.lowercased() {
-                return app.contains("screenshot") ||
-                       app.contains("bildschirmfoto") ||
-                       app.contains("screencapture") ||
-                       app.contains("cleanshot") ||
-                       app.contains("shottr") ||
-                       app.contains("snagit") ||
-                       app.contains("kap") ||
-                       app.contains("grab")
+    }
+    private func scheduleImage(sourceApp: String?, isScreenshot: Bool?, load: @escaping () throws -> Data) {
+        queue.async {
+            guard !self.blocked, self.imageQueue.operationCount < 2 else { return }
+            let generation = self.generation
+            self.imageQueue.addOperation {
+                do {
+                    let data = try load()
+                    guard data.count <= SecurityPolicy.imageBytes else { return }
+                    let image = try BoundedImage.decode(data)
+                    guard let png = NSBitmapImageRep(cgImage: image).representation(using: .png, properties: [:]),
+                          png.count <= SecurityPolicy.imageBytes else { return }
+                    self.queue.async {
+                        guard self.generation == generation else { return }
+                        self.mutate { next in
+                            let id = UUID()
+                            let item = ClipboardItem(id: id, content: "Bild (\(image.width) × \(image.height))", type: .image,
+                                sourceApp: sourceApp.map { String($0.prefix(256)) }, imageFileName: "\(id.uuidString).png",
+                                imageWidth: image.width, imageHeight: image.height, imageByteSize: png.count, isScreenshot: isScreenshot)
+                            next.items.insert(item, at: 0); next.images[id.uuidString] = png
+                        }
+                    }
+                } catch { self.report(error) }
             }
-            return false
-        }()
-        
-        let newItem = ClipboardItem(
-            id: id,
-            content: "\(isScreen ? "Screenshot" : "Bild") (\(width) × \(height))",
-            type: .image,
-            createdAt: Date(),
-            sourceApp: sourceApp,
-            imageFileName: fileName,
-            imageWidth: width,
-            imageHeight: height,
-            imageByteSize: byteSize,
-            isScreenshot: isScreen
-        )
-        
-        items.insert(newItem, at: 0)
-        trimExcessItems()
-        save()
-        
-        ClipboardImageCache.shared.preheatThumbnail(for: fileName, originalURL: fileURL, maxPixelSize: 120)
-        ClipboardImageCache.shared.preheatThumbnail(for: fileName, originalURL: fileURL, maxPixelSize: 300)
+        }
     }
-    
+    public func imageData(for item: ClipboardItem) -> Data? {
+        guard item.type == .image, item.imageFileName == "\(item.id.uuidString).png" else { return nil }
+        imageLock.lock(); defer { imageLock.unlock() }
+        return publishedImages[item.id.uuidString]
+    }
     public func togglePin(for item: ClipboardItem) {
-        if let idx = items.firstIndex(where: { $0.id == item.id }) {
-            items[idx].isPinned.toggle()
-            save()
+        queue.async { self.mutate { next in if let i = next.items.firstIndex(where: { $0.id == item.id }) { next.items[i].isPinned.toggle() } } }
+    }
+    public func removeItem(id: UUID) { remove { $0.id == id } }
+    public func clearUnpinned() { remove { !$0.isPinned } }
+    public func clearAll() { remove { _ in true } }
+    private func remove(_ predicate: @escaping (ClipboardItem) -> Bool) {
+        queue.async {
+            self.generation += 1; self.imageQueue.cancelAllOperations()
+            self.mutate { next in next.items.removeAll(where: predicate) }
         }
     }
-    
-    public func removeItem(id: UUID) {
-        if let item = items.first(where: { $0.id == id }) {
-            deleteImageFileIfNeeded(for: item)
+    private func mutate(_ body: (inout ClipboardSnapshot) -> Void) {
+        guard !blocked else { return }
+        var next = state; body(&next)
+        while next.items.count > itemLimit {
+            guard let i = next.items.lastIndex(where: { !$0.isPinned }) else { report(SecurityFailure.rejected("Clipboard-Limit erreicht.")); return }
+            next.items.remove(at: i)
         }
-        items.removeAll { $0.id == id }
-        save()
-    }
-    
-    public func clearUnpinned() {
-        for item in items where !item.isPinned {
-            deleteImageFileIfNeeded(for: item)
-        }
-        items.removeAll { !$0.isPinned }
-        save()
-    }
-    
-    public func clearAll() {
-        for item in items {
-            deleteImageFileIfNeeded(for: item)
-        }
-        items.removeAll()
-        save()
-    }
-    
-    private func trimExcessItems() {
-        if items.count > maxItems {
-            var nonPinnedIndices = items.indices.filter { !items[$0].isPinned }
-            while items.count > maxItems && !nonPinnedIndices.isEmpty {
-                let removeIdx = nonPinnedIndices.removeLast()
-                let item = items[removeIdx]
-                deleteImageFileIfNeeded(for: item)
-                items.remove(at: removeIdx)
+        let ids = Set(next.items.filter { $0.type == .image }.map { $0.id.uuidString })
+        next.images = next.images.filter { ids.contains($0.key) }
+        do {
+            try next.validate()
+            state = next
+            if !commitScheduled {
+                commitScheduled = true
+                queue.asyncAfter(deadline: .now() + 0.05) { self.commitPending() }
             }
-        }
+        } catch { report(error) }
     }
-    
-    private func deleteImageFileIfNeeded(for item: ClipboardItem) {
-        guard let fileName = item.imageFileName else { return }
-        let fileURL = imagesDirectory.appendingPathComponent(fileName)
-        try? FileManager.default.removeItem(at: fileURL)
-        ClipboardImageCache.shared.evict(fileName: fileName)
-        
-        let prefix = fileName.replacingOccurrences(of: ".png", with: "")
-        if let files = try? FileManager.default.contentsOfDirectory(atPath: imagesDirectory.path) {
-            for f in files where f.hasPrefix(prefix) {
-                try? FileManager.default.removeItem(at: imagesDirectory.appendingPathComponent(f))
-            }
-        }
+    private func commitPending() {
+        guard commitScheduled else { return }
+        commitScheduled = false
+        do {
+            if persistent { try persist(state) }
+            committed = state; publish()
+        } catch { state = committed; report(error) }
     }
-    
-    private func save() {
-        DispatchQueue.global(qos: .utility).async { [items = self.items, url = self.storageURL] in
-            let encoder = JSONEncoder()
-            encoder.outputFormatting = .prettyPrinted
-            if let data = try? encoder.encode(items) {
-                try? data.write(to: url, options: [.atomic, .completeFileProtection])
-                try? FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: url.path)
-            }
-        }
+    private func persist(_ snapshot: ClipboardSnapshot) throws {
+        try ensureDocument()
+        guard let document else { throw SecurityFailure.rejected("Persistenz nicht verfügbar.") }
+        try document.write(JSONEncoder().encode(snapshot))
     }
-    
+    private func ensureDocument() throws {
+        guard document == nil else { return }
+        guard let directoryURL else { throw SecurityFailure.rejected("Flüchtiger Test-Speicher.") }
+        let directory = try SecureDirectory(directoryURL)
+        document = try EncryptedDocument(directory: directory, name: "clipboard-v1.enc", secrets: secrets, limit: SecurityPolicy.historyBytes)
+    }
     private func load() {
-        guard FileManager.default.fileExists(atPath: storageURL.path) else { return }
-        if let data = try? Data(contentsOf: storageURL),
-           let loaded = try? JSONDecoder().decode([ClipboardItem].self, from: data) {
-            self.items = loaded
+        guard let directoryURL else { return }
+        do {
+            let directory = try SecureDirectory(directoryURL)
+            let existing = try directory.exists("clipboard-v1.enc")
+            let legacy = try directory.exists("clipboard_history.json")
+            let oldURL = directoryURL.deletingLastPathComponent().appendingPathComponent("MacCustomizer")
+            let oldExists = FileManager.default.fileExists(atPath: oldURL.path)
+            let userPref = defaults.object(forKey: "clipboard_encrypted_persistence") as? Bool
+            let migrationDone = defaults.bool(forKey: "clipboard_legacy_migration_done")
+
+            // User preference ALWAYS takes precedence over directory presence (AUD-02)
+            if let userPref {
+                persistent = userPref
+            } else if !migrationDone && (legacy || oldExists) {
+                persistent = true
+            } else {
+                persistent = false
+            }
+
+            if existing || persistent {
+                try ensureDocument()
+                if let data = try document?.read() {
+                    state = try JSONDecoder().decode(ClipboardSnapshot.self, from: data)
+                    try state.validate()
+                }
+
+                // If legacy files exist, always migrate/merge them instead of deleting without import (AUD-03)
+                var migratedSources = [SecureDirectory]()
+                if legacy {
+                    if try migrate(directory) {
+                        migratedSources.append(directory)
+                    }
+                }
+                if oldExists {
+                    let oldDir = try SecureDirectory(oldURL, create: false)
+                    if try migrate(oldDir) {
+                        migratedSources.append(oldDir)
+                    }
+                }
+
+                if !migratedSources.isEmpty || !existing {
+                    if persistent {
+                        try persist(state)
+                    }
+                }
+
+                // Clean only migrated sources after successful encrypted commit
+                if persistent && (existing || !migratedSources.isEmpty || migrationDone) {
+                    for dir in migratedSources {
+                        try cleanLegacy(dir)
+                    }
+                    defaults.set(true, forKey: "clipboard_legacy_migration_done")
+                }
+            }
+            defaults.set(persistent, forKey: "clipboard_encrypted_persistence")
+            committed = state; publish()
+        } catch { blocked = true; report(error) }
+    }
+    @discardableResult
+    private func migrate(_ directory: SecureDirectory) throws -> Bool {
+        guard try directory.exists("clipboard_history.json") else { return false }
+        let data = try directory.read("clipboard_history.json", limit: SecurityPolicy.historyBytes)
+        let old = try JSONDecoder().decode([ClipboardItem].self, from: data)
+        guard old.count <= 500 else { throw SecurityFailure.rejected("Alter Verlauf zu groß.") }
+        var next = state
+        for item in old {
+            if let existing = next.items.first(where: { $0.id == item.id }) {
+                guard existing == item else { throw SecurityFailure.rejected("Widersprüchliche Legacy-Einträge; Quelldaten bleiben erhalten.") }
+            } else {
+                next.items.append(item)
+            }
         }
+        if old.contains(where: { $0.type == .image }) {
+            if try directory.exists("clipboard_images") {
+                let images = try directory.child("clipboard_images", create: false)
+                for item in old where item.type == .image {
+                    guard item.imageFileName == "\(item.id.uuidString).png" else { throw SecurityFailure.rejected("Unsicherer Legacy-Bildpfad.") }
+                    if next.images[item.id.uuidString] == nil, try images.exists(item.imageFileName!) {
+                        let bytes = try images.read(item.imageFileName!, limit: SecurityPolicy.imageBytes)
+                        _ = try BoundedImage.decode(bytes)
+                        next.images[item.id.uuidString] = bytes
+                    }
+                }
+            }
+        }
+        try next.validate()
+        state = next
+        return true
+    }
+    private func cleanLegacy(_ directory: SecureDirectory) throws {
+        if try directory.exists("clipboard_images") {
+            let images = try directory.child("clipboard_images", create: false)
+            for name in try FileManager.default.contentsOfDirectory(atPath: images.url.path) {
+                // Only generated UUID image/thumbnail names, never paths from JSON.
+                let id = String(name.prefix(36))
+                guard UUID(uuidString: id) != nil,
+                      name == id + ".png" || [120, 200, 300].contains(where: { name == id + ".png_thumb_\($0).jpg" }) else { continue }
+                try images.remove(name)
+            }
+            if (try? FileManager.default.contentsOfDirectory(atPath: images.url.path).isEmpty) == true {
+                try? FileManager.default.removeItem(at: images.url)
+            }
+        }
+        try directory.remove("clipboard_history.json")
+        if (try? FileManager.default.contentsOfDirectory(atPath: directory.url.path).isEmpty) == true &&
+           directory.url.lastPathComponent == "MacCustomizer" {
+            try? FileManager.default.removeItem(at: directory.url)
+        }
+    }
+    private func publish() {
+        let snapshot = state, persistent = persistent
+        DispatchQueue.main.async {
+            self.imageLock.lock(); self.publishedImages = snapshot.images; self.imageLock.unlock()
+            ClipboardImageCache.shared.clear()
+            self.items = snapshot.items; self.isPersistent = persistent
+        }
+    }
+    private func report(_ error: Error) { DispatchQueue.main.async { self.storageError = error.localizedDescription } }
+    /// Deterministic test barrier; never needed by the UI.
+    public func flushForTesting() {
+        queue.sync {}
+        imageQueue.waitUntilAllOperationsAreFinished()
+        queue.sync { commitPending() }
     }
 }

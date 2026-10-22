@@ -32,20 +32,20 @@ func runUpdateManagerTests() {
         harness.test("isTrustedUpdateHost enforces HTTPS and GitHub whitelist") {
             // Valid trusted URLs
             let releaseUrl = URL(string: "https://api.github.com/repos/timo-rst/mac_customizer/releases/latest")!
-            let downloadUrl = URL(string: "https://github.com/timo-rst/mac_customizer/releases/download/v1.0.0/Yeoman.dmg")!
+            let downloadUrl = URL(string: "https://github.com/timo-rst/mac_customizer/releases/download/v1.0.0/Yeoman.zip")!
             let cdnUrl = URL(string: "https://objects.githubusercontent.com/github-production-release-asset-2e65be/Yeoman.zip")!
             
-            assertTrue(UpdateManager.isTrustedUpdateHost(releaseUrl), "GitHub API must be trusted")
+            assertFalse(UpdateManager.isTrustedUpdateHost(releaseUrl), "API endpoint is not an installable asset")
             assertTrue(UpdateManager.isTrustedUpdateHost(downloadUrl), "GitHub release download must be trusted")
-            assertTrue(UpdateManager.isTrustedUpdateHost(cdnUrl), "GitHub user content CDN must be trusted")
+            assertFalse(UpdateManager.isTrustedUpdateHost(cdnUrl), "CDN is allowed only as a controlled redirect")
             
             // Insecure HTTP must be rejected
-            let insecureUrl = URL(string: "http://github.com/timo-rst/mac_customizer/releases/download/v1.0.0/Yeoman.dmg")!
+            let insecureUrl = URL(string: "http://github.com/timo-rst/mac_customizer/releases/download/v1.0.0/Yeoman.zip")!
             assertFalse(UpdateManager.isTrustedUpdateHost(insecureUrl), "Insecure HTTP must be rejected")
             
             // Untrusted third-party domains must be rejected
             let maliciousUrl = URL(string: "https://evil-server.com/malware.dmg")!
-            let deceptiveUrl = URL(string: "https://github.com.evil-domain.org/Yeoman.dmg")!
+            let deceptiveUrl = URL(string: "https://github.com.evil-domain.org/Yeoman.zip")!
             assertFalse(UpdateManager.isTrustedUpdateHost(maliciousUrl), "External untrusted host must be rejected")
             assertFalse(UpdateManager.isTrustedUpdateHost(deceptiveUrl), "Phishing subdomain must be rejected")
         }

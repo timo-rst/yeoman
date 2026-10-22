@@ -265,13 +265,15 @@ public final class LocalizationManager: ObservableObject {
     
     @Published public var selectedLanguage: AppLanguage {
         didSet {
-            UserDefaults.standard.set(selectedLanguage.rawValue, forKey: storageKey)
+            defaults.set(selectedLanguage.rawValue, forKey: storageKey)
             NotificationCenter.default.post(name: .appLanguageDidChange, object: nil)
         }
     }
     
-    public init() {
-        if let stored = UserDefaults.standard.string(forKey: storageKey),
+    private let defaults: UserDefaults
+    public init(defaults: UserDefaults = .standard) {
+        self.defaults = defaults
+        if let stored = defaults.string(forKey: storageKey),
            let lang = AppLanguage(rawValue: stored) {
             self.selectedLanguage = lang
         } else {

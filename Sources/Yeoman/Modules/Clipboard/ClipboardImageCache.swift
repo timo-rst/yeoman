@@ -1,158 +1,53 @@
 import AppKit
-import ImageIO
 
 public final class ClipboardImageCache {
     public static let shared = ClipboardImageCache()
-    
-    private let thumbnailCache = NSCache<NSString, NSImage>()
-    private let fullImageCache = NSCache<NSString, NSImage>()
-    private let ioQueue = DispatchQueue(label: "de.trst.maccustomizer.clipboard.imagecache", qos: .userInitiated, attributes: .concurrent)
-    
-    private init() {
-        thumbnailCache.countLimit = 300
-        thumbnailCache.totalCostLimit = 40 * 1024 * 1024 // 40 MB max for thumbnails
-        
-        fullImageCache.countLimit = 6
-        fullImageCache.totalCostLimit = 100 * 1024 * 1024 // 100 MB max for full previews
+    private let cache = NSCache<NSString, NSImage>()
+    private let queue: OperationQueue = { let q = OperationQueue(); q.maxConcurrentOperationCount = 2; return q }()
+    private let lock = NSLock()
+    private var generation = 0
+    private var waiters: [String: [(NSImage?) -> Void]] = [:]
+    private init() { cache.countLimit = 300; cache.totalCostLimit = 40 * 1024 * 1024 }
+    public func clear() {
+        lock.lock()
+        generation += 1; cache.removeAllObjects(); queue.cancelAllOperations()
+        let callbacks = waiters.values.flatMap { $0 }; waiters.removeAll()
+        lock.unlock()
+        DispatchQueue.main.async { callbacks.forEach { $0(nil) } }
     }
-    
-    private func cacheKey(for fileName: String, size: CGFloat) -> NSString {
-        "\(fileName)_\(Int(size))" as NSString
-    }
-    
-    /// Synchronous memory-cache check (0ms latency, zero disk I/O, zero lag)
+    public func evict(fileName: String) { clear() }
+    private func key(_ item: ClipboardItem, _ size: CGFloat) -> NSString { "\(item.id)-\(Int(size))" as NSString }
     public func cachedThumbnail(for item: ClipboardItem, maxPixelSize: CGFloat = 200) -> NSImage? {
-        guard let fileName = item.imageFileName else { return nil }
-        let key = cacheKey(for: fileName, size: maxPixelSize)
-        return thumbnailCache.object(forKey: key)
+        guard maxPixelSize.isFinite, (1...4096).contains(maxPixelSize) else { return nil }
+        return cache.object(forKey: key(item, maxPixelSize))
     }
-    
-    /// Asynchronously loads or generates downscaled thumbnail using hardware-accelerated ImageIO
     public func loadThumbnail(for item: ClipboardItem, maxPixelSize: CGFloat = 200, completion: @escaping (NSImage?) -> Void) {
-        guard let fileName = item.imageFileName, let originalURL = item.imageURL else {
-            completion(nil)
-            return
+        guard maxPixelSize.isFinite, (1...4096).contains(maxPixelSize),
+              let data = ClipboardHistoryStore.shared.imageData(for: item) else { completion(nil); return }
+        if let cached = cachedThumbnail(for: item, maxPixelSize: maxPixelSize) { completion(cached); return }
+        let cacheKey = key(item, maxPixelSize), requestKey = cacheKey as String
+        lock.lock()
+        if waiters[requestKey] != nil {
+            waiters[requestKey]!.append(completion); lock.unlock(); return
         }
-        
-        let key = cacheKey(for: fileName, size: maxPixelSize)
-        if let cached = thumbnailCache.object(forKey: key) {
-            completion(cached)
-            return
-        }
-        
-        ioQueue.async { [weak self] in
-            guard let self = self else { return }
-            
-            // 1. Check if on-disk thumbnail already exists
-            let thumbFileName = "\(fileName)_thumb_\(Int(maxPixelSize)).jpg"
-            let thumbURL = originalURL.deletingLastPathComponent().appendingPathComponent(thumbFileName)
-            
-            if FileManager.default.fileExists(atPath: thumbURL.path),
-               let thumbData = try? Data(contentsOf: thumbURL),
-               let thumbImage = NSImage(data: thumbData) {
-                let cost = Int(thumbImage.size.width * thumbImage.size.height * 4)
-                self.thumbnailCache.setObject(thumbImage, forKey: key, cost: cost)
-                DispatchQueue.main.async { completion(thumbImage) }
-                return
-            }
-            
-            // 2. Decode thumbnail directly via ImageIO without loading or decompressing the full 4K bitmap
-            guard FileManager.default.fileExists(atPath: originalURL.path) else {
-                DispatchQueue.main.async { completion(nil) }
-                return
-            }
-            
-            let options: [CFString: Any] = [
-                kCGImageSourceCreateThumbnailFromImageAlways: true,
-                kCGImageSourceCreateThumbnailWithTransform: true,
-                kCGImageSourceThumbnailMaxPixelSize: maxPixelSize,
-                kCGImageSourceShouldCacheImmediately: true
-            ]
-            
-            guard let source = CGImageSourceCreateWithURL(originalURL as CFURL, nil),
-                  let cgImage = CGImageSourceCreateThumbnailAtIndex(source, 0, options as CFDictionary) else {
-                DispatchQueue.main.async { completion(nil) }
-                return
-            }
-            
-            let thumbImage = NSImage(cgImage: cgImage, size: NSSize(width: cgImage.width, height: cgImage.height))
-            let cost = cgImage.width * cgImage.height * 4
-            self.thumbnailCache.setObject(thumbImage, forKey: key, cost: cost)
-            
-            // 3. Save thumbnail to disk in background for instant loading on next app launch
-            let rep = NSBitmapImageRep(cgImage: cgImage)
-            if let jpgData = rep.representation(using: .jpeg, properties: [.compressionFactor: 0.85]) {
-                try? jpgData.write(to: thumbURL, options: .atomic)
-            }
-            
+        guard waiters.count < 2 else { lock.unlock(); completion(nil); return }
+        waiters[requestKey] = [completion]
+        let expected = generation
+        lock.unlock()
+        queue.addOperation {
+            let cg = try? BoundedImage.decode(data, thumbnail: Int(maxPixelSize))
+            let image = cg.map { NSImage(cgImage: $0, size: .zero) }
             DispatchQueue.main.async {
-                completion(thumbImage)
+                self.lock.lock()
+                let valid = self.generation == expected
+                let callbacks = self.waiters.removeValue(forKey: requestKey) ?? []
+                if valid, let image, let cg { self.cache.setObject(image, forKey: cacheKey, cost: cg.width * cg.height * 4) }
+                self.lock.unlock()
+                callbacks.forEach { $0(valid ? image : nil) }
             }
         }
     }
-    
-    /// Asynchronously loads full resolution image for detail view
     public func loadFullImage(for item: ClipboardItem, completion: @escaping (NSImage?) -> Void) {
-        guard let fileName = item.imageFileName, let url = item.imageURL else {
-            completion(nil)
-            return
-        }
-        
-        let key = fileName as NSString
-        if let cached = fullImageCache.object(forKey: key) {
-            completion(cached)
-            return
-        }
-        
-        ioQueue.async { [weak self] in
-            guard let self = self, FileManager.default.fileExists(atPath: url.path),
-                  let img = NSImage(contentsOf: url) else {
-                DispatchQueue.main.async { completion(nil) }
-                return
-            }
-            
-            let cost = Int(img.size.width * img.size.height * 4)
-            self.fullImageCache.setObject(img, forKey: key, cost: cost)
-            DispatchQueue.main.async {
-                completion(img)
-            }
-        }
-    }
-    
-    /// Pre-generates thumbnail in background immediately when a screenshot or image is copied
-    public func preheatThumbnail(for fileName: String, originalURL: URL, maxPixelSize: CGFloat = 200) {
-        ioQueue.async { [weak self] in
-            guard let self = self else { return }
-            let key = self.cacheKey(for: fileName, size: maxPixelSize)
-            let thumbFileName = "\(fileName)_thumb_\(Int(maxPixelSize)).jpg"
-            let thumbURL = originalURL.deletingLastPathComponent().appendingPathComponent(thumbFileName)
-            
-            let options: [CFString: Any] = [
-                kCGImageSourceCreateThumbnailFromImageAlways: true,
-                kCGImageSourceCreateThumbnailWithTransform: true,
-                kCGImageSourceThumbnailMaxPixelSize: maxPixelSize,
-                kCGImageSourceShouldCacheImmediately: true
-            ]
-            
-            guard let source = CGImageSourceCreateWithURL(originalURL as CFURL, nil),
-                  let cgImage = CGImageSourceCreateThumbnailAtIndex(source, 0, options as CFDictionary) else { return }
-            
-            let thumbImage = NSImage(cgImage: cgImage, size: NSSize(width: cgImage.width, height: cgImage.height))
-            let cost = cgImage.width * cgImage.height * 4
-            self.thumbnailCache.setObject(thumbImage, forKey: key, cost: cost)
-            
-            let rep = NSBitmapImageRep(cgImage: cgImage)
-            if let jpgData = rep.representation(using: .jpeg, properties: [.compressionFactor: 0.85]) {
-                try? jpgData.write(to: thumbURL, options: .atomic)
-            }
-        }
-    }
-    
-    /// Evicts caches for an item upon deletion
-    public func evict(fileName: String) {
-        fullImageCache.removeObject(forKey: fileName as NSString)
-        thumbnailCache.removeObject(forKey: cacheKey(for: fileName, size: 120))
-        thumbnailCache.removeObject(forKey: cacheKey(for: fileName, size: 200))
-        thumbnailCache.removeObject(forKey: cacheKey(for: fileName, size: 300))
+        loadThumbnail(for: item, maxPixelSize: 2048, completion: completion)
     }
 }

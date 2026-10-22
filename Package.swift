@@ -11,11 +11,22 @@ let package = Package(
     ],
     dependencies: [],
     targets: [
+        .systemLibrary(name: "CArchive", path: "Sources/CArchive"),
         .target(
             name: "YeomanCore",
-            dependencies: [],
+            dependencies: ["CArchive"],
             path: "Sources/Yeoman",
             exclude: ["App/YeomanApp.swift"]
+        ),
+        .executableTarget(
+            name: "YeomanReleaseSign",
+            dependencies: ["YeomanCore"],
+            path: "Sources/YeomanReleaseSign"
+        ),
+        .executableTarget(
+            name: "YeomanInstaller",
+            dependencies: ["YeomanCore"],
+            path: "Sources/YeomanInstaller"
         ),
         .executableTarget(
             name: "Yeoman",

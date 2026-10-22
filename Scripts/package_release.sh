@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-set -e
+set -euo pipefail
 
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$DIR"
@@ -16,7 +16,7 @@ swift run YeomanTests
 # 2. Build Release .app Bundle
 echo ""
 echo "==> Step 2: Building release application bundle..."
-./Scripts/build_app.sh
+./Scripts/build_app.sh release
 
 APP_BUNDLE="dist/Yeoman.app"
 ZIP_FILE="dist/Yeoman.zip"
@@ -27,7 +27,10 @@ DMG_STAGING="dist/dmg_staging"
 echo ""
 echo "==> Step 3: Creating release ZIP archive..."
 rm -f "$ZIP_FILE"
-/usr/bin/ditto -c -k --keepParent "$APP_BUNDLE" "$ZIP_FILE"
+# Plain ZIP: no AppleDouble sidecar entries outside Yeoman.app.
+(cd dist && /usr/bin/zip -q -r -X Yeoman.zip Yeoman.app)
+: "${YEOMAN_UPDATE_PRIVATE_KEY_FILE:?Set external private-key file; never store it in this repository}"
+.build/release/YeomanReleaseSign "${YEOMAN_VERSION:-0.2.0}" "$ZIP_FILE" "$YEOMAN_UPDATE_PRIVATE_KEY_FILE" dist/Yeoman.update.json
 echo "    Created: $ZIP_FILE ($(du -h "$ZIP_FILE" | cut -f1))"
 
 # 4. Create Distribution DMG (with Drag-and-Drop /Applications symlink)

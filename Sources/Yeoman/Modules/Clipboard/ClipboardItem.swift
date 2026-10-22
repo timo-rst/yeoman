@@ -78,31 +78,14 @@ public struct ClipboardItem: Identifiable, Codable, Equatable {
         isScreenshotItem ? "Screenshot" : "Bild"
     }
     
-    public var imageURL: URL? {
-        guard let fileName = imageFileName else { return nil }
-        let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
-        let newURL = appSupport
-            .appendingPathComponent("Yeoman", isDirectory: true)
-            .appendingPathComponent("clipboard_images", isDirectory: true)
-            .appendingPathComponent(fileName)
-        if FileManager.default.fileExists(atPath: newURL.path) {
-            return newURL
-        }
-        let legacyURL = appSupport
-            .appendingPathComponent("MacCustomizer", isDirectory: true)
-            .appendingPathComponent("clipboard_images", isDirectory: true)
-            .appendingPathComponent(fileName)
-        if FileManager.default.fileExists(atPath: legacyURL.path) {
-            return legacyURL
-        }
-        return newURL
-    }
-    
+    // Plaintext image paths are intentionally no longer exposed.
+    public var imageURL: URL? { nil }
     public var image: NSImage? {
-        guard let url = imageURL, FileManager.default.fileExists(atPath: url.path) else { return nil }
-        return NSImage(contentsOf: url)
+        guard let data = ClipboardHistoryStore.shared.imageData(for: self),
+              let image = try? BoundedImage.decode(data) else { return nil }
+        return NSImage(cgImage: image, size: .zero)
     }
-    
+
     public var formattedDimensions: String {
         if let w = imageWidth, let h = imageHeight, w > 0, h > 0 {
             return "\(w) × \(h) px"

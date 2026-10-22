@@ -97,6 +97,7 @@ public struct WebWidgetItem: Identifiable, Codable, Equatable {
         self.isEnabled = isEnabled
         self.isPinned = isPinned
         self.showsAddressBar = showsAddressBar
+        normalize()
     }
     
     public init(from decoder: Decoder) throws {
@@ -116,15 +117,27 @@ public struct WebWidgetItem: Identifiable, Codable, Equatable {
         self.isEnabled = try container.decodeIfPresent(Bool.self, forKey: .isEnabled) ?? true
         self.isPinned = try container.decodeIfPresent(Bool.self, forKey: .isPinned) ?? false
         self.showsAddressBar = try container.decodeIfPresent(Bool.self, forKey: .showsAddressBar) ?? false
+        guard SecurityPolicy.webURL(url) != nil else { throw SecurityFailure.rejected("Ungültige Widget-URL.") }
+        normalize()
     }
     
+    public mutating func normalize() {
+        title = String(title.prefix(256)); iconName = String(iconName.prefix(128))
+        customWidth = CGFloat(SecurityPolicy.bounded(Double(customWidth), 280...1200, fallback: 320))
+        customHeight = CGFloat(SecurityPolicy.bounded(Double(customHeight), 300...1000, fallback: 400))
+        zoomScale = SecurityPolicy.bounded(zoomScale, 0.5...1.5, fallback: 1)
+        if let valid = SecurityPolicy.webURL(url) { url = valid.absoluteString }
+        else { url = ""; isEnabled = false }
+        selectedFaviconURL = selectedFaviconURL.flatMap { SecurityPolicy.webURL($0)?.absoluteString }
+    }
+
     public var effectiveWidth: CGFloat {
-        if sizePreset == .custom { return customWidth }
+        if sizePreset == .custom { return CGFloat(SecurityPolicy.bounded(Double(customWidth), 280...1200, fallback: 320)) }
         return sizePreset.dimensions.width
     }
     
     public var effectiveHeight: CGFloat {
-        if sizePreset == .custom { return customHeight }
+        if sizePreset == .custom { return CGFloat(SecurityPolicy.bounded(Double(customHeight), 300...1000, fallback: 400)) }
         return sizePreset.dimensions.height
     }
 }
@@ -156,7 +169,7 @@ public final class WebPanelModule: NSObject, CustomizerModule, ObservableObject 
         }
     }
     
-    @Published public var widgets: [WebWidgetItem] = [] {
+    @Published public private(set) var widgets: [WebWidgetItem] = [] {
         didSet {
             saveWidgets()
             syncAllInstances()
@@ -164,6 +177,9 @@ public final class WebPanelModule: NSObject, CustomizerModule, ObservableObject 
     }
     
     private var instanceControllers: [UUID: WebWidgetInstanceController] = [:]
+    @Published public private(set) var storageError: String?
+    private let storage = WidgetStorage()
+    private var didLoadWidgets = false
     private let widgetsStorageKey = "web_panel_widgets_list_json"
     
     public override init() {
@@ -194,11 +210,18 @@ public final class WebPanelModule: NSObject, CustomizerModule, ObservableObject 
     // MARK: - CRUD Operations
     
     public func addWidget(_ item: WebWidgetItem) {
+        guard didLoadWidgets, storageError == nil, widgets.count < SecurityPolicy.widgetCount,
+              !widgets.contains(where: { $0.id == item.id }) else { return }
+        var item = item; item.normalize()
+        guard !item.url.isEmpty else { return }
         widgets.append(item)
         ModuleManager.shared.recreateAllStatusItems()
     }
     
     public func updateWidget(_ item: WebWidgetItem) {
+        guard didLoadWidgets, storageError == nil else { return }
+        var item = item; item.normalize()
+        guard !item.url.isEmpty else { return }
         if let idx = widgets.firstIndex(where: { $0.id == item.id }) {
             widgets[idx] = item
             if let controller = instanceControllers[item.id] {
@@ -208,10 +231,21 @@ public final class WebPanelModule: NSObject, CustomizerModule, ObservableObject 
     }
     
     public func deleteWidget(id: UUID) {
+        guard didLoadWidgets, storageError == nil else { return }
+        if let item = widgets.first(where: { $0.id == id }) { WebFaviconManager.shared.removeWidget(item) }
+
         if let controller = instanceControllers.removeValue(forKey: id) {
             controller.cleanup()
         }
         widgets.removeAll(where: { $0.id == id })
+        // Delete authenticated configuration first. If that commit fails, retain the
+        // browser profile so a widget restored on next launch does not lose its session.
+        storage.save(widgets) { [weak self] error in
+            if let error { self?.storageError = error.localizedDescription; return }
+            IsolatedWebsiteDataStore.remove(identifier: id) { error in
+                if let error { DispatchQueue.main.async { self?.storageError = error.localizedDescription } }
+            }
+        }
         ModuleManager.shared.recreateAllStatusItems()
     }
     
@@ -260,20 +294,19 @@ public final class WebPanelModule: NSObject, CustomizerModule, ObservableObject 
     // MARK: - Persistence
     
     private func saveWidgets() {
-        if let data = try? JSONEncoder().encode(widgets) {
-            UserDefaults.standard.set(data, forKey: widgetsStorageKey)
-        }
+        guard didLoadWidgets, storageError == nil else { return }
+        storage.save(widgets) { [weak self] error in self?.storageError = error?.localizedDescription }
     }
-    
     private func loadWidgets() {
-        if let data = UserDefaults.standard.data(forKey: widgetsStorageKey),
-           let loaded = try? JSONDecoder().decode([WebWidgetItem].self, from: data) {
-            self.widgets = loaded
-        } else {
-            self.widgets = []
+        storage.load { [weak self] result in
+            guard let self else { return }
+            switch result {
+            case .success(let items): self.widgets = items; self.didLoadWidgets = true
+            case .failure(let error): self.storageError = error.localizedDescription
+            }
         }
     }
-    
+
     public func openWidgetPopover(id: UUID) {
         instanceControllers[id]?.openPopover()
     }
@@ -318,11 +351,11 @@ public final class WebPanelModule: NSObject, CustomizerModule, ObservableObject 
         return NSImage(systemSymbolName: item.iconName, accessibilityDescription: item.title)
     }
     
-    public func getCurrentWidgetProcessMap() -> [pid_t: (title: String, icon: NSImage?)] {
-        var map: [pid_t: (title: String, icon: NSImage?)] = [:]
+    public func getCurrentWidgetProcessMap() -> [pid_t: (title: String, icon: NSImage?, identity: ProcessIdentity)] {
+        var map: [pid_t: (title: String, icon: NSImage?, identity: ProcessIdentity)] = [:]
         for controller in instanceControllers.values {
-            guard let pid = controller.webProcessIdentifier, pid > 0 else { continue }
-            map[pid] = (title: controller.item.title, icon: controller.taskIcon)
+            guard let pid = controller.webProcessIdentifier, pid > 0, let identity = ProcessIdentity.read(pid) else { continue }
+            map[pid] = (title: controller.item.title, icon: controller.taskIcon, identity: identity)
         }
         return map
     }
@@ -349,7 +382,7 @@ public final class WebWidgetInstanceController: NSObject, ObservableObject, NSPo
                 return p
             }
         }
-        return webController.lastKnownPID
+        return nil
     }
     
     public var taskIcon: NSImage? {
@@ -383,6 +416,7 @@ public final class WebWidgetInstanceController: NSObject, ObservableObject, NSPo
         self.autoFitScale = 1.0
         self.webController = WebPanelController(
             initialURL: item.url,
+            widgetID: item.id,
             userAgentMode: item.userAgentMode,
             targetWidth: item.effectiveWidth,
             zoomScale: item.zoomScale
@@ -611,8 +645,8 @@ public final class WebWidgetInstanceController: NSObject, ObservableObject, NSPo
         }
         popover?.delegate = nil
         popover = nil
-        webController.stopLoading()
         webController.onPopoverClosed()
+        webController.dispose()
     }
     
     @objc private func statusItemClicked(_ sender: NSStatusBarButton) {
@@ -676,7 +710,7 @@ public final class WebWidgetInstanceController: NSObject, ObservableObject, NSPo
     }
     
     @objc private func openInBrowserAction() {
-        if let url = URL(string: webController.currentURL) {
+        if let url = SecurityPolicy.webURL(webController.currentURL) {
             NSWorkspace.shared.open(url)
         }
     }

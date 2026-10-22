@@ -3,6 +3,7 @@ import Darwin
 import Combine
 
 public struct ProcessTaskItem: Identifiable, Equatable {
+    public let identity: ProcessIdentity?
     public let id: Int // PID
     public let pid: Int
     public let name: String
@@ -22,8 +23,10 @@ public struct ProcessTaskItem: Identifiable, Equatable {
         isUserApp: Bool,
         bundleIdentifier: String?,
         customIcon: NSImage? = nil,
-        widgetTitle: String? = nil
+        widgetTitle: String? = nil,
+        identity: ProcessIdentity? = nil
     ) {
+        self.identity = identity
         self.id = id
         self.pid = pid
         self.name = name
@@ -47,7 +50,7 @@ public struct ProcessTaskItem: Identifiable, Equatable {
     }
     
     public static func == (lhs: ProcessTaskItem, rhs: ProcessTaskItem) -> Bool {
-        lhs.id == rhs.id &&
+        lhs.identity == rhs.identity && lhs.id == rhs.id &&
         lhs.pid == rhs.pid &&
         lhs.name == rhs.name &&
         lhs.cpuPercent == rhs.cpuPercent &&
@@ -86,10 +89,11 @@ public final class SystemMetricsProvider: ObservableObject {
     
     private var prevCpuInfo: host_cpu_load_info?
     private var timer: Timer?
+    private let refreshGate = SingleFlight()
+    @Published public private(set) var processError: String?
     
-    public init() {
-        refreshMetrics()
-        refreshProcessList()
+    public init(autoRefresh: Bool = true) {
+        if autoRefresh { refreshMetrics(); refreshProcessList() }
     }
     
     public func startPolling(interval: TimeInterval = 1.5) {
@@ -155,10 +159,11 @@ public final class SystemMetricsProvider: ObservableObject {
             return
         }
         
-        let user = Double(cpuInfo.cpu_ticks.0 - prev.cpu_ticks.0)
-        let sys = Double(cpuInfo.cpu_ticks.1 - prev.cpu_ticks.1)
-        let idle = Double(cpuInfo.cpu_ticks.2 - prev.cpu_ticks.2)
-        let nice = Double(cpuInfo.cpu_ticks.3 - prev.cpu_ticks.3)
+        // Host tick counters are finite-width and legitimately wrap.
+        let user = Double(cpuInfo.cpu_ticks.0 &- prev.cpu_ticks.0)
+        let sys = Double(cpuInfo.cpu_ticks.1 &- prev.cpu_ticks.1)
+        let idle = Double(cpuInfo.cpu_ticks.2 &- prev.cpu_ticks.2)
+        let nice = Double(cpuInfo.cpu_ticks.3 &- prev.cpu_ticks.3)
         
         let total = user + sys + idle + nice
         if total > 0 {
@@ -219,24 +224,15 @@ public final class SystemMetricsProvider: ObservableObject {
     // MARK: - Process Table Snapshot
     
     public func refreshProcessList() {
+        guard refreshGate.begin() else { return }
         let widgetInfoMap = ModuleManager.shared.webPanelModule.getCurrentWidgetProcessMap()
-        let enabledWidgets = ModuleManager.shared.webPanelModule.widgets.filter { $0.isEnabled }
         
         DispatchQueue.global(qos: .utility).async { [weak self] in
-            let process = Process()
-            let pipe = Pipe()
-            process.executableURL = URL(fileURLWithPath: "/bin/ps")
-            process.arguments = ["-eco", "pid,%cpu,rss,comm", "-r"]
-            process.standardOutput = pipe
-            process.standardError = Pipe()
-            
+            defer { self?.refreshGate.end() }
             do {
-                try process.run()
-                process.waitUntilExit()
-                
-                let data = pipe.fileHandleForReading.readDataToEndOfFile()
-                guard let output = String(data: data, encoding: .utf8) else { return }
-                
+                let result = try BoundedProcess.run("/bin/ps", ["-eco", "pid,%cpu,rss,comm", "-r"])
+                guard result.status == 0, let output = String(data: result.data, encoding: .utf8) else { return }
+
                 let runningApps = NSWorkspace.shared.runningApplications
                 var appMap: [pid_t: (name: String, bundleId: String?)] = [:]
                 for app in runningApps {
@@ -246,44 +242,31 @@ public final class SystemMetricsProvider: ObservableObject {
                 var items: [ProcessTaskItem] = []
                 let lines = output.components(separatedBy: .newlines)
                 
-                var matchedWidgetTitles = Set<String>()
-                for (_, info) in widgetInfoMap {
-                    matchedWidgetTitles.insert(info.title)
-                }
-                var unassignedWidgets = enabledWidgets.filter { !matchedWidgetTitles.contains($0.title) }
-                
                 // Skip header line
                 for line in lines.dropFirst() {
                     let trimmed = line.trimmingCharacters(in: .whitespaces)
                     guard !trimmed.isEmpty else { continue }
                     
-                    let parts = trimmed.split(separator: " ", maxSplits: 3, omittingEmptySubsequences: true)
-                    guard parts.count >= 4,
-                          let pid = Int(parts[0]),
-                          let cpu = Double(parts[1]),
-                          let rssKB = Double(parts[2]) else { continue }
+                    guard let sample = ProcessSnapshotParser.parse(trimmed),
+                          let identity = ProcessIdentity.read(sample.pid) else { continue }
+                    let pid = Int(sample.pid), cpu = sample.cpuPercent, rssKB = sample.residentKB
                     
-                    let rawName = String(parts[3])
+                    let rawName = sample.command
                     let memoryMB = rssKB / 1024.0
                     
-                    let isApp = appMap[pid_t(pid)] != nil
-                    let friendlyName = appMap[pid_t(pid)]?.name ?? rawName
-                    let bundleId = appMap[pid_t(pid)]?.bundleId
+                    let isApp = appMap[sample.pid] != nil
+                    let friendlyName = appMap[sample.pid]?.name ?? rawName
+                    let bundleId = appMap[sample.pid]?.bundleId
                     
                     var customIcon: NSImage? = nil
                     var matchedWidgetTitle: String? = nil
                     
                     // Match with Web Widget info if this process is a WebWidget process
-                    if let widgetInfo = widgetInfoMap[pid_t(pid)] {
+                    if let widgetInfo = widgetInfoMap[sample.pid], widgetInfo.identity == identity {
                         matchedWidgetTitle = widgetInfo.title
                         customIcon = widgetInfo.icon
-                    } else if (friendlyName.contains("Web Content") || rawName.contains("WebKit.WebContent")),
-                              !unassignedWidgets.isEmpty {
-                        let fallback = unassignedWidgets.removeFirst()
-                        matchedWidgetTitle = fallback.title
-                        customIcon = ModuleManager.shared.webPanelModule.getTaskIcon(for: fallback)
                     }
-                    
+
                     let displayName: String
                     if let widgetTitle = matchedWidgetTitle {
                         displayName = "Web Widget (\(widgetTitle))"
@@ -300,7 +283,8 @@ public final class SystemMetricsProvider: ObservableObject {
                         isUserApp: isApp,
                         bundleIdentifier: bundleId,
                         customIcon: customIcon,
-                        widgetTitle: matchedWidgetTitle
+                        widgetTitle: matchedWidgetTitle,
+                        identity: identity
                     ))
                 }
                 
@@ -308,6 +292,7 @@ public final class SystemMetricsProvider: ObservableObject {
                     self?.processes = items
                 }
             } catch {
+                DispatchQueue.main.async { self?.processError = error.localizedDescription }
                 return
             }
         }
@@ -334,59 +319,15 @@ public final class SystemMetricsProvider: ObservableObject {
     
     @discardableResult
     public func killProcess(pid: Int) -> Bool {
-        // Prevent killing invalid, broadcast, or kernel/init PIDs (PID <= 1)
-        guard pid > 1 else { return false }
-        
-        let currentPid = ProcessInfo.processInfo.processIdentifier
-        guard pid != Int(currentPid) else { return false }
-        
-        // Critical system processes and daemons that must never be terminated
-        let protectedProcessNames: Set<String> = [
-            "kernel_task",
-            "launchd",
-            "WindowServer",
-            "loginwindow",
-            "systemstats",
-            "diskarbitrationd",
-            "coreauthd",
-            "securityd",
-            "opendirectoryd",
-            "syslogd",
-            "notifyd",
-            "configd",
-            "powerd"
-        ]
-        
-        // 1. If it is a running GUI application, check protected bundle IDs and names
-        if let app = NSWorkspace.shared.runningApplications.first(where: { $0.processIdentifier == pid_t(pid) }) {
-            if let name = app.localizedName, protectedProcessNames.contains(name) {
-                return false
-            }
-            if let bundleId = app.bundleIdentifier,
-               bundleId == "com.apple.loginwindow" ||
-               bundleId == "com.apple.WindowServer" ||
-               bundleId == "de.trst.Yeoman" ||
-               bundleId == "de.trst.MacCustomizer" ||
-               bundleId == Bundle.main.bundleIdentifier {
-                return false
-            }
-            app.forceTerminate()
+        guard let valid = pid_t(exactly: pid), valid > 1, valid != getpid(),
+              let item = processes.first(where: { $0.pid == pid }), let identity = item.identity else {
+            processError = "Prozessidentität nicht verfügbar."; return false
         }
-        
-        // 2. Also check against known process name from current process table
-        if let item = processes.first(where: { $0.pid == pid }) {
-            if protectedProcessNames.contains(item.name) {
-                return false
-            }
+        guard TerminationPolicy.terminate(expected: identity) else {
+            processError = "Prozess geändert, geschützt oder Beenden nicht erlaubt."; return false
         }
-        
-        // 3. Send SIGKILL directly
-        let status = kill(pid_t(pid), SIGKILL)
-        
-        // Remove immediately from memory for responsive feel
-        self.processes.removeAll { $0.pid == pid }
-        objectWillChange.send()
-        
-        return status == 0
+        processes.removeAll { $0.identity == identity }
+        processError = nil
+        return true
     }
 }

@@ -122,6 +122,7 @@ public struct TaskManagerPopoverView: View {
             
             Divider()
             
+            if let error = provider.processError { Text(error).font(.caption).foregroundColor(.red) }
             // Column Headers
             HStack {
                 Text("PROZESS")
@@ -151,8 +152,7 @@ public struct TaskManagerPopoverView: View {
                             isHovered: hoveredPid == item.pid,
                             isJustKilled: killedPid == item.pid,
                             onKill: {
-                                killedPid = item.pid
-                                provider.killProcess(pid: item.pid)
+                                if provider.killProcess(pid: item.pid) { killedPid = item.pid }
                                 DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
                                     if killedPid == item.pid {
                                         killedPid = nil

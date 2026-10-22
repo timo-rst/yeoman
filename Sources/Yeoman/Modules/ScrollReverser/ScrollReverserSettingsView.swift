@@ -26,6 +26,9 @@ public struct ScrollReverserSettingsView: View {
             
             ScrollView {
                 VStack(alignment: .leading, spacing: 20) {
+                    if let error = manager.permissionError {
+                        Text(error).font(.caption).foregroundColor(.red)
+                    }
                     Group {
                     // Accessibility Permission Banner (if missing)
                     if !manager.hasAccessibilityPermission {

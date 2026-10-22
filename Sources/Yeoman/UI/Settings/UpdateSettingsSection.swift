@@ -5,8 +5,6 @@ public struct UpdateSettingsSection: View {
     @ObservedObject var l10n = LocalizationManager.shared
     public var isDetailedView: Bool = false
     
-    @State private var showingTokenConfig: Bool = false
-    
     public init(isDetailedView: Bool = false) {
         self.isDetailedView = isDetailedView
     }
@@ -141,41 +139,6 @@ public struct UpdateSettingsSection: View {
                         .foregroundColor(.secondary)
                 }
                 .padding(10)
-            }
-            
-            // Optional Token Configuration (for private testing if needed)
-            VStack(alignment: .leading, spacing: 6) {
-                Button(action: {
-                    withAnimation(.easeInOut(duration: 0.2)) {
-                        showingTokenConfig.toggle()
-                    }
-                }) {
-                    HStack(spacing: 4) {
-                        Image(systemName: showingTokenConfig ? "chevron.down" : "chevron.right")
-                            .font(.caption2)
-                        Text("Erweiterte GitHub-Einstellungen")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                    }
-                }
-                .buttonStyle(.plain)
-                
-                if showingTokenConfig {
-                    VStack(alignment: .leading, spacing: 6) {
-                        HStack(spacing: 8) {
-                            Text("GitHub Token (optional für private Repos):")
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                            SecureField("ghp_...", text: $updater.githubToken)
-                                .textFieldStyle(.roundedBorder)
-                                .font(.caption)
-                        }
-                        Text("Nur erforderlich, solange das Repository privat ist. Sobald es öffentlich ist, funktioniert der Update-Check automatisch ohne Token.")
-                            .font(.caption2)
-                            .foregroundColor(.secondary.opacity(0.8))
-                    }
-                    .padding(.top, 4)
-                }
             }
         }
         .padding()

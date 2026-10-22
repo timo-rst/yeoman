@@ -448,7 +448,7 @@ struct GeneralSettingsView: View {
                                             .padding(.horizontal, 10)
                                             .background(RoundedRectangle(cornerRadius: 6).fill(Color.primary.opacity(0.04)))
                                             .onAppear {
-                                                if !widget.url.isEmpty && faviconManager.options(for: widget.url).isEmpty {
+                                                if !widget.url.isEmpty && faviconManager.options(for: widget.id).isEmpty {
                                                     faviconManager.discoverFavicons(for: widget.url, widgetId: widget.id)
                                                 }
                                             }

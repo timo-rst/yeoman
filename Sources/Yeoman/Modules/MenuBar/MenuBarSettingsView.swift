@@ -74,6 +74,9 @@ public struct MenuBarSpacingSectionView: View {
     public var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
+                if let error = spacingManager.lastError {
+                    Text(error).font(.caption).foregroundColor(.red)
+                }
                 // Dedicated status item toggle
                 VStack(alignment: .leading, spacing: 14) {
                     Text("Menüleisten-Integration")

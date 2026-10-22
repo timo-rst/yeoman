@@ -16,10 +16,11 @@ public struct SpacingProfile: Codable, Equatable {
 public final class MenuBarSpacingManager: ObservableObject {
     public static let shared = MenuBarSpacingManager()
     
-    @Published public var currentSpacing: Int = 8
-    @Published public var currentSelectionPadding: Int = 8
-    @Published public var autoRestartControlCenter: Bool = true
-    @Published public var isApplying: Bool = false
+    @Published public private(set) var currentSpacing: Int = 8
+    @Published public private(set) var currentSelectionPadding: Int = 8
+    @Published public private(set) var autoRestartControlCenter: Bool = true
+    @Published public private(set) var isApplying: Bool = false
+    @Published public private(set) var lastError: String?
     
     private let spacingKey = "NSStatusItemSpacing"
     private let paddingKey = "NSStatusItemSelectionPadding"
@@ -68,16 +69,16 @@ public final class MenuBarSpacingManager: ObservableObject {
     
     public func readCurrentPreferences() {
         if let val = getGlobalInt(key: spacingKey) {
-            self.currentSpacing = val
+            self.currentSpacing = min(24, max(0, val))
         } else if let localVal = UserDefaults.standard.object(forKey: spacingKey) as? Int {
-            self.currentSpacing = localVal
+            self.currentSpacing = min(24, max(0, localVal))
         } else {
             self.currentSpacing = 16
         }
         if let val = getGlobalInt(key: paddingKey) {
-            self.currentSelectionPadding = val
+            self.currentSelectionPadding = min(24, max(0, val))
         } else if let localVal = UserDefaults.standard.object(forKey: paddingKey) as? Int {
-            self.currentSelectionPadding = localVal
+            self.currentSelectionPadding = min(24, max(0, localVal))
         } else {
             self.currentSelectionPadding = 16
         }
@@ -85,12 +86,14 @@ public final class MenuBarSpacingManager: ObservableObject {
     
     public func applyPreset(_ profile: SpacingProfile) {
         debounceTimer?.cancel()
-        self.currentSpacing = profile.spacing
-        self.currentSelectionPadding = profile.selectionPadding
-        commitSpacing(spacing: profile.spacing, selectionPadding: profile.selectionPadding, restartNow: true)
+        let spacing = min(24, max(0, profile.spacing)), padding = min(24, max(0, profile.selectionPadding))
+        self.currentSpacing = spacing
+        self.currentSelectionPadding = padding
+        commitSpacing(spacing: spacing, selectionPadding: padding, restartNow: true)
     }
     
     public func setSpacingDebounced(spacing: Int, selectionPadding: Int) {
+        let spacing = min(24, max(0, spacing)), selectionPadding = min(24, max(0, selectionPadding))
         self.currentSpacing = spacing
         self.currentSelectionPadding = selectionPadding
         
@@ -104,6 +107,7 @@ public final class MenuBarSpacingManager: ObservableObject {
     }
     
     public func commitSpacing(spacing: Int, selectionPadding: Int, restartNow: Bool) {
+        let spacing = min(24, max(0, spacing)), selectionPadding = min(24, max(0, selectionPadding))
         isApplying = true
         self.currentSpacing = spacing
         self.currentSelectionPadding = selectionPadding
@@ -120,11 +124,11 @@ public final class MenuBarSpacingManager: ObservableObject {
         // 3. Persist system-wide and reload ControlCenter in background
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
             guard let self = self else { return }
-            self.writeKeys(spacing: spacing, padding: selectionPadding)
-            
-            if restartNow {
-                self.restartControlCenterProcess()
-            }
+            var failure: Error?
+            do {
+                try self.writeKeys(spacing: spacing, padding: selectionPadding)
+                if restartNow { try self.restartControlCenterProcess() }
+            } catch { failure = error }
             
             DistributedNotificationCenter.default().postNotificationName(
                 NSNotification.Name("com.apple.controlcenter.itemchanged"),
@@ -132,9 +136,10 @@ public final class MenuBarSpacingManager: ObservableObject {
                 userInfo: nil,
                 deliverImmediately: true
             )
-            
+            let errorMessage = failure?.localizedDescription
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
                 ModuleManager.shared.recreateAllStatusItems()
+                self.lastError = errorMessage
                 self.isApplying = false
             }
         }
@@ -157,8 +162,9 @@ public final class MenuBarSpacingManager: ObservableObject {
         // 3. Clear system-wide defaults and reload ControlCenter
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
             guard let self = self else { return }
-            self.deleteKeys()
-            self.restartControlCenterProcess()
+            var failure: Error?
+            do { try self.deleteKeys(); try self.restartControlCenterProcess() }
+            catch { failure = error }
             
             DistributedNotificationCenter.default().postNotificationName(
                 NSNotification.Name("com.apple.controlcenter.itemchanged"),
@@ -166,9 +172,10 @@ public final class MenuBarSpacingManager: ObservableObject {
                 userInfo: nil,
                 deliverImmediately: true
             )
-            
+            let errorMessage = failure?.localizedDescription
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
                 ModuleManager.shared.recreateAllStatusItems()
+                self.lastError = errorMessage
                 self.isApplying = false
             }
         }
@@ -226,19 +233,19 @@ public final class MenuBarSpacingManager: ObservableObject {
     public func restartControlCenter() {
         isApplying = true
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
-            self?.restartControlCenterProcess()
+            var failure: Error?
+            do { try self?.restartControlCenterProcess() } catch { failure = error }
+            let errorMessage = failure?.localizedDescription
             DispatchQueue.main.async {
+                self?.lastError = errorMessage
                 self?.isApplying = false
             }
         }
     }
     
-    private func restartControlCenterProcess() {
-        let p = Process()
-        p.executableURL = URL(fileURLWithPath: "/usr/bin/killall")
-        p.arguments = ["ControlCenter"]
-        try? p.run()
-        p.waitUntilExit()
+    private func restartControlCenterProcess() throws {
+        let result = try BoundedProcess.run("/usr/bin/killall", ["ControlCenter"], timeout: 3, limit: 16384)
+        guard result.status == 0 else { throw SecurityFailure.rejected("ControlCenter konnte nicht neu gestartet werden.") }
     }
     
     // MARK: - Defaults access
@@ -253,29 +260,24 @@ public final class MenuBarSpacingManager: ObservableObject {
         return nil
     }
     
-    private func writeKeys(spacing: Int, padding: Int) {
+    private func writeKeys(spacing: Int, padding: Int) throws {
         // Write to -currentHost -globalDomain
-        runDefaults(["-currentHost", "write", "-globalDomain", spacingKey, "-int", "\(spacing)"])
-        runDefaults(["-currentHost", "write", "-globalDomain", paddingKey, "-int", "\(padding)"])
+        try runDefaults(["-currentHost", "write", "-globalDomain", spacingKey, "-int", "\(spacing)"])
+        try runDefaults(["-currentHost", "write", "-globalDomain", paddingKey, "-int", "\(padding)"])
         // Write to -g (NSGlobalDomain) for apps reading global domain
-        runDefaults(["write", "-g", spacingKey, "-int", "\(spacing)"])
-        runDefaults(["write", "-g", paddingKey, "-int", "\(padding)"])
+        try runDefaults(["write", "-g", spacingKey, "-int", "\(spacing)"])
+        try runDefaults(["write", "-g", paddingKey, "-int", "\(padding)"])
     }
     
-    private func deleteKeys() {
-        runDefaults(["-currentHost", "delete", "-globalDomain", spacingKey])
-        runDefaults(["-currentHost", "delete", "-globalDomain", paddingKey])
-        runDefaults(["delete", "-g", spacingKey])
-        runDefaults(["delete", "-g", paddingKey])
+    private func deleteKeys() throws {
+        try runDefaults(["-currentHost", "delete", "-globalDomain", spacingKey])
+        try runDefaults(["-currentHost", "delete", "-globalDomain", paddingKey])
+        try runDefaults(["delete", "-g", spacingKey])
+        try runDefaults(["delete", "-g", paddingKey])
     }
     
-    private func runDefaults(_ args: [String]) {
-        let p = Process()
-        p.executableURL = URL(fileURLWithPath: "/usr/bin/defaults")
-        p.arguments = args
-        p.standardOutput = Pipe()
-        p.standardError = Pipe()
-        try? p.run()
-        p.waitUntilExit()
+    private func runDefaults(_ args: [String]) throws {
+        let result = try BoundedProcess.run("/usr/bin/defaults", args, timeout: 3, limit: 16384)
+        guard result.status == 0 else { throw SecurityFailure.rejected("Systemeinstellung konnte nicht geschrieben werden.") }
     }
 }

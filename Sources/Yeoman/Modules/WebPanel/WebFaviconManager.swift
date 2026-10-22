@@ -1,6 +1,7 @@
 import AppKit
 import SwiftUI
 import WebKit
+import CryptoKit
 
 public extension Notification.Name {
     static let webFaviconDidUpdate = Notification.Name("de.trst.Yeoman.webFaviconDidUpdate")
@@ -20,488 +21,217 @@ public struct FaviconOption: Identifiable, Equatable, Hashable {
     }
 }
 
+// Native network fetching is deliberately absent. Page-controlled resources stay
+// inside WebKit and its origin/network sandbox. Only bounded raster bytes cross.
 public final class WebFaviconManager: ObservableObject {
     public static let shared = WebFaviconManager()
-    
-    @Published public var changeCount: Int = 0
-    @Published public var discoveredOptions: [String: [FaviconOption]] = [:]
-    
-    private var memoryCache: [String: NSImage] = [:]
-    private let fileManager = FileManager.default
-    private let cacheDirectory: URL
-    
+    @Published public private(set) var changeCount = 0
+    @Published public private(set) var legacyCleanupError: String?
+    private let cache = NSCache<NSString, NSImage>()
+    private var optionsByWidget: [UUID: [FaviconOption]] = [:]
+    private var views: [UUID: WeakWebView] = [:]
+    private var pending: [UUID: WebWidgetItem] = [:]
+    private var active: [UUID: UUID] = [:]
+    private var generations: [UUID: Int] = [:]
+    private var insertionOrder: [NSString] = []
+    private let decoding = OperationQueue()
+    private struct WeakWebView { weak var value: WKWebView? }
     private init() {
-        let appSupport = fileManager.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
-        let directory = appSupport.appendingPathComponent("Yeoman", isDirectory: true)
-        self.cacheDirectory = directory.appendingPathComponent("favicons", isDirectory: true)
-        
-        try? fileManager.createDirectory(at: cacheDirectory, withIntermediateDirectories: true)
-    }
-    
-    // MARK: - Public API
-    
-    /// Returns the menu-bar ready favicon for the given widget, or nil if not available.
-    public func menuBarIcon(for item: WebWidgetItem) -> NSImage? {
-        guard item.useFavicon else { return nil }
-        
-        if let selectedURL = item.selectedFaviconURL, !selectedURL.isEmpty {
-            return getOrFetchIcon(forURLString: selectedURL, widgetId: item.id, removeWhite: item.removeWhiteBackground)
-        }
-        
-        return getOrFetchBestIcon(forPageURL: item.url, widgetId: item.id, removeWhite: item.removeWhiteBackground)
-    }
-    
-    /// Returns the raw/preview favicon for settings
-    public func previewIcon(for urlString: String, widgetId: UUID? = nil, selectedFaviconURL: String? = nil, removeWhite: Bool = false) -> NSImage? {
-        if let selected = selectedFaviconURL, !selected.isEmpty {
-            return getOrFetchIcon(forURLString: selected, widgetId: widgetId, removeWhite: removeWhite)
-        }
-        return getOrFetchBestIcon(forPageURL: urlString, widgetId: widgetId, removeWhite: removeWhite)
-    }
-    
-    /// Returns preview image for an option URL
-    public func icon(forOption optionUrl: String, removeWhite: Bool = false) -> NSImage? {
-        return getOrFetchIcon(forURLString: optionUrl, widgetId: nil, removeWhite: removeWhite)
-    }
-    
-    /// Returns discovered options for a page URL (deduplicated by visual appearance)
-    public func options(for pageURL: String) -> [FaviconOption] {
-        guard let host = extractHost(from: pageURL) else { return [] }
-        guard let list = discoveredOptions[host] else { return [] }
-        
-        var unique: [FaviconOption] = []
-        var seenFingerprints = Set<String>()
-        for opt in list {
-            let key = diskKey(forURLString: opt.urlString)
-            if let img = memoryCache[key] ?? icon(forOption: opt.urlString, removeWhite: false),
-               let fp = imageFingerprint(img) {
-                if seenFingerprints.contains(fp) {
-                    continue
+        cache.countLimit = 256; cache.totalCostLimit = 8 * 1024 * 1024
+        decoding.maxConcurrentOperationCount = 2
+        do {
+            let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
+                .appendingPathComponent("Yeoman", isDirectory: true)
+            if FileManager.default.fileExists(atPath: appSupport.path) {
+                let root = try SecureDirectory(appSupport, create: false)
+                if try root.exists("favicons") {
+                    try root.child("favicons", create: false).purgeRegularFiles()
                 }
-                seenFingerprints.insert(fp)
             }
-            unique.append(opt)
+        } catch {
+            legacyCleanupError = "Alter Favicon-Cache konnte nicht sicher bereinigt werden: \(error.localizedDescription)"
         }
-        return unique
     }
-    
-    /// Clears cached icons for a widget to force redownload
+    public static func cacheKey(widget: UUID, url: String, removeWhite: Bool) -> String {
+        let raw = "\(widget.uuidString)|\(removeWhite)|\(url)"
+        return SHA256.hash(data: Data(raw.utf8)).map { String(format: "%02x", $0) }.joined()
+    }
+    public func menuBarIcon(for item: WebWidgetItem) -> NSImage? {
+        previewIcon(for: item.url, widgetId: item.id, selectedFaviconURL: item.selectedFaviconURL, removeWhite: item.removeWhiteBackground)
+    }
+    public func previewIcon(for urlString: String, widgetId: UUID? = nil, selectedFaviconURL: String? = nil, removeWhite: Bool = false) -> NSImage? {
+        precondition(Thread.isMainThread)
+        guard let id = widgetId, let options = optionsByWidget[id],
+              let chosen = selectedFaviconURL ?? options.first?.urlString else { return nil }
+        return cache.object(forKey: Self.cacheKey(widget: id, url: chosen, removeWhite: removeWhite) as NSString)
+    }
+    public func icon(forOption optionUrl: String, widgetId: UUID, removeWhite: Bool = false) -> NSImage? {
+        precondition(Thread.isMainThread)
+        guard optionsByWidget[widgetId]?.contains(where: { $0.urlString == optionUrl }) == true else { return nil }
+        return cache.object(forKey: Self.cacheKey(widget: widgetId, url: optionUrl, removeWhite: removeWhite) as NSString)
+    }
+    public func options(for widgetId: UUID?) -> [FaviconOption] {
+        precondition(Thread.isMainThread)
+        return widgetId.flatMap { optionsByWidget[$0] } ?? []
+    }
     public func clearCache(for item: WebWidgetItem) {
-        let host = extractHost(from: item.url) ?? "default"
-        discoveredOptions.removeValue(forKey: host)
-        let key = cacheKey(for: item.url, widgetId: item.id)
-        memoryCache.removeValue(forKey: key)
-        try? fileManager.removeItem(at: diskFileURL(for: key))
+        precondition(Thread.isMainThread)
+        generations[item.id, default: 0] += 1
+        optionsByWidget.removeValue(forKey: item.id)
+        // NSCache is bounded; clear avoids retaining removed profiles.
+        cache.removeAllObjects()
+        insertionOrder.removeAll(keepingCapacity: true)
     }
-    
-    /// Forces a refresh of all discovered favicons
+    public func removeWidget(_ item: WebWidgetItem) {
+        clearCache(for: item); views.removeValue(forKey: item.id); pending.removeValue(forKey: item.id)
+        if active[item.id] == nil { generations.removeValue(forKey: item.id) }
+    }
     public func refreshFavicon(for item: WebWidgetItem, completion: (([FaviconOption]) -> Void)? = nil) {
         clearCache(for: item)
-        discoverFavicons(for: item.url, widgetId: item.id, completion: completion)
+        if let web = views[item.id]?.value { extractFaviconFromWebView(web, for: item) }
+        completion?(options(for: item.id))
     }
-    
-    /// Legacy fetchFavicon helper for simple calls
     public func fetchFavicon(for urlString: String, widgetId: UUID? = nil, completion: ((NSImage?) -> Void)? = nil) {
-        discoverFavicons(for: urlString, widgetId: widgetId) { [weak self] _ in
-            guard let self = self else {
-                completion?(nil)
-                return
-            }
-            let img = self.previewIcon(for: urlString, widgetId: widgetId)
-            completion?(img)
-        }
+        completion?(previewIcon(for: urlString, widgetId: widgetId))
     }
-    
-    /// Discovers all available favicon candidates for a URL
     public func discoverFavicons(for urlString: String, widgetId: UUID? = nil, completion: (([FaviconOption]) -> Void)? = nil) {
-        guard let host = extractHost(from: urlString), !host.isEmpty else {
-            completion?([])
-            return
-        }
-        
-        var candidates: [URL] = []
-        // Prioritize transparent favicon candidates:
-        if let directAsset = URL(string: "https://\(host)/assets/favicon.ico") {
-            candidates.append(directAsset)
-        }
-        if let directFavicon = URL(string: "https://\(host)/favicon.ico") {
-            candidates.append(directFavicon)
-        }
-        if let ddg = URL(string: "https://icons.duckduckgo.com/ip3/\(host).ico") {
-            candidates.append(ddg)
-        }
-        if let google = URL(string: "https://www.google.com/s2/favicons?domain=\(host)&sz=128") {
-            candidates.append(google)
-        }
-        if let appleTouch180 = URL(string: "https://\(host)/apple-touch-icon-180x180.png") {
-            candidates.append(appleTouch180)
-        }
-        if let appleTouch = URL(string: "https://\(host)/apple-touch-icon.png") {
-            candidates.append(appleTouch)
-        }
-        
-        let baseDomain = extractBaseDomain(from: host)
-        if baseDomain != host {
-            if let ddgBase = URL(string: "https://icons.duckduckgo.com/ip3/\(baseDomain).ico") {
-                candidates.append(ddgBase)
-            }
-            if let baseFavicon = URL(string: "https://\(baseDomain)/favicon.ico") {
-                candidates.append(baseFavicon)
-            }
-        }
-        
-        fetchCandidates(candidates, host: host, widgetId: widgetId, completion: completion)
+        completion?(options(for: widgetId))
     }
-    
-    /// Extracts all favicon links directly from WKWebView document
+    public func extractHost(from urlString: String) -> String? { SecurityPolicy.webURL(urlString)?.host }
     public func extractFaviconFromWebView(_ webView: WKWebView, for item: WebWidgetItem) {
+        precondition(Thread.isMainThread)
         guard item.useFavicon else { return }
-        
-        let js = """
-        (function() {
-            var selectors = [
-                'link[rel="icon"]',
-                'link[rel="shortcut icon"]',
-                'link[rel="icon"][type="image/svg+xml"]',
-                'link[rel="icon"][type="image/png"]',
-                'link[rel="icon"][sizes="192x192"]',
-                'link[rel="icon"][sizes="180x180"]',
-                'link[rel="icon"][sizes="128x128"]',
-                'link[rel="apple-touch-icon"]',
-                'link[rel="apple-touch-icon-precomposed"]'
-            ];
-            var results = [];
-            for (var i = 0; i < selectors.length; i++) {
-                var els = document.querySelectorAll(selectors[i]);
-                for (var j = 0; j < els.length; j++) {
-                    if (els[j].href && results.indexOf(els[j].href) === -1) {
-                        results.push(els[j].href);
+        views[item.id] = WeakWebView(value: webView)
+        guard pending.count < SecurityPolicy.widgetCount, active[item.id] == nil else { return }
+        pending[item.id] = item; drain()
+    }
+    private func drain() {
+        precondition(Thread.isMainThread)
+        while active.count < 2, let (id, item) = pending.first {
+            pending.removeValue(forKey: id)
+            guard let web = views[id]?.value else { continue }
+            let token = UUID()
+            active[id] = token
+            let generation = generations[id, default: 0]
+            let pageURL = web.url
+            web.callAsyncJavaScript(Self.script, arguments: ["selected": item.selectedFaviconURL ?? ""], in: nil, in: .defaultClient) { result in
+                DispatchQueue.main.async {
+                    guard self.active[id] == token else { return }
+                    guard case .success(let raw) = result, let entries = raw as? [[String: String]], entries.count <= 8 else {
+                        self.finish(id: id, token: token); return
+                    }
+                    self.decoding.addOperation {
+                        var decoded: [(FaviconOption, NSImage, NSImage)] = []
+                        for entry in entries {
+                            guard let url = entry["url"], url.utf8.count <= 8192,
+                                  let candidate = URL(string: url), let pageURL,
+                                  Self.allows(candidate: candidate, page: pageURL),
+                                  let encoded = entry["data"], encoded.utf8.count <= 2_800_000,
+                                  let data = Data(base64Encoded: encoded),
+                                  let cg = try? BoundedImage.decode(data, bytes: 2 * 1_048_576, pixels: 4_000_000, thumbnail: 64) else { continue }
+                            let image = NSImage(cgImage: cg, size: NSSize(width: 18, height: 18))
+                            let option = FaviconOption(urlString: url, label: "Webseiten-Icon", isTransparent: Self.isImageTransparent(image))
+                            decoded.append((option, image, Self.makeWhiteTransparent(image)))
+                        }
+                        DispatchQueue.main.async {
+                            defer { self.finish(id: id, token: token) }
+                            guard self.active[id] == token,
+                                  self.generations[id, default: 0] == generation,
+                                  self.views[id]?.value != nil else { return }
+                            self.optionsByWidget[id] = decoded.map { $0.0 }
+                            for (option, image, transparent) in decoded {
+                                self.insert(image, key: Self.cacheKey(widget: id, url: option.urlString, removeWhite: false) as NSString)
+                                self.insert(transparent, key: Self.cacheKey(widget: id, url: option.urlString, removeWhite: true) as NSString)
+                            }
+                            self.changeCount += 1
+                            NotificationCenter.default.post(name: .webFaviconDidUpdate, object: nil, userInfo: ["widgetId": id])
+                        }
                     }
                 }
             }
-            return results;
-        })()
-        """
-        
-        webView.evaluateJavaScript(js) { [weak self] (result, error) in
-            guard let self = self, let host = self.extractHost(from: item.url) else { return }
-            if let urls = result as? [String] {
-                let candidateURLs = urls.compactMap { URL(string: $0) }
-                if !candidateURLs.isEmpty {
-                    self.fetchCandidates(candidateURLs, host: host, widgetId: item.id, completion: nil)
-                }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 6) {
+                self.finish(id: id, token: token)
             }
         }
     }
-    
-    // MARK: - Internal Helpers & Downloading
-    
-    private func fetchCandidates(_ urls: [URL], host: String, widgetId: UUID?, completion: (([FaviconOption]) -> Void)?) {
-        let group = DispatchGroup()
-        var discovered: [FaviconOption] = self.discoveredOptions[host] ?? []
-        let lock = NSLock()
-        
-        for url in urls {
-            let urlString = url.absoluteString
-            if discovered.contains(where: { $0.urlString == urlString }) {
-                continue
-            }
-            
-            group.enter()
-            var request = URLRequest(url: url, cachePolicy: .returnCacheDataElseLoad, timeoutInterval: 4.0)
-            request.setValue("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15", forHTTPHeaderField: "User-Agent")
-            
-            URLSession.shared.dataTask(with: request) { [weak self] data, response, error in
-                defer { group.leave() }
-                guard let self = self,
-                      let http = response as? HTTPURLResponse, (200...299).contains(http.statusCode),
-                      let data = data, data.count > 100,
-                      let rawImage = NSImage(data: data), rawImage.isValid else {
-                    return
-                }
-                
-                let isTransparent = Self.isImageTransparent(rawImage)
-                var label = isTransparent ? "Transparent" : "Mit Hintergrund"
-                if urlString.contains("apple-touch-icon") {
-                    label = "App-Kachel"
-                } else if urlString.contains("duckduckgo") {
-                    label = "DuckDuckGo"
-                } else if urlString.contains("google") {
-                    label = "Google"
-                } else if urlString.hasSuffix(".ico") {
-                    label = "Favicon.ico"
-                } else if urlString.hasSuffix(".svg") {
-                    label = "Vektor (SVG)"
-                }
-                
-                let option = FaviconOption(urlString: urlString, label: label, isTransparent: isTransparent)
-                
-                // Cache raw image data on disk
-                let diskKey = self.diskKey(forURLString: urlString)
-                let diskURL = self.diskFileURL(for: diskKey)
-                try? data.write(to: diskURL)
-                
-                // Format & cache in memory
-                let formatted = self.formatIcon(rawImage)
-                
-                lock.lock()
-                if !discovered.contains(where: { $0.urlString == urlString }) {
-                    discovered.append(option)
-                }
-                self.memoryCache[diskKey] = formatted
-                lock.unlock()
-            }.resume()
-        }
-        
-        group.notify(queue: .main) { [weak self] in
-            guard let self = self else { return }
-            
-            // Deduplicate visually identical options
-            var unique: [FaviconOption] = []
-            var seenFingerprints = Set<String>()
-            
-            for opt in discovered {
-                let key = self.diskKey(forURLString: opt.urlString)
-                if let img = self.memoryCache[key], let fp = self.imageFingerprint(img) {
-                    if seenFingerprints.contains(fp) {
-                        continue
-                    }
-                    seenFingerprints.insert(fp)
-                }
-                unique.append(opt)
-            }
-            
-            // Sort: transparent options first!
-            unique.sort { (a, b) -> Bool in
-                if a.isTransparent != b.isTransparent {
-                    return a.isTransparent && !b.isTransparent
-                }
-                return a.label < b.label
-            }
-            
-            self.discoveredOptions[host] = unique
-            self.changeCount += 1
-            NotificationCenter.default.post(
-                name: .webFaviconDidUpdate,
-                object: nil,
-                userInfo: ["host": host, "widgetId": widgetId as Any]
-            )
-            completion?(unique)
-        }
+    private func finish(id: UUID, token: UUID) {
+        precondition(Thread.isMainThread)
+        guard active[id] == token else { return }
+        active.removeValue(forKey: id)
+        if views[id]?.value == nil { generations.removeValue(forKey: id) }
+        drain()
     }
-    
-    /// Generates a visual fingerprint string for icon deduplication
-    public func imageFingerprint(_ image: NSImage) -> String? {
-        let targetSize = NSSize(width: 16, height: 16)
-        let smallImage = NSImage(size: targetSize, flipped: false) { rect in
-            image.draw(in: rect, from: .zero, operation: .copy, fraction: 1.0)
-            return true
-        }
-        guard let smallTiff = smallImage.tiffRepresentation,
-              let smallRep = NSBitmapImageRep(data: smallTiff),
-              let png = smallRep.representation(using: .png, properties: [:]) else { return nil }
-        
-        return png.base64EncodedString()
+    private func insert(_ image: NSImage, key: NSString) {
+        insertionOrder.removeAll { $0 == key }
+        insertionOrder.append(key)
+        cache.setObject(image, forKey: key, cost: 64 * 64 * 4)
+        while insertionOrder.count > 256 { cache.removeObject(forKey: insertionOrder.removeFirst()) }
     }
-    
-    private func getOrFetchBestIcon(forPageURL pageURL: String, widgetId: UUID?, removeWhite: Bool) -> NSImage? {
-        guard let host = extractHost(from: pageURL) else { return nil }
-        
-        // 1. If options already discovered, pick the first transparent option, or first option
-        if let options = discoveredOptions[host], !options.isEmpty {
-            let chosen = options.first(where: { $0.isTransparent }) ?? options[0]
-            return getOrFetchIcon(forURLString: chosen.urlString, widgetId: widgetId, removeWhite: removeWhite)
-        }
-        
-        // 2. Otherwise trigger discovery and check widget disk cache
-        let key = cacheKey(for: pageURL, widgetId: widgetId)
-        if let cached = memoryCache[key] {
-            return removeWhite ? Self.makeWhiteTransparent(cached) : cached
-        }
-        
-        let fileURL = diskFileURL(for: key)
-        if let data = try? Data(contentsOf: fileURL), let image = NSImage(data: data) {
-            var formatted = formatIcon(image)
-            if removeWhite {
-                formatted = Self.makeWhiteTransparent(formatted)
-            }
-            memoryCache[key] = formatted
-            return formatted
-        }
-        
-        discoverFavicons(for: pageURL, widgetId: widgetId)
-        return nil
+    public static func allows(candidate: URL, page: URL) -> Bool {
+        guard SecurityPolicy.webURL(candidate.absoluteString) != nil,
+              candidate.scheme == "https", page.scheme == "https",
+              let host = candidate.host, host == page.host else { return false }
+        return (candidate.port ?? 443) == (page.port ?? 443)
     }
-    
-    private func getOrFetchIcon(forURLString iconURLString: String, widgetId: UUID?, removeWhite: Bool) -> NSImage? {
-        let key = diskKey(forURLString: iconURLString)
-        let cacheKey = removeWhite ? "\(key)_nowhite" : key
-        
-        if let cached = memoryCache[cacheKey] {
-            return cached
-        }
-        
-        let fileURL = diskFileURL(for: key)
-        if let data = try? Data(contentsOf: fileURL), let image = NSImage(data: data) {
-            var formatted = formatIcon(image)
-            if removeWhite {
-                formatted = Self.makeWhiteTransparent(formatted)
+    private static let script = #"""
+    const base = new URL(location.href);
+    if (base.protocol !== 'https:' || base.username || base.password) return [];
+    const candidates = [];
+    const add = value => {
+        try {
+            const u = new URL(value, base);
+            if (u.protocol === 'https:' && u.origin === base.origin && !u.username && !u.password &&
+                u.href.length <= 8192 && candidates.length < 8 && !candidates.includes(u.href)) candidates.push(u.href);
+        } catch (_) {}
+    };
+    if (selected) add(selected);
+    const links = document.querySelectorAll('link[rel~="icon"],link[rel="apple-touch-icon"]');
+    for (let i = 0; i < Math.min(links.length, 64) && candidates.length < 8; i++) add(links[i].href);
+    add('/favicon.ico');
+    const result = [];
+    const deadline = Date.now() + 4000;
+    for (const url of candidates) {
+        const remaining = deadline - Date.now();
+        if (remaining <= 0) break;
+        const abort = new AbortController();
+        const timer = setTimeout(() => abort.abort(), remaining);
+        try {
+            const response = await fetch(url, {mode:'same-origin', credentials:'omit', redirect:'error', signal:abort.signal});
+            if (!response.ok || !response.body) continue;
+            const reader = response.body.getReader();
+            let length = 0; const chunks = [];
+            while (true) {
+                const part = await reader.read(); if (part.done) break;
+                length += part.value.byteLength;
+                if (length > 2097152) { await reader.cancel(); throw new Error('limit'); }
+                chunks.push(part.value);
             }
-            memoryCache[cacheKey] = formatted
-            return formatted
-        }
-        
-        // Fetch specific icon URL
-        guard let url = URL(string: iconURLString) else { return nil }
-        var request = URLRequest(url: url, cachePolicy: .returnCacheDataElseLoad, timeoutInterval: 4.0)
-        request.setValue("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15", forHTTPHeaderField: "User-Agent")
-        
-        URLSession.shared.dataTask(with: request) { [weak self] data, response, error in
-            guard let self = self,
-                  let data = data, data.count > 100,
-                  let image = NSImage(data: data), image.isValid else { return }
-            
-            try? data.write(to: fileURL)
-            var formatted = self.formatIcon(image)
-            if removeWhite {
-                formatted = Self.makeWhiteTransparent(formatted)
+            let binary = '';
+            for (const chunk of chunks) {
+                for (let i = 0; i < chunk.length; i += 16384) binary += String.fromCharCode(...chunk.subarray(i, i + 16384));
             }
-            DispatchQueue.main.async {
-                self.memoryCache[cacheKey] = formatted
-                self.changeCount += 1
-                NotificationCenter.default.post(name: .webFaviconDidUpdate, object: nil)
-            }
-        }.resume()
-        
-        return nil
+            result.push({url, data:btoa(binary)});
+        } catch (_) {} finally { clearTimeout(timer); }
     }
-    
-    // MARK: - Image Processing
-    
-    /// Formats any favicon into a crisp, high-DPI 18x18 point macOS menu bar image
-    private func formatIcon(_ original: NSImage) -> NSImage {
-        let targetSize = NSSize(width: 18, height: 18)
-        let cornerRadius: CGFloat = 3.5
-        
-        let newImage = NSImage(size: targetSize, flipped: false) { rect in
-            let path = NSBezierPath(roundedRect: rect, xRadius: cornerRadius, yRadius: cornerRadius)
-            path.addClip()
-            original.draw(in: rect, from: .zero, operation: .sourceOver, fraction: 1.0)
-            return true
-        }
-        
-        newImage.isTemplate = false
-        return newImage
-    }
-    
-    /// Detects if an image has transparency at its corners
+    return result;
+    """#
     public static func isImageTransparent(_ image: NSImage) -> Bool {
-        guard let tiff = image.tiffRepresentation,
-              let rep = NSBitmapImageRep(data: tiff) else {
-            return false
-        }
-        let w = rep.pixelsWide
-        let h = rep.pixelsHigh
-        guard w > 0 && h > 0 else { return false }
-        
-        let c1 = rep.colorAt(x: 0, y: 0)
-        let c2 = rep.colorAt(x: max(0, w - 1), y: 0)
-        let c3 = rep.colorAt(x: 0, y: max(0, h - 1))
-        let c4 = rep.colorAt(x: max(0, w - 1), y: max(0, h - 1))
-        
-        let a1 = c1?.alphaComponent ?? 1.0
-        let a2 = c2?.alphaComponent ?? 1.0
-        let a3 = c3?.alphaComponent ?? 1.0
-        let a4 = c4?.alphaComponent ?? 1.0
-        
-        return (a1 < 0.2 || a2 < 0.2 || a3 < 0.2 || a4 < 0.2)
+        guard let cg = image.cgImage(forProposedRect: nil, context: nil, hints: nil) else { return false }
+        return cg.alphaInfo != .none && cg.alphaInfo != .noneSkipFirst && cg.alphaInfo != .noneSkipLast
     }
-    
-    /// Strips solid white background from an image if corners are white
     public static func makeWhiteTransparent(_ image: NSImage) -> NSImage {
-        guard let tiff = image.tiffRepresentation,
-              let rep = NSBitmapImageRep(data: tiff),
-              let cgImage = rep.cgImage else {
-            return image
-        }
-        
-        let w = rep.pixelsWide
-        let h = rep.pixelsHigh
-        guard w > 0 && h > 0 else { return image }
-        
-        let colorSpace = CGColorSpaceCreateDeviceRGB()
-        guard let ctx = CGContext(
-            data: nil,
-            width: w,
-            height: h,
-            bitsPerComponent: 8,
-            bytesPerRow: w * 4,
-            space: colorSpace,
-            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
-        ) else { return image }
-        
-        ctx.draw(cgImage, in: CGRect(x: 0, y: 0, width: w, height: h))
-        guard let pixelData = ctx.data else { return image }
-        let buffer = pixelData.bindMemory(to: UInt8.self, capacity: w * h * 4)
-        
-        let cR = buffer[0]
-        let cG = buffer[1]
-        let cB = buffer[2]
-        
-        // If corner is white / near white
-        if cR > 230 && cG > 230 && cB > 230 {
-            for i in 0..<(w * h) {
-                let offset = i * 4
-                let r = buffer[offset]
-                let g = buffer[offset + 1]
-                let b = buffer[offset + 2]
-                if r > 225 && g > 225 && b > 225 {
-                    buffer[offset + 3] = 0 // make alpha 0
-                }
-            }
-            
-            if let resultCG = ctx.makeImage() {
-                return NSImage(cgImage: resultCG, size: image.size)
-            }
-        }
-        
-        return image
+        // Only already bounded 64px images arrive here; do not expand original data.
+        guard let cg = image.cgImage(forProposedRect: nil, context: nil, hints: nil), cg.width <= 64, cg.height <= 64,
+              let context = CGContext(data: nil, width: cg.width, height: cg.height, bitsPerComponent: 8, bytesPerRow: cg.width * 4,
+                                      space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue),
+              let memory = context.data else { return image }
+        context.draw(cg, in: CGRect(x: 0, y: 0, width: cg.width, height: cg.height))
+        let pixels = memory.assumingMemoryBound(to: UInt8.self)
+        for i in 0..<(cg.width * cg.height) where pixels[i*4] > 230 && pixels[i*4+1] > 230 && pixels[i*4+2] > 230 { pixels[i*4+3] = 0 }
+        return context.makeImage().map { NSImage(cgImage: $0, size: image.size) } ?? image
     }
-    
-    // MARK: - Cache Keys
-    
-    private func cacheKey(for urlString: String, widgetId: UUID?) -> String {
-        if let id = widgetId {
-            return "widget_\(id.uuidString)"
-        }
-        let host = extractHost(from: urlString) ?? "default"
-        return "host_\(host)"
-    }
-    
-    private func diskKey(forURLString iconURL: String) -> String {
-        let safe = iconURL.replacingOccurrences(of: "/", with: "_")
-            .replacingOccurrences(of: ":", with: "_")
-            .replacingOccurrences(of: "?", with: "_")
-            .replacingOccurrences(of: "&", with: "_")
-            .prefix(120)
-        return "icon_\(safe)"
-    }
-    
-    private func diskFileURL(for key: String) -> URL {
-        cacheDirectory.appendingPathComponent("\(key).png")
-    }
-    
-    public func extractHost(from urlString: String) -> String? {
-        let clean = urlString.trimmingCharacters(in: .whitespacesAndNewlines)
-        let full = clean.hasPrefix("http") ? clean : "https://" + clean
-        return URL(string: full)?.host
-    }
-    
-    private func extractBaseDomain(from host: String) -> String {
-        let parts = host.split(separator: ".")
-        if parts.count >= 2 {
-            return "\(parts[parts.count - 2]).\(parts[parts.count - 1])"
-        }
-        return host
+    public func imageFingerprint(_ image: NSImage) -> String? {
+        guard let data = image.tiffRepresentation else { return nil }
+        return SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined()
     }
 }

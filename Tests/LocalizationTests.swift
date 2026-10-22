@@ -14,7 +14,7 @@ func runLocalizationTests() {
         }
         
         harness.test("Essential localization keys exist in German and English") {
-            let manager = LocalizationManager.shared
+            let manager = LocalizationManager(defaults: isolatedDefaults())
             
             let essentialKeys = [
                 "menu.settings",
@@ -40,7 +40,7 @@ func runLocalizationTests() {
         }
         
         harness.test("Localization returns key itself if key is missing without crashing") {
-            let manager = LocalizationManager.shared
+            let manager = LocalizationManager(defaults: isolatedDefaults())
             let nonexistentKey = "nonexistent.key.12345"
             let result = manager.localized(nonexistentKey, for: .english)
             assertEqual(result, nonexistentKey, "Missing key should fallback to key identifier")

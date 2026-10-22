@@ -6,14 +6,15 @@ public final class ModuleManager: ObservableObject {
     
     @Published public private(set) var modules: [any CustomizerModule] = []
     
-    public let menuBarModule = MenuBarModule()
-    public let webPanelModule = WebPanelModule()
-    public let clipboardModule = ClipboardModule()
-    public let systemStatsModule = SystemStatsModule()
-    public let scrollReverserModule = ScrollReverserModule()
+    public lazy var menuBarModule = MenuBarModule()
+    public lazy var webPanelModule = WebPanelModule()
+    public lazy var clipboardModule = ClipboardModule()
+    public lazy var systemStatsModule = SystemStatsModule()
+    public lazy var scrollReverserModule = ScrollReverserModule()
     
-    public init() {
-        registerModules()
+    public init(modules: [any CustomizerModule]? = nil) {
+        if let modules { self.modules = modules }
+        else { registerModules() }
     }
     
     private func registerModules() {

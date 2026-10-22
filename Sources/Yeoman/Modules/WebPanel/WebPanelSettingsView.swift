@@ -42,6 +42,10 @@ public struct WebPanelSettingsView: View {
     
     public var body: some View {
         VStack(spacing: 0) {
+            if let error = module.storageError { Text(error).font(.caption).foregroundColor(.red).padding() }
+            if let error = WebFaviconManager.shared.legacyCleanupError { Text(error).font(.caption).foregroundColor(.red).padding() }
+            Text("Widgets verwenden getrennte Browserprofile. Nach der Umstellung ist eine erneute Anmeldung nötig. Icons werden aus geöffneten Webseiten geladen.")
+                .font(.caption).foregroundColor(.secondary).padding(.horizontal)
             // Header
             ModuleHeaderView(
                 title: l10n("web_panel.title"),
@@ -193,9 +197,16 @@ public struct WebPanelSettingsView: View {
     }
     
     private func clearAllWebsiteData() {
-        let store = WKWebsiteDataStore.default()
         let types = WKWebsiteDataStore.allWebsiteDataTypes()
-        store.removeData(ofTypes: types, modifiedSince: Date(timeIntervalSince1970: 0)) {}
+        for widget in module.widgets {
+            if widget.id.isValidWebKitIdentifier {
+                WKWebsiteDataStore(forIdentifier: widget.id)
+                    .removeData(ofTypes: types, modifiedSince: Date(timeIntervalSince1970: 0)) {}
+            }
+        }
+        // Also clear legacy default store from before profiles were introduced (AUD-08)
+        WKWebsiteDataStore.default()
+            .removeData(ofTypes: types, modifiedSince: Date(timeIntervalSince1970: 0)) {}
     }
 }
 
@@ -464,7 +475,7 @@ struct WebWidgetIconPickerPopover: View {
                 }
                 
                 if useFavicon {
-                    let options = faviconManager.options(for: widget.url)
+                    let options = faviconManager.options(for: widget.id)
                     if !options.isEmpty {
                         VStack(alignment: .leading, spacing: 5) {
                             HStack(spacing: 4) {
@@ -510,7 +521,7 @@ struct WebWidgetIconPickerPopover: View {
                                                     .fill(Color(nsColor: .controlBackgroundColor))
                                                     .frame(width: 30, height: 30)
                                                 
-                                                if let img = faviconManager.icon(forOption: opt.urlString, removeWhite: removeWhiteBackground) {
+                                                if let img = faviconManager.icon(forOption: opt.urlString, widgetId: widget.id, removeWhite: removeWhiteBackground) {
                                                     Image(nsImage: img)
                                                         .resizable()
                                                         .aspectRatio(contentMode: .fit)
@@ -635,7 +646,7 @@ struct WebWidgetIconPickerPopover: View {
         .padding(14)
         .frame(width: 330)
         .onAppear {
-            if faviconManager.options(for: widget.url).isEmpty && !widget.url.isEmpty {
+            if faviconManager.options(for: widget.id).isEmpty && !widget.url.isEmpty {
                 faviconManager.discoverFavicons(for: widget.url, widgetId: widget.id)
             }
         }
@@ -906,7 +917,7 @@ struct WebWidgetEditorSheet: View {
                                         .background(RoundedRectangle(cornerRadius: 6).fill(Color.primary.opacity(0.04)))
                                         
                                         // Discovered Favicon Options Gallery
-                                        let options = faviconManager.options(for: url)
+                                        let options = faviconManager.options(for: originalId)
                                         if !options.isEmpty {
                                             VStack(alignment: .leading, spacing: 6) {
                                                 HStack(spacing: 5) {
@@ -943,7 +954,7 @@ struct WebWidgetEditorSheet: View {
                                                                         .fill(Color(nsColor: .controlBackgroundColor))
                                                                         .frame(width: 34, height: 34)
                                                                     
-                                                                    if let img = faviconManager.icon(forOption: opt.urlString, removeWhite: removeWhiteBackground) {
+                                                                    if let id = originalId, let img = faviconManager.icon(forOption: opt.urlString, widgetId: id, removeWhite: removeWhiteBackground) {
                                                                         Image(nsImage: img)
                                                                             .resizable()
                                                                             .aspectRatio(contentMode: .fit)
@@ -1491,6 +1502,3 @@ struct QuickButton: View {
         .buttonStyle(.plain)
     }
 }
-
-
-

@@ -10,6 +10,7 @@ public final class WebPanelController: NSObject, ObservableObject, WKNavigationD
     @Published public var zoomScale: Double = 1.0
     @Published public var isPopoverVisible: Bool = false
     
+    public let widgetID: UUID?
     public var userAgentMode: WebUserAgentMode
     public var targetWidth: CGFloat
     public var homeURL: String
@@ -19,43 +20,43 @@ public final class WebPanelController: NSObject, ObservableObject, WKNavigationD
     public private(set) var webView: WKWebView!
     public private(set) var lastKnownPID: pid_t?
     private var hasPreloaded = false
+    private var isDisposed = false
+    private var popoverGeneration: Int = 0
     
     // User Agents
     public static let iPhoneUserAgent = "Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1"
     public static let desktopUserAgent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Safari/605.1.15"
     
-    public init(initialURL: String, userAgentMode: WebUserAgentMode = .auto, targetWidth: CGFloat = 320, zoomScale: Double = 1.0) {
+    public init(initialURL: String, widgetID: UUID? = nil, userAgentMode: WebUserAgentMode = .auto, targetWidth: CGFloat = 320, zoomScale: Double = 1.0, preload: Bool = true) {
+        self.widgetID = widgetID
         self.currentURL = initialURL
         self.homeURL = initialURL
         self.userAgentMode = userAgentMode
-        self.targetWidth = targetWidth
-        self.zoomScale = zoomScale
+        self.targetWidth = CGFloat(SecurityPolicy.bounded(Double(targetWidth), 280...1200, fallback: 320))
+        self.zoomScale = SecurityPolicy.bounded(zoomScale, 0.1...1.5, fallback: 1)
         super.init()
         
         setupWebView()
-        preload()
+        if preload { self.preload() }
     }
     
     private func setupWebView() {
         let config = WKWebViewConfiguration()
-        config.websiteDataStore = WKWebsiteDataStore.default()
+        let safeStoreId = widgetID.flatMap { $0.isValidWebKitIdentifier ? $0 : nil }
+        config.websiteDataStore = safeStoreId.map { WKWebsiteDataStore(forIdentifier: $0) } ?? .nonPersistent()
         
         let prefs = WKWebpagePreferences()
         prefs.allowsContentJavaScript = true
         config.defaultWebpagePreferences = prefs
         
         let preferences = config.preferences
-        preferences.javaScriptCanOpenWindowsAutomatically = true
-        preferences.isElementFullscreenEnabled = true
+        preferences.javaScriptCanOpenWindowsAutomatically = false
+        preferences.isElementFullscreenEnabled = false
         
         // Memory & Background optimizations:
         if #available(macOS 14.0, *) {
             preferences.inactiveSchedulingPolicy = .throttle
         }
-        preferences.setValue(false, forKey: "usesPageCache")
-        preferences.setValue(true, forKey: "hiddenPageDOMTimerThrottlingEnabled")
-        preferences.setValue(true, forKey: "pageVisibilityBasedProcessSuppressionEnabled")
-        preferences.setValue(false, forKey: "aggressiveTileRetentionEnabled")
         
         // Inject responsive viewport script so web content scales properly to widget bounds
         let viewportScript = """
@@ -74,7 +75,7 @@ public final class WebPanelController: NSObject, ObservableObject, WKNavigationD
         wv.navigationDelegate = self
         wv.uiDelegate = self
         wv.customUserAgent = resolvedUserAgent()
-        wv.pageZoom = CGFloat(zoomScale)
+        wv.pageZoom = CGFloat(self.zoomScale)
         self.webView = wv
     }
     
@@ -86,8 +87,8 @@ public final class WebPanelController: NSObject, ObservableObject, WKNavigationD
     
     public func updateConfig(userAgentMode: WebUserAgentMode, targetWidth: CGFloat, zoomScale: Double = 1.0, newURL: String? = nil) {
         self.userAgentMode = userAgentMode
-        self.targetWidth = targetWidth
-        self.zoomScale = zoomScale
+        self.targetWidth = CGFloat(SecurityPolicy.bounded(Double(targetWidth), 280...1200, fallback: 320))
+        self.zoomScale = SecurityPolicy.bounded(zoomScale, 0.1...1.5, fallback: 1)
         applyZoom(zoomScale)
         if let u = newURL, u != currentURL && !u.isEmpty {
             self.homeURL = u
@@ -98,6 +99,7 @@ public final class WebPanelController: NSObject, ObservableObject, WKNavigationD
     }
     
     public func applyZoom(_ scale: Double) {
+        let scale = SecurityPolicy.bounded(scale, 0.1...1.5, fallback: 1)
         self.zoomScale = scale
         DispatchQueue.main.async { [weak self] in
             self?.webView?.pageZoom = CGFloat(scale)
@@ -106,7 +108,7 @@ public final class WebPanelController: NSObject, ObservableObject, WKNavigationD
     
     public func loadURL(_ urlString: String? = nil) {
         let str = urlString ?? currentURL
-        guard let url = URL(string: str.hasPrefix("http") ? str : "https://" + str) else { return }
+        guard let url = SecurityPolicy.webURL(str) else { return }
         currentURL = url.absoluteString
         var request = URLRequest(url: url, cachePolicy: .useProtocolCachePolicy, timeoutInterval: 30.0)
         request.attribution = .developer
@@ -131,6 +133,18 @@ public final class WebPanelController: NSObject, ObservableObject, WKNavigationD
     
     public func stopLoading() {
         webView?.stopLoading()
+    }
+
+    public func dispose() {
+        isDisposed = true
+        popoverGeneration += 1
+        webView?.stopLoading()
+        webView?.navigationDelegate = nil
+        webView?.uiDelegate = nil
+        webView?.removeFromSuperview()
+        webView = nil
+        lastKnownPID = nil
+        hasPreloaded = false
     }
     
     public func resolvedUserAgent() -> String {
@@ -160,6 +174,7 @@ public final class WebPanelController: NSObject, ObservableObject, WKNavigationD
     // MARK: - WKNavigationDelegate
     
     public func webView(_ webView: WKWebView, didStartProvisionalNavigation navigation: WKNavigation!) {
+        if let url = webView.url { currentURL = url.absoluteString }
         if let num = webView.value(forKey: "_webProcessIdentifier") as? NSNumber, num.int32Value > 0 {
             self.lastKnownPID = num.int32Value
         }
@@ -168,7 +183,12 @@ public final class WebPanelController: NSObject, ObservableObject, WKNavigationD
         }
     }
     
+    public func webView(_ webView: WKWebView, didCommit navigation: WKNavigation!) {
+        if let url = webView.url { currentURL = url.absoluteString }
+    }
+
     public func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
+        if let url = webView.url { currentURL = url.absoluteString }
         if let num = webView.value(forKey: "_webProcessIdentifier") as? NSNumber, num.int32Value > 0 {
             self.lastKnownPID = num.int32Value
         }
@@ -218,18 +238,21 @@ public final class WebPanelController: NSObject, ObservableObject, WKNavigationD
         purgeMemoryCache()
         
         // 4. Secondary sweep after webpage finishes its background transition
+        popoverGeneration += 1
+        let gen = popoverGeneration
         DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) { [weak self] in
-            guard let self = self, !self.isPopoverVisible else { return }
+            guard let self = self, !self.isDisposed, self.popoverGeneration == gen, !self.isPopoverVisible else { return }
             self.purgeMemoryCache()
         }
     }
     
     public func purgeMemoryCache() {
+        guard !isDisposed, let webView = self.webView else { return }
         let types: Set<String> = [
             WKWebsiteDataTypeMemoryCache,
             WKWebsiteDataTypeFetchCache
         ]
-        WKWebsiteDataStore.default().removeData(ofTypes: types, modifiedSince: Date.distantPast) { }
+        webView.configuration.websiteDataStore.removeData(ofTypes: types, modifiedSince: Date.distantPast) { }
     }
     
     public func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) {
@@ -260,7 +283,7 @@ public final class WebPanelController: NSObject, ObservableObject, WKNavigationD
         let scheme = url.scheme?.lowercased() ?? ""
         
         // 1. Allow standard web navigation and about:blank
-        if scheme == "https" || scheme == "http" || (scheme == "about" && url.absoluteString == "about:blank") {
+        if ((scheme == "https" || scheme == "http") && SecurityPolicy.webURL(url.absoluteString) != nil) || (scheme == "about" && url.absoluteString == "about:blank") {
             decisionHandler(.allow)
             return
         }
@@ -282,7 +305,7 @@ public final class WebPanelController: NSObject, ObservableObject, WKNavigationD
     // MARK: - WKUIDelegate
     
     public func webView(_ webView: WKWebView, createWebViewWith configuration: WKWebViewConfiguration, for navigationAction: WKNavigationAction, windowFeatures: WKWindowFeatures) -> WKWebView? {
-        if navigationAction.targetFrame == nil, let url = navigationAction.request.url {
+        if navigationAction.navigationType == .linkActivated, navigationAction.targetFrame == nil, let raw = navigationAction.request.url, let url = SecurityPolicy.webURL(raw.absoluteString) {
             let scheme = url.scheme?.lowercased() ?? ""
             if scheme == "https" || scheme == "http" {
                 webView.load(navigationAction.request)
@@ -291,6 +314,28 @@ public final class WebPanelController: NSObject, ObservableObject, WKNavigationD
             }
         }
         return nil
+    }
+}
+
+public enum IsolatedWebsiteDataStore {
+    public static func remove(identifier: UUID, retries: Int = 20, completion: @escaping (Error?) -> Void) {
+        let store = WKWebsiteDataStore(forIdentifier: identifier)
+        store.removeData(ofTypes: WKWebsiteDataStore.allWebsiteDataTypes(), modifiedSince: .distantPast) {
+            removeContainer(identifier: identifier, retries: retries) { error in
+                // WebKit may retain an empty persistent store for this process and
+                // report "in use". The sensitive data deletion above has completed.
+                let nsError = error as NSError?
+                completion(nsError?.domain == "WKWebSiteDataStore" && nsError?.code == 1 ? nil : error)
+            }
+        }
+    }
+    private static func removeContainer(identifier: UUID, retries: Int, completion: @escaping (Error?) -> Void) {
+        WKWebsiteDataStore.remove(forIdentifier: identifier) { error in
+            guard error != nil, retries > 0 else { completion(error); return }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                removeContainer(identifier: identifier, retries: retries - 1, completion: completion)
+            }
+        }
     }
 }
 
@@ -338,6 +383,10 @@ public struct WebPanelView: View {
     
     public var body: some View {
         VStack(spacing: 0) {
+            Text(SecurityPolicy.origin(URL(string: controller.currentURL)))
+                .font(.caption).lineLimit(2).textSelection(.enabled)
+                .frame(maxWidth: .infinity, alignment: .leading).padding(6)
+                .background(Color(nsColor: .controlBackgroundColor))
             // Address / Input Bar (only when actively editing URL)
             if isShowingAddressInput {
                 HStack(spacing: 6) {
@@ -501,7 +550,7 @@ public struct WebPanelView: View {
                     }
                     
                     Button("Im Browser öffnen") {
-                        if let url = URL(string: controller.currentURL) {
+                        if let url = SecurityPolicy.webURL(controller.currentURL) {
                             NSWorkspace.shared.open(url)
                         }
                     }
@@ -608,7 +657,7 @@ public struct WebPanelView: View {
                 } else {
                     // Open in External Browser
                     Button(action: {
-                        if let url = URL(string: controller.currentURL) {
+                        if let url = SecurityPolicy.webURL(controller.currentURL) {
                             NSWorkspace.shared.open(url)
                         }
                     }) {

@@ -1,12 +1,25 @@
 #!/usr/bin/env bash
-set -e
+set -euo pipefail
 
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$DIR"
 
-echo "==> Building Yeoman in release mode..."
+MODE="${1:-development}"
+if [[ "$MODE" != "development" && "$MODE" != "release" ]]; then
+    echo "Usage: $0 [development|release]" >&2
+    exit 1
+fi
+VERSION="${YEOMAN_VERSION:-0.2.0}"
+if [[ ! "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+    echo "Invalid YEOMAN_VERSION" >&2
+    exit 1
+fi
+echo "==> Building Yeoman..."
 swift build -c release
 
+if [[ "$MODE" == "release" ]]; then
+    .build/release/YeomanReleaseSign --check-trust
+fi
 APP_NAME="Yeoman"
 BUILD_BIN=".build/release/$APP_NAME"
 APP_BUNDLE="dist/$APP_NAME.app"
@@ -17,10 +30,11 @@ RESOURCES_DIR="$CONTENTS_DIR/Resources"
 echo "==> Creating macOS App Bundle..."
 rm -rf "$APP_BUNDLE"
 mkdir -p "$MACOS_DIR"
-mkdir -p "$RESOURCES_DIR"
+mkdir -p "$RESOURCES_DIR" "$CONTENTS_DIR/Helpers"
 
 cp "$BUILD_BIN" "$MACOS_DIR/$APP_NAME"
 chmod +x "$MACOS_DIR/$APP_NAME"
+cp .build/release/YeomanInstaller "$CONTENTS_DIR/Helpers/YeomanInstaller"
 
 if [ -f "Resources/AppIcon.icns" ]; then
     cp "Resources/AppIcon.icns" "$RESOURCES_DIR/AppIcon.icns"
@@ -40,7 +54,7 @@ cat <<EOF > "$CONTENTS_DIR/Info.plist"
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>CFBundleShortVersionString</key>
-    <string>0.2.0</string>
+    <string>$VERSION</string>
     <key>CFBundleVersion</key>
     <string>2</string>
     <key>CFBundleIconFile</key>
@@ -61,20 +75,10 @@ cat <<EOF > "$CONTENTS_DIR/Info.plist"
 </plist>
 EOF
 
-echo "==> Signing macOS App Bundle with stable designated requirement..."
-codesign -s - -f --deep -r='designated => identifier "de.trst.Yeoman"' "$APP_BUNDLE"
-
-if [ -f "Resources/AppIcon.icns" ]; then
-    echo "==> Registering native custom icon with Finder..."
-    swift -e '
-    import AppKit
-    let app = "'"$APP_BUNDLE"'"
-    let icon = "Resources/AppIcon.icns"
-    if let img = NSImage(contentsOfFile: icon) {
-        _ = NSWorkspace.shared.setIcon(img, forFile: app, options: [])
-    }
-    '
-fi
-
-echo "==> Successfully created and signed $APP_BUNDLE!"
-echo "You can launch it with: open $APP_BUNDLE"
+# Developer ID and notarization are intentionally optional. Update publisher
+# authentication is provided by the pinned Ed25519 key and signed ZIP manifest.
+echo "==> Signing helper and application for integrity..."
+codesign --force --sign - --options runtime "$CONTENTS_DIR/Helpers/YeomanInstaller"
+codesign --force --sign - --options runtime "$APP_BUNDLE"
+codesign --verify --deep --strict "$APP_BUNDLE"
+echo "==> Created $APP_BUNDLE ($MODE)"

@@ -11,6 +11,15 @@ public final class ClipboardMonitor: ObservableObject {
         }
     }
     
+    @Published public var isPaused = false {
+        didSet { lastChangeCount = NSPasteboard.general.changeCount }
+    }
+    @Published public var excludedBundleIDs: String = String((UserDefaults.standard.string(forKey: "clipboard_excluded_apps") ?? "").prefix(8192)) {
+        didSet {
+            guard excludedBundleIDs.utf8.count <= 32_768 else { excludedBundleIDs = oldValue; return }
+            UserDefaults.standard.set(excludedBundleIDs, forKey: "clipboard_excluded_apps")
+        }
+    }
     private var lastChangeCount: Int = 0
     private var timerCancellable: AnyCancellable?
     
@@ -146,71 +155,43 @@ public final class ClipboardMonitor: ObservableObject {
     }
     
     private func checkPasteboard() {
+        guard !isPaused else { return }
         let pasteboard = NSPasteboard.general
-        let currentChangeCount = pasteboard.changeCount
-        
-        guard currentChangeCount != lastChangeCount else { return }
-        lastChangeCount = currentChangeCount
-        
-        let frontmostApp = NSWorkspace.shared.frontmostApplication
-        
-        // Strict privacy check: ignore if copied from password managers or browser extensions
-        if isPasswordManagerPasteboard(pasteboard: pasteboard, frontmostApp: frontmostApp) {
-            return
+        let generation = pasteboard.changeCount
+        guard generation != lastChangeCount else { return }
+        let frontmost = NSWorkspace.shared.frontmostApplication
+        let excluded = Set(excludedBundleIDs.split(whereSeparator: { $0 == "," || $0.isNewline }).map { $0.trimmingCharacters(in: .whitespaces) })
+        guard !excluded.contains(frontmost?.bundleIdentifier ?? ""),
+              !isPasswordManagerPasteboard(pasteboard: pasteboard, frontmostApp: frontmost),
+              let items = pasteboard.pasteboardItems, items.count <= 16,
+              !items.contains(where: { $0.types.count > 64 || $0.types.contains { Self.isTransientPasteboardType($0.rawValue) } }) else {
+            lastChangeCount = generation; return
         }
-        
-        let appName = frontmostApp?.localizedName
-        
-        // 1. Check for direct image data on pasteboard (Screenshots, copied images)
-        if pasteboard.canReadItem(withDataConformingToTypes: [NSPasteboard.PasteboardType.png.rawValue, NSPasteboard.PasteboardType.tiff.rawValue]) {
-            let bundleID = frontmostApp?.bundleIdentifier?.lowercased() ?? ""
-            let lowerApp = (appName ?? "").lowercased()
-            let isScreenshot = lowerApp.contains("screenshot") ||
-                               lowerApp.contains("bildschirmfoto") ||
-                               lowerApp.contains("screencapture") ||
-                               lowerApp.contains("cleanshot") ||
-                               lowerApp.contains("shottr") ||
-                               bundleID.contains("screencapture")
-            
-            if let readImages = pasteboard.readObjects(forClasses: [NSImage.self], options: nil) as? [NSImage],
-               let image = readImages.first {
-                ClipboardHistoryStore.shared.addImageItem(image: image, sourceApp: isScreenshot ? (appName ?? "Bildschirmfoto") : appName, isScreenshot: isScreenshot ? true : nil)
-                return
-            } else if let data = pasteboard.data(forType: .png) ?? pasteboard.data(forType: .tiff),
-                      let image = NSImage(data: data) {
-                ClipboardHistoryStore.shared.addImageItem(image: image, sourceApp: isScreenshot ? (appName ?? "Bildschirmfoto") : appName, isScreenshot: isScreenshot ? true : nil)
-                return
-            }
-        }
-        
-        // 2. Check for copied image file in Finder
-        if let urls = pasteboard.readObjects(forClasses: [NSURL.self], options: nil) as? [URL],
-           let fileURL = urls.first, fileURL.isFileURL {
-            let ext = fileURL.pathExtension.lowercased()
-            let imageExtensions = ["png", "jpg", "jpeg", "heic", "webp", "gif", "tiff", "bmp", "ico", "svg"]
-            if imageExtensions.contains(ext), let img = NSImage(contentsOf: fileURL) {
-                let filename = fileURL.lastPathComponent.lowercased()
-                let isScreenshot = filename.contains("screenshot") || filename.contains("bildschirmfoto")
-                ClipboardHistoryStore.shared.addImageItem(image: img, sourceApp: isScreenshot ? "Bildschirmfoto" : (appName ?? "Finder"), isScreenshot: isScreenshot)
-                return
-            }
-        }
-        
-        // 3. Extract text content
-        if let text = pasteboard.string(forType: .string), !text.isEmpty {
-            let type: ClipboardContentType
-            if text.hasPrefix("http://") || text.hasPrefix("https://") {
-                type = .url
-            } else if text.contains("{") && text.contains("}") || text.contains("func ") || text.contains("def ") {
-                type = .code
-            } else {
-                type = .text
-            }
-            
-            ClipboardHistoryStore.shared.addItem(content: text, type: type, sourceApp: appName)
+        // Read immutable bytes before committing; never call readObjects(NSImage) here.
+        // NSPasteboard may materialize a promised value before its size is known;
+        // limits below bound everything after that unavoidable first materialization.
+        let image = pasteboard.data(forType: .png) ?? pasteboard.data(forType: .tiff)
+        let text = image == nil ? pasteboard.string(forType: .string) : nil
+        let file = image == nil ? pasteboard.string(forType: .fileURL).flatMap(URL.init(string:)) : nil
+        guard Self.acceptsSnapshot(before: generation, after: pasteboard.changeCount,
+                                   sensitive: isPasswordManagerPasteboard(pasteboard: pasteboard, frontmostApp: frontmost)) else { return }
+        lastChangeCount = generation
+        let app = frontmost?.localizedName
+        if let image {
+            ClipboardHistoryStore.shared.addImageData(image, sourceApp: app)
+        } else if let file, file.isFileURL, ["png", "jpg", "jpeg", "heic", "webp", "tiff", "bmp", "ico"].contains(file.pathExtension.lowercased()) {
+            // The store captures its deletion generation before the bounded read starts.
+            ClipboardHistoryStore.shared.addImageFile(file, sourceApp: app)
+        } else if let text, text.utf8.count <= SecurityPolicy.textBytes {
+            let type: ClipboardContentType = SecurityPolicy.webURL(text) != nil && text.hasPrefix("http") ? .url : .text
+            ClipboardHistoryStore.shared.addItem(content: text, type: type, sourceApp: app)
         }
     }
-    
+
+    public static func acceptsSnapshot(before: Int, after: Int, sensitive: Bool) -> Bool {
+        before == after && !sensitive
+    }
+
     // MARK: - Privacy & Password Manager Inspection
     
     private func isPasswordManagerPasteboard(pasteboard: NSPasteboard, frontmostApp: NSRunningApplication?) -> Bool {
@@ -218,6 +199,7 @@ public final class ClipboardMonitor: ObservableObject {
         // Even if heuristic application filtering is disabled, OS-level transient/concealed contracts
         // must always be honored to protect passwords and secrets.
         if let types = pasteboard.types {
+            guard types.count <= 64 else { return true }
             for type in types {
                 if Self.isTransientPasteboardType(type.rawValue) {
                     return true
@@ -249,7 +231,7 @@ public final class ClipboardMonitor: ObservableObject {
         }
         
         // 3. Check Browser Source URL (Brave, Chrome, Edge, Arc, Opera, Safari, etc.)
-        let sourceURLs = extractSourceURLs(from: pasteboard)
+        guard let sourceURLs = extractSourceURLs(from: pasteboard) else { return true }
         for urlString in sourceURLs {
             if Self.isPasswordManagerURL(urlString) {
                 return true
@@ -259,27 +241,24 @@ public final class ClipboardMonitor: ObservableObject {
         return false
     }
     
-    private func extractSourceURLs(from pasteboard: NSPasteboard) -> [String] {
+    private func extractSourceURLs(from pasteboard: NSPasteboard) -> [String]? {
         var urls: [String] = []
+        func append(_ value: String?) -> Bool {
+            guard let value, !value.isEmpty else { return true }
+            guard value.utf8.count <= 8192, urls.count < 16 else { return false }
+            urls.append(value); return true
+        }
         
         // Chromium source URL (Chrome, Brave, Edge, Arc, Opera, Vivaldi, Electron)
-        if let str = pasteboard.string(forType: NSPasteboard.PasteboardType("org.chromium.source-url")), !str.isEmpty {
-            urls.append(str)
-        }
+        guard append(pasteboard.string(forType: NSPasteboard.PasteboardType("org.chromium.source-url"))) else { return nil }
         // Standard URL
-        if let str = pasteboard.string(forType: .URL), !str.isEmpty {
-            urls.append(str)
-        }
+        guard append(pasteboard.string(forType: .URL)) else { return nil }
         // Public URL
-        if let str = pasteboard.string(forType: NSPasteboard.PasteboardType("public.url")), !str.isEmpty {
-            urls.append(str)
-        }
+        guard append(pasteboard.string(forType: NSPasteboard.PasteboardType("public.url"))) else { return nil }
         // Any other pasteboard type containing "source-url"
         if let types = pasteboard.types {
             for t in types where t.rawValue.lowercased().contains("source-url") && t.rawValue != "org.chromium.source-url" {
-                if let str = pasteboard.string(forType: t), !str.isEmpty {
-                    urls.append(str)
-                }
+                guard append(pasteboard.string(forType: t)) else { return nil }
             }
         }
         
@@ -293,13 +272,8 @@ public final class ClipboardMonitor: ObservableObject {
         pasteboard.clearContents()
         
         if item.type == .image {
-            if let url = item.imageURL, let data = try? Data(contentsOf: url) {
+            if let data = ClipboardHistoryStore.shared.imageData(for: item) {
                 pasteboard.setData(data, forType: .png)
-                if let img = NSImage(data: data), let tiff = img.tiffRepresentation {
-                    pasteboard.setData(tiff, forType: .tiff)
-                }
-            } else if let img = item.image, let tiff = img.tiffRepresentation {
-                pasteboard.setData(tiff, forType: .tiff)
             }
         } else {
             pasteboard.setString(item.content, forType: .string)
