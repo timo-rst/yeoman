@@ -1201,18 +1201,13 @@ struct WebWidgetEditorSheet: View {
                                     .padding(.vertical, 4)
                                 
                                 HStack(spacing: 6) {
-                                    Toggle("In Menüleiste anzeigen", isOn: $isEnabled)
-                                    InfoTooltip(text: "Zeigt das Widget als eigenständiges Symbol direkt in der macOS Menüleiste an.")
-                                }
-                                
-                                HStack(spacing: 6) {
-                                    Toggle("Steuer- & Navigationsleiste einblenden", isOn: $showsAddressBar)
-                                    InfoTooltip(text: "Zeigt die Leiste mit Vor-, Zurück-, Neuladen-, Zoom- und URL-Buttons am unteren Rand des Widgets an. Wenn deaktiviert, wird die Leiste ausgeblendet für eine saubere, randlose Ansicht.")
-                                }
-                                
-                                HStack(spacing: 6) {
                                     Toggle("Fenster anheften (Pin)", isOn: $isPinned)
-                                    InfoTooltip(text: "Hält das Widget-Fenster dauerhaft geöffnet, auch wenn du in eine andere App klickst.")
+                                    InfoTooltip(text: "Hält das Widget-Fenster dauerhaft geöffnet, auch wenn du in eine andere App klickst oder außerhalb des Fensters tippst.")
+                                }
+                                
+                                HStack(spacing: 6) {
+                                    Toggle("Such- & Navigationsleiste anzeigen", isOn: $showsAddressBar)
+                                    InfoTooltip(text: "Blendet eine Leiste mit Adress-/Suchfeld sowie Vor-, Zurück-, Neuladen- und Zoom-Buttons am unteren Rand des Widgets ein.")
                                 }
                             }
                         } label: {
@@ -1223,7 +1218,7 @@ struct WebWidgetEditorSheet: View {
                                     .font(.subheadline)
                                     .fontWeight(.medium)
                                 Spacer()
-                                Text(isEnabled ? "In Menüleiste aktiv" : "Deaktiviert")
+                                Text(isPinned && showsAddressBar ? "Pin & Suchleiste" : (isPinned ? "Angeheftet" : (showsAddressBar ? "Suchleiste" : "Standard")))
                                     .font(.caption2)
                                     .foregroundColor(.secondary)
                             }
