@@ -295,7 +295,6 @@ struct GeneralSettingsView: View {
     @ObservedObject private var stats = ModuleManager.shared.systemStatsModule
     @ObservedObject private var scrollReverser = ModuleManager.shared.scrollReverserModule
     @ObservedObject private var menuBar = ModuleManager.shared.menuBarModule
-    @ObservedObject private var faviconManager = WebFaviconManager.shared
     @ObservedObject private var statusController = StatusItemController.shared
     
     var body: some View {
@@ -374,10 +373,6 @@ struct GeneralSettingsView: View {
                             isOn: Binding(
                                 get: { menuBar.isEnabled },
                                 set: { mm.toggleModule(id: menuBar.id, enabled: $0) }
-                            ),
-                            showsDedicatedIcon: Binding(
-                                get: { menuBar.showsDedicatedStatusItem },
-                                set: { menuBar.showsDedicatedStatusItem = $0 }
                             )
                         )
                         
@@ -391,10 +386,6 @@ struct GeneralSettingsView: View {
                             isOn: Binding(
                                 get: { scrollReverser.isEnabled },
                                 set: { mm.toggleModule(id: scrollReverser.id, enabled: $0) }
-                            ),
-                            showsDedicatedIcon: Binding(
-                                get: { scrollReverser.showsDedicatedStatusItem },
-                                set: { scrollReverser.showsDedicatedStatusItem = $0 }
                             )
                         )
                         
@@ -408,56 +399,7 @@ struct GeneralSettingsView: View {
                             isOn: Binding(
                                 get: { webPanel.isEnabled },
                                 set: { mm.toggleModule(id: webPanel.id, enabled: $0) }
-                            ),
-                            extraContent: {
-                                if webPanel.isEnabled && !webPanel.widgets.isEmpty {
-                                    VStack(spacing: 6) {
-                                        ForEach(webPanel.widgets) { widget in
-                                            HStack(spacing: 8) {
-                                                // Preferred Favicon with Fallback to SF Symbol
-                                                Group {
-                                                    if let icon = faviconManager.previewIcon(for: widget.url, widgetId: widget.id, selectedFaviconURL: widget.selectedFaviconURL, removeWhite: widget.removeWhiteBackground) {
-                                                        Image(nsImage: icon)
-                                                            .resizable()
-                                                            .aspectRatio(contentMode: .fit)
-                                                            .frame(width: 15, height: 15)
-                                                            .clipShape(RoundedRectangle(cornerRadius: 3.5))
-                                                    } else {
-                                                        Image(systemName: widget.iconName.isEmpty ? "globe" : widget.iconName)
-                                                            .font(.caption)
-                                                            .foregroundColor(.accentColor)
-                                                            .frame(width: 15, height: 15)
-                                                    }
-                                                }
-                                                .frame(width: 16, height: 16)
-                                                
-                                                Text(widget.title)
-                                                    .font(.caption)
-                                                    .foregroundColor(.primary)
-                                                Spacer()
-                                                Toggle("", isOn: Binding(
-                                                    get: { widget.isEnabled },
-                                                    set: { enabled in
-                                                        webPanel.toggleWidget(id: widget.id, isEnabled: enabled)
-                                                    }
-                                                ))
-                                                .toggleStyle(.switch)
-                                                .scaleEffect(0.75)
-                                            }
-                                            .padding(.vertical, 4)
-                                            .padding(.horizontal, 10)
-                                            .background(RoundedRectangle(cornerRadius: 6).fill(Color.primary.opacity(0.04)))
-                                            .onAppear {
-                                                if !widget.url.isEmpty && faviconManager.options(for: widget.id).isEmpty {
-                                                    faviconManager.discoverFavicons(for: widget.url, widgetId: widget.id)
-                                                }
-                                            }
-                                        }
-                                    }
-                                    .padding(.leading, 40)
-                                    .padding(.top, 4)
-                                }
-                            }
+                            )
                         )
                         
                         Divider()
@@ -470,10 +412,6 @@ struct GeneralSettingsView: View {
                             isOn: Binding(
                                 get: { clipboard.isEnabled },
                                 set: { mm.toggleModule(id: clipboard.id, enabled: $0) }
-                            ),
-                            showsDedicatedIcon: Binding(
-                                get: { clipboard.showsDedicatedStatusItem },
-                                set: { clipboard.showsDedicatedStatusItem = $0 }
                             )
                         )
                         
@@ -499,80 +437,41 @@ struct GeneralSettingsView: View {
     }
 }
 
-struct ModuleToggleRow<ExtraContent: View>: View {
+struct ModuleToggleRow: View {
     let title: String
     let subtitle: String
     let icon: String
     @Binding var isOn: Bool
-    var showsDedicatedIcon: Binding<Bool>? = nil
-    var extraContent: ExtraContent
-    
-    init(
-        title: String,
-        subtitle: String,
-        icon: String,
-        isOn: Binding<Bool>,
-        showsDedicatedIcon: Binding<Bool>? = nil,
-        @ViewBuilder extraContent: () -> ExtraContent = { EmptyView() }
-    ) {
-        self.title = title
-        self.subtitle = subtitle
-        self.icon = icon
-        self._isOn = isOn
-        self.showsDedicatedIcon = showsDedicatedIcon
-        self.extraContent = extraContent()
-    }
     
     var body: some View {
-        VStack(spacing: 8) {
-            HStack(spacing: 12) {
-                Image(systemName: icon)
-                    .font(.title2)
-                    .foregroundColor(.accentColor)
-                    .frame(width: 28)
-                
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(title)
-                        .fontWeight(.medium)
-                    Text(subtitle)
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                }
-                
-                Spacer()
-                
-                HStack(spacing: 10) {
-                    Text(isOn ? l10n("common.enabled") : l10n("common.disabled"))
-                        .font(.subheadline)
-                        .fontWeight(.medium)
-                        .foregroundColor(isOn ? .primary : .secondary)
-                    
-                    Toggle("", isOn: $isOn)
-                        .toggleStyle(.switch)
-                        .labelsHidden()
-                }
+        HStack(spacing: 12) {
+            Image(systemName: icon)
+                .font(.title2)
+                .foregroundColor(.accentColor)
+                .frame(width: 28)
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .fontWeight(.medium)
+                Text(subtitle)
+                    .font(.caption)
+                    .foregroundColor(.secondary)
             }
-            
-            if isOn {
-                if let dedicatedBinding = showsDedicatedIcon {
-                    HStack {
-                        Spacer().frame(width: 40)
-                        Image(systemName: "menubar.arrow.up.rectangle")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                        Text(l10n("general.status_icon_label"))
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                        Spacer()
-                        Toggle("", isOn: dedicatedBinding)
-                            .toggleStyle(.switch)
-                            .scaleEffect(0.85)
-                    }
-                }
+
+            Spacer()
+
+            HStack(spacing: 10) {
+                Text(isOn ? l10n("common.enabled") : l10n("common.disabled"))
+                    .font(.subheadline)
+                    .fontWeight(.medium)
+                    .foregroundColor(isOn ? .primary : .secondary)
                 
-                extraContent
+                Toggle("", isOn: $isOn)
+                    .toggleStyle(.switch)
+                    .labelsHidden()
             }
         }
+        .padding(.vertical, 2)
     }
 }
 

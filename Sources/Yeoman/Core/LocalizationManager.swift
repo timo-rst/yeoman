@@ -433,10 +433,10 @@ public final class LocalizationManager: ObservableObject {
             .french: "Affiche l'icône principale de Yeoman dans la barre des menus pour un accès rapide à tous les modules."
         ],
         "general.active_modules": [
-            .german: "Aktive Module & Menüleisten-Symbole",
-            .english: "Active Modules & Menu Bar Icons",
-            .spanish: "Módulos activos e iconos de la barra de menús",
-            .french: "Modules actifs et icônes de la barre des menus"
+            .german: "Aktive Module",
+            .english: "Active Modules",
+            .spanish: "Módulos activos",
+            .french: "Modules actifs"
         ],
         "general.menu_bar_opt_title": [
             .german: "Menüleisten-Optimizer",
