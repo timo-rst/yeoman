@@ -672,11 +672,16 @@ public final class WebWidgetInstanceController: NSObject, ObservableObject, NSPo
         if p.isShown {
             p.performClose(sender)
         } else {
+            PopoverFocusCoordinator.shared.prepareForPresentation(of: p)
             p.contentSize = fittedSize
             webController.applyZoom(item.zoomScale * autoFitScale)
             p.show(relativeTo: sender.bounds, of: sender, preferredEdge: .minY)
             p.contentViewController?.view.window?.makeKey()
-            NSApp.activate(ignoringOtherApps: true)
+            if #available(macOS 14.0, *) {
+                NSApp.activate()
+            } else {
+                NSApp.activate(ignoringOtherApps: true)
+            }
         }
     }
     
@@ -733,5 +738,6 @@ public final class WebWidgetInstanceController: NSObject, ObservableObject, NSPo
     
     public func popoverDidClose(_ notification: Notification) {
         webController.onPopoverClosed()
+        PopoverFocusCoordinator.shared.handlePopoverDidClose(of: popover)
     }
 }

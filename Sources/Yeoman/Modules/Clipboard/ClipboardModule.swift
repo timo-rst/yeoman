@@ -30,8 +30,6 @@ public final class ClipboardModule: NSObject, CustomizerModule, ObservableObject
     
     private var statusItem: NSStatusItem?
     private var popover: NSPopover?
-    private var previousApp: NSRunningApplication?
-    private var temporarilyHiddenSettings: Bool = false
     
     public override init() {
         self.isEnabled = UserDefaults.standard.object(forKey: "clipboard_is_enabled") as? Bool ?? true
@@ -120,26 +118,14 @@ public final class ClipboardModule: NSObject, CustomizerModule, ObservableObject
         if p.isShown {
             closePopoverAndRestoreFocus()
         } else {
-            // 1. Capture the frontmost application before showing the popover
-            if let front = NSWorkspace.shared.frontmostApplication,
-               front.bundleIdentifier != Bundle.main.bundleIdentifier {
-                self.previousApp = front
-            }
-            
-            // 2. If Settings window is currently open in background,
-            // hide it temporarily so activating NSApp doesn't surface it in front of the user's work
-            if let settings = StatusItemController.shared.settingsWindow,
-               settings.isVisible,
-               !settings.isKeyWindow {
-                self.temporarilyHiddenSettings = true
-                settings.orderOut(nil)
-            } else {
-                self.temporarilyHiddenSettings = false
-            }
-            
+            PopoverFocusCoordinator.shared.prepareForPresentation(of: p)
             p.show(relativeTo: sender.bounds, of: sender, preferredEdge: .minY)
             p.contentViewController?.view.window?.makeKey()
-            NSApp.activate(ignoringOtherApps: true)
+            if #available(macOS 14.0, *) {
+                NSApp.activate()
+            } else {
+                NSApp.activate(ignoringOtherApps: true)
+            }
         }
     }
     
@@ -147,47 +133,10 @@ public final class ClipboardModule: NSObject, CustomizerModule, ObservableObject
         if let p = popover, p.isShown {
             p.performClose(nil)
         }
-        restoreFocus()
     }
     
     public func popoverDidClose(_ notification: Notification) {
-        restoreFocus()
-    }
-    
-    private func restoreFocus() {
-        guard previousApp != nil || temporarilyHiddenSettings else { return }
-        
-        let appToRestore = self.previousApp
-        let shouldRestoreSettings = self.temporarilyHiddenSettings
-        self.previousApp = nil
-        self.temporarilyHiddenSettings = false
-        
-        DispatchQueue.main.async { [weak self] in
-            guard let self = self else { return }
-            // Restore previous application focus
-            if let app = appToRestore,
-               app.bundleIdentifier != Bundle.main.bundleIdentifier,
-               !app.isTerminated {
-                self.activateApp(app)
-            } else {
-                NSApp.deactivate()
-            }
-            
-            // If settings was temporarily hidden, restore it behind the user's app
-            if shouldRestoreSettings, let settings = StatusItemController.shared.settingsWindow {
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
-                    settings.orderBack(nil)
-                }
-            }
-        }
-    }
-    
-    private func activateApp(_ app: NSRunningApplication) {
-        if #available(macOS 14.0, *) {
-            app.activate()
-        } else {
-            app.activate(options: [.activateIgnoringOtherApps])
-        }
+        PopoverFocusCoordinator.shared.handlePopoverDidClose(of: popover)
     }
     
     private func showContextMenu(for sender: NSStatusBarButton) {

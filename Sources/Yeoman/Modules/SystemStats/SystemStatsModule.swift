@@ -304,6 +304,7 @@ public final class SystemStatsModule: NSObject, CustomizerModule, ObservableObje
             p.contentSize = NSSize(width: 460, height: 495)
             p.behavior = .transient
             p.animates = true
+            p.delegate = self
             p.contentViewController = NSHostingController(rootView: TaskManagerPopoverView())
             self.popover = p
         }
@@ -312,11 +313,16 @@ public final class SystemStatsModule: NSObject, CustomizerModule, ObservableObje
         if p.isShown {
             p.performClose(sender)
         } else {
+            PopoverFocusCoordinator.shared.prepareForPresentation(of: p)
             SystemMetricsProvider.shared.refreshMetrics()
             SystemMetricsProvider.shared.refreshProcessList()
             p.show(relativeTo: sender.bounds, of: sender, preferredEdge: .minY)
             p.contentViewController?.view.window?.makeKey()
-            NSApp.activate(ignoringOtherApps: true)
+            if #available(macOS 14.0, *) {
+                NSApp.activate()
+            } else {
+                NSApp.activate(ignoringOtherApps: true)
+            }
         }
     }
     
@@ -353,6 +359,14 @@ public final class SystemStatsModule: NSObject, CustomizerModule, ObservableObje
     
     public func settingsView() -> AnyView {
         AnyView(SystemStatsSettingsView(module: self))
+    }
+}
+
+// MARK: - NSPopoverDelegate
+
+extension SystemStatsModule: NSPopoverDelegate {
+    public func popoverDidClose(_ notification: Notification) {
+        PopoverFocusCoordinator.shared.handlePopoverDidClose(of: popover)
     }
 }
 

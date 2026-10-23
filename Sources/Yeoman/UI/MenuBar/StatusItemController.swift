@@ -8,7 +8,7 @@ public final class StatusItemController: NSObject, ObservableObject, NSMenuDeleg
     private var pendingDockPolicy: NSApplication.ActivationPolicy?
     
     private var statusItem: NSStatusItem?
-    private var clipboardWindow: NSWindow?
+    public private(set) var clipboardWindow: NSWindow?
     public private(set) var settingsWindow: NSWindow?
     
     private var previousAppForMenu: NSRunningApplication?
@@ -294,6 +294,7 @@ public final class StatusItemController: NSObject, ObservableObject, NSMenuDeleg
     }
     
     @objc public func openSettingsWindow() {
+        PopoverFocusCoordinator.shared.cancelSuppression()
         let standardWidth: CGFloat = 1040
         let standardHeight: CGFloat = 720
         let minWidth: CGFloat = 980

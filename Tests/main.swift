@@ -9,6 +9,7 @@ runWebPanelTests()
 runLocalizationTests()
 runModuleManagerTests()
 runSecurityTests()
+runPopoverFocusCoordinatorTests()
 removeTestDefaults()
 
 let exitCode = TestHarness.shared.printSummary()
