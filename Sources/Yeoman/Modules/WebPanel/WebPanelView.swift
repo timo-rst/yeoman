@@ -45,6 +45,9 @@ public final class WebPanelController: NSObject, ObservableObject, WKNavigationD
         let safeStoreId = widgetID.flatMap { $0.isValidWebKitIdentifier ? $0 : nil }
         config.websiteDataStore = safeStoreId.map { WKWebsiteDataStore(forIdentifier: $0) } ?? .nonPersistent()
 
+        // Enable media playback (videos on Reddit, YouTube, etc.) without requiring direct gesture on <video>
+        config.mediaTypesRequiringUserActionForPlayback = []
+
         let prefs = WKWebpagePreferences()
         prefs.allowsContentJavaScript = true
         config.defaultWebpagePreferences = prefs
@@ -52,11 +55,6 @@ public final class WebPanelController: NSObject, ObservableObject, WKNavigationD
         let preferences = config.preferences
         preferences.javaScriptCanOpenWindowsAutomatically = false
         preferences.isElementFullscreenEnabled = false
-
-        // Memory & Background optimizations:
-        if #available(macOS 14.0, *) {
-            preferences.inactiveSchedulingPolicy = .throttle
-        }
 
         // Inject responsive viewport script so web content scales properly to widget bounds
         let viewportScript = """
@@ -76,6 +74,9 @@ public final class WebPanelController: NSObject, ObservableObject, WKNavigationD
         wv.uiDelegate = self
         wv.customUserAgent = resolvedUserAgent()
         wv.pageZoom = CGFloat(self.zoomScale)
+        if #available(macOS 13.3, *) {
+            wv.isInspectable = true
+        }
         self.webView = wv
     }
 
@@ -219,7 +220,7 @@ public final class WebPanelController: NSObject, ObservableObject, WKNavigationD
     public func onPopoverOpened() {
         isPopoverVisible = true
         webView?.setAllMediaPlaybackSuspended(false)
-        let js = "if (document.hidden !== undefined) { Object.defineProperty(document, 'hidden', {value: false, configurable: true}); document.dispatchEvent(new Event('visibilitychange')); }"
+        let js = "if (document.hidden !== undefined) { Object.defineProperty(document, 'hidden', {value: false, configurable: true}); Object.defineProperty(document, 'visibilityState', {value: 'visible', configurable: true}); document.dispatchEvent(new Event('visibilitychange')); }"
         webView?.evaluateJavaScript(js, completionHandler: nil)
     }
 
@@ -231,7 +232,7 @@ public final class WebPanelController: NSObject, ObservableObject, WKNavigationD
         webView?.setAllMediaPlaybackSuspended(true)
 
         // 2. Notify the webpage that it is hidden (causes SPAs to pause animation loops, render queues, and heavy background tasks)
-        let js = "if (document.hidden !== undefined) { Object.defineProperty(document, 'hidden', {value: true, configurable: true}); document.dispatchEvent(new Event('visibilitychange')); }"
+        let js = "if (document.hidden !== undefined) { Object.defineProperty(document, 'hidden', {value: true, configurable: true}); Object.defineProperty(document, 'visibilityState', {value: 'hidden', configurable: true}); document.dispatchEvent(new Event('visibilitychange')); }"
         webView?.evaluateJavaScript(js, completionHandler: nil)
 
         // 3. Purge volatile in-memory WebKit caches
@@ -282,8 +283,10 @@ public final class WebPanelController: NSObject, ObservableObject, WKNavigationD
 
         let scheme = url.scheme?.lowercased() ?? ""
 
-        // 1. Allow standard web navigation and about:blank
-        if ((scheme == "https" || scheme == "http") && SecurityPolicy.webURL(url.absoluteString) != nil) || (scheme == "about" && url.absoluteString == "about:blank") {
+        // 1. Allow standard web navigation, about:blank, and blob: media streams
+        if ((scheme == "https" || scheme == "http") && SecurityPolicy.webURL(url.absoluteString) != nil)
+            || (scheme == "about" && url.absoluteString == "about:blank")
+            || scheme == "blob" {
             decisionHandler(.allow)
             return
         }
@@ -344,6 +347,7 @@ public struct WebViewRepresentable: NSViewRepresentable {
         if wv.superview != nil {
             wv.removeFromSuperview()
         }
+        controller.onPopoverOpened()
         return wv
     }
 
