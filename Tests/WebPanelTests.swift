@@ -3,7 +3,7 @@ import YeomanCore
 
 func runWebPanelTests() {
     let harness = TestHarness.shared
-    
+
     harness.runSuite("WebPanel Tests") {
         harness.test("WebWidgetItem JSON serialization roundtrip") {
             let originalItem = WebWidgetItem(
@@ -20,16 +20,17 @@ func runWebPanelTests() {
                 zoomScale: 1.0,
                 isEnabled: true,
                 isPinned: true,
-                showsAddressBar: false
+                showsAddressBar: false,
+                hidesTopBar: true
             )
-            
+
             let encoder = JSONEncoder()
             let data = try encoder.encode(originalItem)
             assertTrue(data.count > 0, "Encoded JSON data should not be empty")
-            
+
             let decoder = JSONDecoder()
             let decodedItem = try decoder.decode(WebWidgetItem.self, from: data)
-            
+
             assertEqual(decodedItem.id, originalItem.id)
             assertEqual(decodedItem.title, originalItem.title)
             assertEqual(decodedItem.url, originalItem.url)
@@ -44,18 +45,43 @@ func runWebPanelTests() {
             assertEqual(decodedItem.isEnabled, originalItem.isEnabled)
             assertEqual(decodedItem.isPinned, originalItem.isPinned)
             assertEqual(decodedItem.showsAddressBar, originalItem.showsAddressBar)
+            assertEqual(decodedItem.hidesTopBar, originalItem.hidesTopBar)
         }
-        
+
+        harness.test("WebWidgetItem decodes legacy JSON without hidesTopBar to false") {
+            let legacyJSON = """
+            {
+                "id": "12345678-1234-1234-1234-123456789abc",
+                "title": "Legacy Item",
+                "url": "https://example.com",
+                "iconName": "globe",
+                "useFavicon": false,
+                "removeWhiteBackground": false,
+                "sizePreset": "320 × 400 (Widget)",
+                "customWidth": 320,
+                "customHeight": 400,
+                "userAgentMode": "Immer Desktop",
+                "zoomScale": 1.0,
+                "isEnabled": true,
+                "isPinned": false,
+                "showsAddressBar": false
+            }
+            """.data(using: .utf8)!
+
+            let decoded = try JSONDecoder().decode(WebWidgetItem.self, from: legacyJSON)
+            assertFalse(decoded.hidesTopBar, "Legacy widget without hidesTopBar should default to false")
+        }
+
         harness.test("WebSizePreset dimensions are accurate") {
             assertEqual(WebSizePreset.custom.dimensions.width, 320)
             assertEqual(WebSizePreset.custom.dimensions.height, 400)
-            
+
             assertEqual(WebSizePreset.widget.dimensions.width, 320)
             assertEqual(WebSizePreset.widget.dimensions.height, 400)
-            
+
             assertEqual(WebSizePreset.smartphone.dimensions.width, 375)
             assertEqual(WebSizePreset.smartphone.dimensions.height, 667)
-            
+
             assertEqual(WebSizePreset.large.dimensions.width, 500)
             assertEqual(WebSizePreset.large.dimensions.height, 700)
         }

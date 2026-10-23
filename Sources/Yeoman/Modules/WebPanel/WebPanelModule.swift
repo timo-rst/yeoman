@@ -60,9 +60,10 @@ public struct WebWidgetItem: Identifiable, Codable, Equatable {
     public var isEnabled: Bool
     public var isPinned: Bool
     public var showsAddressBar: Bool
+    public var hidesTopBar: Bool
     
     enum CodingKeys: String, CodingKey {
-        case id, title, url, iconName, useFavicon, selectedFaviconURL, removeWhiteBackground, sizePreset, customWidth, customHeight, userAgentMode, zoomScale, isEnabled, isPinned, showsAddressBar
+        case id, title, url, iconName, useFavicon, selectedFaviconURL, removeWhiteBackground, sizePreset, customWidth, customHeight, userAgentMode, zoomScale, isEnabled, isPinned, showsAddressBar, hidesTopBar
     }
     
     public init(
@@ -80,7 +81,8 @@ public struct WebWidgetItem: Identifiable, Codable, Equatable {
         zoomScale: Double = 1.0,
         isEnabled: Bool = true,
         isPinned: Bool = false,
-        showsAddressBar: Bool = false
+        showsAddressBar: Bool = false,
+        hidesTopBar: Bool = false
     ) {
         self.id = id
         self.title = title
@@ -97,6 +99,7 @@ public struct WebWidgetItem: Identifiable, Codable, Equatable {
         self.isEnabled = isEnabled
         self.isPinned = isPinned
         self.showsAddressBar = showsAddressBar
+        self.hidesTopBar = hidesTopBar
         normalize()
     }
     
@@ -117,6 +120,7 @@ public struct WebWidgetItem: Identifiable, Codable, Equatable {
         self.isEnabled = try container.decodeIfPresent(Bool.self, forKey: .isEnabled) ?? true
         self.isPinned = try container.decodeIfPresent(Bool.self, forKey: .isPinned) ?? false
         self.showsAddressBar = try container.decodeIfPresent(Bool.self, forKey: .showsAddressBar) ?? false
+        self.hidesTopBar = try container.decodeIfPresent(Bool.self, forKey: .hidesTopBar) ?? false
         guard SecurityPolicy.webURL(url) != nil else { throw SecurityFailure.rejected("Ungültige Widget-URL.") }
         normalize()
     }

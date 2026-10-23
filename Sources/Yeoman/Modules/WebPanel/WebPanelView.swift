@@ -9,24 +9,24 @@ public final class WebPanelController: NSObject, ObservableObject, WKNavigationD
     @Published public var canGoForward: Bool = false
     @Published public var zoomScale: Double = 1.0
     @Published public var isPopoverVisible: Bool = false
-    
+
     public let widgetID: UUID?
     public var userAgentMode: WebUserAgentMode
     public var targetWidth: CGFloat
     public var homeURL: String
     public var associatedItem: WebWidgetItem? = nil
-    
+
     // Persistent preloaded WKWebView instance
     public private(set) var webView: WKWebView!
     public private(set) var lastKnownPID: pid_t?
     private var hasPreloaded = false
     private var isDisposed = false
     private var popoverGeneration: Int = 0
-    
+
     // User Agents
     public static let iPhoneUserAgent = "Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1"
     public static let desktopUserAgent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Safari/605.1.15"
-    
+
     public init(initialURL: String, widgetID: UUID? = nil, userAgentMode: WebUserAgentMode = .auto, targetWidth: CGFloat = 320, zoomScale: Double = 1.0, preload: Bool = true) {
         self.widgetID = widgetID
         self.currentURL = initialURL
@@ -35,29 +35,29 @@ public final class WebPanelController: NSObject, ObservableObject, WKNavigationD
         self.targetWidth = CGFloat(SecurityPolicy.bounded(Double(targetWidth), 280...1200, fallback: 320))
         self.zoomScale = SecurityPolicy.bounded(zoomScale, 0.1...1.5, fallback: 1)
         super.init()
-        
+
         setupWebView()
         if preload { self.preload() }
     }
-    
+
     private func setupWebView() {
         let config = WKWebViewConfiguration()
         let safeStoreId = widgetID.flatMap { $0.isValidWebKitIdentifier ? $0 : nil }
         config.websiteDataStore = safeStoreId.map { WKWebsiteDataStore(forIdentifier: $0) } ?? .nonPersistent()
-        
+
         let prefs = WKWebpagePreferences()
         prefs.allowsContentJavaScript = true
         config.defaultWebpagePreferences = prefs
-        
+
         let preferences = config.preferences
         preferences.javaScriptCanOpenWindowsAutomatically = false
         preferences.isElementFullscreenEnabled = false
-        
+
         // Memory & Background optimizations:
         if #available(macOS 14.0, *) {
             preferences.inactiveSchedulingPolicy = .throttle
         }
-        
+
         // Inject responsive viewport script so web content scales properly to widget bounds
         let viewportScript = """
         var meta = document.querySelector('meta[name="viewport"]');
@@ -70,7 +70,7 @@ public final class WebPanelController: NSObject, ObservableObject, WKNavigationD
         """
         let userScript = WKUserScript(source: viewportScript, injectionTime: .atDocumentEnd, forMainFrameOnly: true)
         config.userContentController.addUserScript(userScript)
-        
+
         let wv = WKWebView(frame: NSRect(x: 0, y: 0, width: targetWidth, height: 400), configuration: config)
         wv.navigationDelegate = self
         wv.uiDelegate = self
@@ -78,13 +78,13 @@ public final class WebPanelController: NSObject, ObservableObject, WKNavigationD
         wv.pageZoom = CGFloat(self.zoomScale)
         self.webView = wv
     }
-    
+
     public func preload() {
         guard !hasPreloaded else { return }
         hasPreloaded = true
         loadURL(homeURL)
     }
-    
+
     public func updateConfig(userAgentMode: WebUserAgentMode, targetWidth: CGFloat, zoomScale: Double = 1.0, newURL: String? = nil) {
         self.userAgentMode = userAgentMode
         self.targetWidth = CGFloat(SecurityPolicy.bounded(Double(targetWidth), 280...1200, fallback: 320))
@@ -97,7 +97,7 @@ public final class WebPanelController: NSObject, ObservableObject, WKNavigationD
             updateUserAgent()
         }
     }
-    
+
     public func applyZoom(_ scale: Double) {
         let scale = SecurityPolicy.bounded(scale, 0.1...1.5, fallback: 1)
         self.zoomScale = scale
@@ -105,7 +105,7 @@ public final class WebPanelController: NSObject, ObservableObject, WKNavigationD
             self?.webView?.pageZoom = CGFloat(scale)
         }
     }
-    
+
     public func loadURL(_ urlString: String? = nil) {
         let str = urlString ?? currentURL
         guard let url = SecurityPolicy.webURL(str) else { return }
@@ -114,23 +114,23 @@ public final class WebPanelController: NSObject, ObservableObject, WKNavigationD
         request.attribution = .developer
         webView?.load(request)
     }
-    
+
     public func reload() {
         webView?.reload()
     }
-    
+
     public func goBack() {
         webView?.goBack()
     }
-    
+
     public func goForward() {
         webView?.goForward()
     }
-    
+
     public func goHome() {
         loadURL(homeURL)
     }
-    
+
     public func stopLoading() {
         webView?.stopLoading()
     }
@@ -146,7 +146,7 @@ public final class WebPanelController: NSObject, ObservableObject, WKNavigationD
         lastKnownPID = nil
         hasPreloaded = false
     }
-    
+
     public func resolvedUserAgent() -> String {
         switch userAgentMode {
         case .mobile:
@@ -157,7 +157,7 @@ public final class WebPanelController: NSObject, ObservableObject, WKNavigationD
             return targetWidth <= 480 ? Self.iPhoneUserAgent : Self.desktopUserAgent
         }
     }
-    
+
     public func updateUserAgent() {
         guard let wv = webView else { return }
         let ua = resolvedUserAgent()
@@ -166,13 +166,13 @@ public final class WebPanelController: NSObject, ObservableObject, WKNavigationD
             wv.reload()
         }
     }
-    
+
     public func applyUserAgent(to wv: WKWebView) {
         wv.customUserAgent = resolvedUserAgent()
     }
-    
+
     // MARK: - WKNavigationDelegate
-    
+
     public func webView(_ webView: WKWebView, didStartProvisionalNavigation navigation: WKNavigation!) {
         if let url = webView.url { currentURL = url.absoluteString }
         if let num = webView.value(forKey: "_webProcessIdentifier") as? NSNumber, num.int32Value > 0 {
@@ -182,7 +182,7 @@ public final class WebPanelController: NSObject, ObservableObject, WKNavigationD
             self?.isLoading = true
         }
     }
-    
+
     public func webView(_ webView: WKWebView, didCommit navigation: WKNavigation!) {
         if let url = webView.url { currentURL = url.absoluteString }
     }
@@ -201,11 +201,11 @@ public final class WebPanelController: NSObject, ObservableObject, WKNavigationD
                 self.currentURL = url
             }
             webView.pageZoom = CGFloat(self.zoomScale)
-            
+
             if let item = self.associatedItem, item.useFavicon {
                 WebFaviconManager.shared.extractFaviconFromWebView(webView, for: item)
             }
-            
+
             // If the popover is currently closed (e.g. during background preload),
             // immediately enter background mode to flush transient load caches
             if !self.isPopoverVisible {
@@ -213,30 +213,30 @@ public final class WebPanelController: NSObject, ObservableObject, WKNavigationD
             }
         }
     }
-    
+
     // MARK: - Memory & Background Lifecycle Optimization
-    
+
     public func onPopoverOpened() {
         isPopoverVisible = true
         webView?.setAllMediaPlaybackSuspended(false)
         let js = "if (document.hidden !== undefined) { Object.defineProperty(document, 'hidden', {value: false, configurable: true}); document.dispatchEvent(new Event('visibilitychange')); }"
         webView?.evaluateJavaScript(js, completionHandler: nil)
     }
-    
+
     public func onPopoverClosed() {
         isPopoverVisible = false
-        
+
         // 1. Pause active audio/video to release media buffers
         webView?.pauseAllMediaPlayback()
         webView?.setAllMediaPlaybackSuspended(true)
-        
+
         // 2. Notify the webpage that it is hidden (causes SPAs to pause animation loops, render queues, and heavy background tasks)
         let js = "if (document.hidden !== undefined) { Object.defineProperty(document, 'hidden', {value: true, configurable: true}); document.dispatchEvent(new Event('visibilitychange')); }"
         webView?.evaluateJavaScript(js, completionHandler: nil)
-        
+
         // 3. Purge volatile in-memory WebKit caches
         purgeMemoryCache()
-        
+
         // 4. Secondary sweep after webpage finishes its background transition
         popoverGeneration += 1
         let gen = popoverGeneration
@@ -245,7 +245,7 @@ public final class WebPanelController: NSObject, ObservableObject, WKNavigationD
             self.purgeMemoryCache()
         }
     }
-    
+
     public func purgeMemoryCache() {
         guard !isDisposed, let webView = self.webView else { return }
         let types: Set<String> = [
@@ -254,56 +254,56 @@ public final class WebPanelController: NSObject, ObservableObject, WKNavigationD
         ]
         webView.configuration.websiteDataStore.removeData(ofTypes: types, modifiedSince: Date.distantPast) { }
     }
-    
+
     public func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) {
         DispatchQueue.main.async { [weak self] in
             self?.isLoading = false
         }
     }
-    
+
     public func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) {
         DispatchQueue.main.async { [weak self] in
             self?.isLoading = false
         }
     }
-    
+
     public func webViewWebContentProcessDidTerminate(_ webView: WKWebView) {
         lastKnownPID = nil
         hasPreloaded = false
     }
-    
+
     // MARK: - WKNavigationDelegate Security & Policy
-    
+
     public func webView(_ webView: WKWebView, decidePolicyFor navigationAction: WKNavigationAction, decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {
         guard let url = navigationAction.request.url else {
             decisionHandler(.cancel)
             return
         }
-        
+
         let scheme = url.scheme?.lowercased() ?? ""
-        
+
         // 1. Allow standard web navigation and about:blank
         if ((scheme == "https" || scheme == "http") && SecurityPolicy.webURL(url.absoluteString) != nil) || (scheme == "about" && url.absoluteString == "about:blank") {
             decisionHandler(.allow)
             return
         }
-        
+
         // 2. Strictly block dangerous local or scripting schemes
         if scheme == "file" || scheme == "javascript" || scheme == "applescript" || scheme == "data" {
             decisionHandler(.cancel)
             return
         }
-        
+
         // 3. If user clicked an external link with safe external schemes (e.g. mailto:, tel:), delegate to macOS default app
         if navigationAction.navigationType == .linkActivated && (scheme == "mailto" || scheme == "tel") {
             NSWorkspace.shared.open(url)
         }
-        
+
         decisionHandler(.cancel)
     }
-    
+
     // MARK: - WKUIDelegate
-    
+
     public func webView(_ webView: WKWebView, createWebViewWith configuration: WKWebViewConfiguration, for navigationAction: WKNavigationAction, windowFeatures: WKWindowFeatures) -> WKWebView? {
         if navigationAction.navigationType == .linkActivated, navigationAction.targetFrame == nil, let raw = navigationAction.request.url, let url = SecurityPolicy.webURL(raw.absoluteString) {
             let scheme = url.scheme?.lowercased() ?? ""
@@ -338,7 +338,7 @@ public enum IsolatedWebsiteDataStore {
 
 public struct WebViewRepresentable: NSViewRepresentable {
     @ObservedObject var controller: WebPanelController
-    
+
     public func makeNSView(context: Context) -> WKWebView {
         let wv = controller.webView!
         if wv.superview != nil {
@@ -346,7 +346,7 @@ public struct WebViewRepresentable: NSViewRepresentable {
         }
         return wv
     }
-    
+
     public func updateNSView(_ nsView: WKWebView, context: Context) {
         if abs(nsView.pageZoom - CGFloat(controller.zoomScale)) > 0.01 {
             nsView.pageZoom = CGFloat(controller.zoomScale)
@@ -358,16 +358,16 @@ public struct WebPanelView: View {
     @ObservedObject var instance: WebWidgetInstanceController
     @ObservedObject var controller: WebPanelController
     public var onUpdateItem: ((WebWidgetItem) -> Void)?
-    
+
     var item: WebWidgetItem {
         instance.item
     }
-    
+
     @State private var inputURL: String = ""
     @State private var isShowingAddressInput: Bool = false
     @State private var isToolbarTemporarilyVisible: Bool = false
     @State private var isHovered: Bool = false
-    
+
     public init(
         instance: WebWidgetInstanceController,
         controller: WebPanelController,
@@ -377,27 +377,29 @@ public struct WebPanelView: View {
         self.controller = controller
         self.onUpdateItem = onUpdateItem
     }
-    
+
     public var body: some View {
         VStack(spacing: 0) {
-            Text(SecurityPolicy.origin(URL(string: controller.currentURL)))
-                .font(.caption).lineLimit(2).textSelection(.enabled)
-                .frame(maxWidth: .infinity, alignment: .leading).padding(6)
-                .background(Color(nsColor: .controlBackgroundColor))
+            if !item.hidesTopBar {
+                Text(SecurityPolicy.origin(URL(string: controller.currentURL)))
+                    .font(.caption).lineLimit(2).textSelection(.enabled)
+                    .frame(maxWidth: .infinity, alignment: .leading).padding(6)
+                    .background(Color(nsColor: .controlBackgroundColor))
+            }
             // Address / Input Bar (only when actively editing URL)
             if isShowingAddressInput {
                 HStack(spacing: 6) {
                     Image(systemName: "globe")
                         .font(.system(size: 11))
                         .foregroundColor(.secondary)
-                    
+
                     TextField("URL eingeben...", text: $inputURL, onCommit: {
                         controller.loadURL(inputURL)
                         isShowingAddressInput = false
                     })
                     .textFieldStyle(.plain)
                     .font(.system(size: 11))
-                    
+
                     Button(action: {
                         controller.loadURL(inputURL)
                         isShowingAddressInput = false
@@ -413,12 +415,12 @@ public struct WebPanelView: View {
                 .background(Color(nsColor: .controlBackgroundColor))
                 Divider()
             }
-            
+
             // Web View - Flexible area filling all available height
             ZStack(alignment: .bottomTrailing) {
                 WebViewRepresentable(controller: controller)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
-                
+
                 if controller.isLoading {
                     VStack {
                         ProgressView()
@@ -429,7 +431,7 @@ public struct WebPanelView: View {
                     }
                     .padding(.top, 10)
                 }
-                
+
                 // Subtle floating button when toolbar is hidden to temporarily reveal it
                 if !item.showsAddressBar && !isToolbarTemporarilyVisible {
                     Button(action: {
@@ -447,16 +449,16 @@ public struct WebPanelView: View {
                     .buttonStyle(.plain)
                     .padding(6)
                     .opacity(isHovered ? 0.9 : 0.0)
-                    .help("Steuerleiste einblenden")
+                    .help("Navigationsleiste einblenden")
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .onHover { isHovered = $0 }
-            
+
             // Bottom Slim Toolbar - Only visible if enabled or temporarily revealed
             if item.showsAddressBar || isToolbarTemporarilyVisible {
                 Divider()
-                
+
                 HStack(spacing: 8) {
                 // Home
                 Button(action: { controller.goHome() }) {
@@ -465,7 +467,7 @@ public struct WebPanelView: View {
                 }
                 .buttonStyle(.plain)
                 .help("Zur Startseite (\(item.title))")
-                
+
                 // Back
                 Button(action: { controller.goBack() }) {
                     Image(systemName: "chevron.left")
@@ -474,7 +476,7 @@ public struct WebPanelView: View {
                 .buttonStyle(.plain)
                 .disabled(!controller.canGoBack)
                 .help("Zurück")
-                
+
                 // Forward
                 Button(action: { controller.goForward() }) {
                     Image(systemName: "chevron.right")
@@ -483,7 +485,7 @@ public struct WebPanelView: View {
                 .buttonStyle(.plain)
                 .disabled(!controller.canGoForward)
                 .help("Vorwärts")
-                
+
                 // Reload
                 Button(action: { controller.reload() }) {
                     Image(systemName: "arrow.clockwise")
@@ -491,9 +493,9 @@ public struct WebPanelView: View {
                 }
                 .buttonStyle(.plain)
                 .help("Neu laden")
-                
+
                 Spacer()
-                
+
                 // Size Preset Menu
                 Menu {
                     Section("Fenstergröße") {
@@ -520,7 +522,7 @@ public struct WebPanelView: View {
                             }
                         }
                     }
-                    
+
                     Section("User Agent (Smartphone / Desktop)") {
                         ForEach(WebUserAgentMode.allCases) { mode in
                             Button(action: {
@@ -537,21 +539,27 @@ public struct WebPanelView: View {
                             }
                         }
                     }
-                    
+
                     Divider()
-                    
-                    Button(item.showsAddressBar ? "Steuerleiste standardmäßig ausblenden" : "Steuerleiste standardmäßig einblenden") {
+
+                    Button(item.showsAddressBar ? "Navigationsleiste standardmäßig ausblenden" : "Navigationsleiste standardmäßig einblenden") {
                         var updated = item
                         updated.showsAddressBar.toggle()
                         onUpdateItem?(updated)
                     }
-                    
+
+                    Button(item.hidesTopBar ? "Obere Link-Leiste einblenden" : "Obere Leiste mit Link entfernen") {
+                        var updated = item
+                        updated.hidesTopBar.toggle()
+                        onUpdateItem?(updated)
+                    }
+
                     Button("Im Browser öffnen") {
                         if let url = SecurityPolicy.webURL(controller.currentURL) {
                             NSWorkspace.shared.open(url)
                         }
                     }
-                    
+
                     Button("Einstellungen...") {
                         StatusItemController.shared.openSettingsWindow()
                     }
@@ -580,7 +588,7 @@ public struct WebPanelView: View {
                 .menuStyle(.borderlessButton)
                 .fixedSize()
                 .help(instance.autoFitScale < 0.99 ? "Konfiguriert: \(Int(item.effectiveWidth)) × \(Int(item.effectiveHeight)) pt (automatisch an Bildschirm angepasst)" : "Fenstergröße anpassen")
-                
+
                 // Zoom Level Menu (scales website to fit widget)
                 Menu {
                     Section("Seiten-Skalierung (Zoom)") {
@@ -613,7 +621,7 @@ public struct WebPanelView: View {
                 }
                 .menuStyle(.borderlessButton)
                 .fixedSize()
-                
+
                 // Address Bar Toggle
                 Button(action: {
                     inputURL = controller.currentURL
@@ -625,7 +633,7 @@ public struct WebPanelView: View {
                 }
                 .buttonStyle(.plain)
                 .help("URL bearbeiten")
-                
+
                 // Pin Window
                 Button(action: {
                     var updated = item
@@ -638,7 +646,7 @@ public struct WebPanelView: View {
                 }
                 .buttonStyle(.plain)
                 .help(item.isPinned ? "Fenster lösen" : "Fenster anheften (offen halten)")
-                
+
                 if !item.showsAddressBar && isToolbarTemporarilyVisible {
                     Button(action: {
                         withAnimation(.easeInOut(duration: 0.15)) {
@@ -650,7 +658,7 @@ public struct WebPanelView: View {
                             .foregroundColor(.secondary)
                     }
                     .buttonStyle(.plain)
-                    .help("Steuerleiste schließen")
+                    .help("Navigationsleiste schließen")
                 } else {
                     // Open in External Browser
                     Button(action: {

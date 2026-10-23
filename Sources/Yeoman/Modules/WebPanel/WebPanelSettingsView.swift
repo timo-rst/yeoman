@@ -4,7 +4,7 @@ import WebKit
 public enum WebWidgetEditorMode: Identifiable {
     case create
     case edit(WebWidgetItem)
-    
+
     public var id: String {
         switch self {
         case .create:
@@ -13,14 +13,14 @@ public enum WebWidgetEditorMode: Identifiable {
             return "edit_\(widget.id.uuidString)"
         }
     }
-    
+
     public var widget: WebWidgetItem? {
         switch self {
         case .create: return nil
         case .edit(let widget): return widget
         }
     }
-    
+
     public var isEditing: Bool {
         switch self {
         case .create: return false
@@ -35,11 +35,11 @@ public struct WebPanelSettingsView: View {
     @State private var editorMode: WebWidgetEditorMode? = nil
     @State private var widgetToDelete: WebWidgetItem? = nil
     @State private var showingDeleteConfirm: Bool = false
-    
+
     public init(module: WebPanelModule) {
         self.module = module
     }
-    
+
     public var body: some View {
         VStack(spacing: 0) {
             if let error = module.storageError { Text(error).font(.caption).foregroundColor(.red).padding() }
@@ -56,7 +56,7 @@ public struct WebPanelSettingsView: View {
                             .font(.caption)
                             .foregroundColor(.secondary)
                         Spacer()
-                        
+
                         Button(action: {
                             editorMode = .create
                         }) {
@@ -73,13 +73,13 @@ public struct WebPanelSettingsView: View {
             .padding(.horizontal, 20)
             .padding(.top, 16)
             .padding(.bottom, 12)
-            
+
             Divider()
-            
+
             ScrollView {
                 VStack(alignment: .leading, spacing: 20) {
                     Group {
-                
+
                 // Widgets List
                 VStack(alignment: .leading, spacing: 14) {
                     HStack {
@@ -87,7 +87,7 @@ public struct WebPanelSettingsView: View {
                             .font(.headline)
                         Spacer()
                     }
-                    
+
                     if module.widgets.isEmpty {
                         VStack(spacing: 12) {
                             Image(systemName: "globe")
@@ -101,7 +101,7 @@ public struct WebPanelSettingsView: View {
                                 .foregroundColor(.secondary)
                                 .multilineTextAlignment(.center)
                                 .frame(maxWidth: 320)
-                            
+
                             Button("Jetzt erstes Widget anlegen") {
                                 editorMode = .create
                             }
@@ -136,7 +136,7 @@ public struct WebPanelSettingsView: View {
                 }
                 .padding()
                 .background(RoundedRectangle(cornerRadius: 12).fill(Color(nsColor: .controlBackgroundColor)))
-                
+
                 // Website Data & Cache
                 VStack(alignment: .leading, spacing: 10) {
                     HStack(spacing: 6) {
@@ -144,7 +144,7 @@ public struct WebPanelSettingsView: View {
                             .font(.headline)
                         InfoTooltip(text: "Cookies und Logins aller Widgets (z. B. Proton Calendar oder Google) werden dauerhaft im WebKit-Speicher gesichert.")
                     }
-                    
+
                     Button(role: .destructive, action: clearAllWebsiteData) {
                         HStack(spacing: 6) {
                             Image(systemName: "trash")
@@ -193,7 +193,7 @@ public struct WebPanelSettingsView: View {
             Button("Abbrechen", role: .cancel) {}
         }
     }
-    
+
     private func clearAllWebsiteData() {
         let types = WKWebsiteDataStore.allWebsiteDataTypes()
         // Include orphaned profiles left by deleted/corrupt legacy widget records, not only
@@ -221,7 +221,7 @@ struct WebWidgetRowView: View {
     let onOpen: () -> Void
     @ObservedObject private var faviconManager = WebFaviconManager.shared
     @State private var showIconPopover: Bool = false
-    
+
     var body: some View {
         HStack(spacing: 14) {
             // Icon Badge
@@ -233,7 +233,7 @@ struct WebWidgetRowView: View {
                         RoundedRectangle(cornerRadius: 10)
                             .stroke(Color.primary.opacity(0.12), lineWidth: 1)
                     )
-                
+
                 if widget.useFavicon, let icon = faviconManager.previewIcon(for: widget.url, widgetId: widget.id, selectedFaviconURL: widget.selectedFaviconURL, removeWhite: widget.removeWhiteBackground) {
                     Image(nsImage: icon)
                         .resizable()
@@ -246,14 +246,14 @@ struct WebWidgetRowView: View {
                         .foregroundColor(.accentColor)
                 }
             }
-            
+
             // Info
             VStack(alignment: .leading, spacing: 4) {
                 HStack(spacing: 8) {
                     Text(widget.title)
                         .font(.system(size: 14, weight: .semibold))
                         .lineLimit(1)
-                    
+
                     if widget.useFavicon {
                         Text("Web-Icon")
                             .font(.caption2)
@@ -269,14 +269,14 @@ struct WebWidgetRowView: View {
                             .background(Capsule().fill(Color.secondary.opacity(0.15)))
                             .foregroundColor(.secondary)
                     }
-                    
+
                     Text("\(Int(widget.effectiveWidth)) × \(Int(widget.effectiveHeight)) pt")
                         .font(.caption2)
                         .padding(.horizontal, 6)
                         .padding(.vertical, 2)
                         .background(Capsule().fill(Color.primary.opacity(0.08)))
                         .foregroundColor(.secondary)
-                    
+
                     if widget.userAgentMode == .mobile {
                         Text("Smartphone")
                             .font(.caption2)
@@ -286,15 +286,15 @@ struct WebWidgetRowView: View {
                             .foregroundColor(.blue)
                     }
                 }
-                
+
                 Text(widget.url)
                     .font(.caption)
                     .foregroundColor(.secondary)
                     .lineLimit(1)
             }
-            
+
             Spacer(minLength: 12)
-            
+
             // Actions: Arranged in a balanced 2x2 grid (Öffnen + Icon oben, Bearbeiten + Löschen unten)
             Grid(horizontalSpacing: 8, verticalSpacing: 6) {
                 GridRow {
@@ -308,7 +308,7 @@ struct WebWidgetRowView: View {
                     .buttonStyle(.bordered)
                     .controlSize(.regular)
                     .help("Fenster in Menüleiste öffnen")
-                    
+
                     Button(action: { showIconPopover.toggle() }) {
                         HStack(spacing: 5) {
                             Image(systemName: "photo")
@@ -327,7 +327,7 @@ struct WebWidgetRowView: View {
                         )
                     }
                 }
-                
+
                 GridRow {
                     Button(action: onEdit) {
                         HStack(spacing: 5) {
@@ -339,7 +339,7 @@ struct WebWidgetRowView: View {
                     .buttonStyle(.bordered)
                     .controlSize(.regular)
                     .help("Widget bearbeiten")
-                    
+
                     Button(role: .destructive, action: onDelete) {
                         HStack(spacing: 5) {
                             Image(systemName: "trash")
@@ -354,11 +354,11 @@ struct WebWidgetRowView: View {
                 }
             }
             .fixedSize(horizontal: true, vertical: false)
-            
+
             Divider()
                 .frame(height: 38)
                 .padding(.horizontal, 4)
-            
+
             // In Menu Bar Toggle
             VStack(spacing: 3) {
                 Toggle("", isOn: Binding(
@@ -367,7 +367,7 @@ struct WebWidgetRowView: View {
                 ))
                 .toggleStyle(.switch)
                 .labelsHidden()
-                
+
                 Text("Menüleiste")
                     .font(.system(size: 9))
                     .foregroundColor(.secondary)
@@ -385,13 +385,13 @@ struct WebWidgetIconPickerPopover: View {
     let widget: WebWidgetItem
     let onUpdate: (WebWidgetItem) -> Void
     let onDismiss: () -> Void
-    
+
     @ObservedObject private var faviconManager = WebFaviconManager.shared
     @State private var useFavicon: Bool
     @State private var selectedFaviconURL: String?
     @State private var removeWhiteBackground: Bool
     @State private var iconName: String
-    
+
     init(widget: WebWidgetItem, onUpdate: @escaping (WebWidgetItem) -> Void, onDismiss: @escaping () -> Void) {
         self.widget = widget
         self.onUpdate = onUpdate
@@ -401,7 +401,7 @@ struct WebWidgetIconPickerPopover: View {
         _removeWhiteBackground = State(initialValue: widget.removeWhiteBackground)
         _iconName = State(initialValue: widget.iconName)
     }
-    
+
     private func applyChange() {
         var updated = widget
         updated.useFavicon = useFavicon
@@ -410,7 +410,7 @@ struct WebWidgetIconPickerPopover: View {
         updated.iconName = iconName
         onUpdate(updated)
     }
-    
+
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             // Header with current live icon preview badge and title
@@ -423,7 +423,7 @@ struct WebWidgetIconPickerPopover: View {
                             RoundedRectangle(cornerRadius: 8)
                                 .stroke(Color.primary.opacity(0.12), lineWidth: 1)
                         )
-                    
+
                     if useFavicon, let icon = faviconManager.previewIcon(for: widget.url, widgetId: widget.id, selectedFaviconURL: selectedFaviconURL, removeWhite: removeWhiteBackground) {
                         Image(nsImage: icon)
                             .resizable()
@@ -436,7 +436,7 @@ struct WebWidgetIconPickerPopover: View {
                             .foregroundColor(.accentColor)
                     }
                 }
-                
+
                 VStack(alignment: .leading, spacing: 1) {
                     Text("Symbol & Logo wählen")
                         .font(.system(size: 12, weight: .semibold))
@@ -445,9 +445,9 @@ struct WebWidgetIconPickerPopover: View {
                         .foregroundColor(.secondary)
                         .lineLimit(1)
                 }
-                
+
                 Spacer()
-                
+
                 Button(action: onDismiss) {
                     Image(systemName: "xmark.circle.fill")
                         .font(.system(size: 14))
@@ -456,9 +456,9 @@ struct WebWidgetIconPickerPopover: View {
                 .buttonStyle(.plain)
                 .help("Schließen")
             }
-            
+
             Divider()
-            
+
             // Web Favicon Options
             VStack(alignment: .leading, spacing: 8) {
                 HStack(spacing: 6) {
@@ -470,10 +470,10 @@ struct WebWidgetIconPickerPopover: View {
                         }
                     ))
                     .fontWeight(.medium)
-                    
+
                     InfoTooltip(text: "Verwendet das farbige Original-Logo der Website direkt in der Menüleiste.")
                 }
-                
+
                 if useFavicon {
                     let options = faviconManager.options(for: widget.id)
                     if !options.isEmpty {
@@ -482,9 +482,9 @@ struct WebWidgetIconPickerPopover: View {
                                 Text("Verfügbare Logos (\(options.count)):")
                                     .font(.caption2)
                                     .foregroundColor(.secondary)
-                                
+
                                 Spacer()
-                                
+
                                 if selectedFaviconURL != nil {
                                     Button("Automatisch") {
                                         selectedFaviconURL = nil
@@ -493,7 +493,7 @@ struct WebWidgetIconPickerPopover: View {
                                     .font(.caption2)
                                     .buttonStyle(.link)
                                 }
-                                
+
                                 Button(action: {
                                     faviconManager.discoverFavicons(for: widget.url, widgetId: widget.id)
                                 }) {
@@ -503,14 +503,14 @@ struct WebWidgetIconPickerPopover: View {
                                 .buttonStyle(.plain)
                                 .help("Neu scannen")
                             }
-                            
+
                             let columns = [GridItem(.adaptive(minimum: 64, maximum: 74), spacing: 6)]
                             let grid = LazyVGrid(columns: columns, spacing: 6) {
                                 ForEach(options) { opt in
                                     let isAuto = (selectedFaviconURL == nil && opt == options.first)
                                     let isChosen = (selectedFaviconURL == opt.urlString)
                                     let isSelected = isChosen || isAuto
-                                    
+
                                     Button(action: {
                                         selectedFaviconURL = opt.urlString
                                         applyChange()
@@ -520,7 +520,7 @@ struct WebWidgetIconPickerPopover: View {
                                                 RoundedRectangle(cornerRadius: 6)
                                                     .fill(Color(nsColor: .controlBackgroundColor))
                                                     .frame(width: 30, height: 30)
-                                                
+
                                                 if let img = faviconManager.icon(forOption: opt.urlString, widgetId: widget.id, removeWhite: removeWhiteBackground) {
                                                     Image(nsImage: img)
                                                         .resizable()
@@ -547,12 +547,12 @@ struct WebWidgetIconPickerPopover: View {
                                                     }
                                                 }
                                             )
-                                            
+
                                             Text(opt.label)
                                                 .font(.system(size: 8.5, weight: isSelected ? .bold : .regular))
                                                 .foregroundColor(.primary)
                                                 .lineLimit(1)
-                                            
+
                                             Text(opt.isTransparent ? "Transparent" : "Hintergrund")
                                                 .font(.system(size: 7, weight: .medium))
                                                 .foregroundColor(opt.isTransparent ? .green : .secondary)
@@ -573,7 +573,7 @@ struct WebWidgetIconPickerPopover: View {
                             }
                             .padding(.vertical, 2)
                             .padding(.horizontal, 1)
-                            
+
                             if options.count > 8 {
                                 ScrollView(.vertical, showsIndicators: true) {
                                     grid
@@ -584,7 +584,7 @@ struct WebWidgetIconPickerPopover: View {
                             }
                         }
                     }
-                    
+
                     HStack(spacing: 6) {
                         Toggle("Weißer Hintergrund transparent machen", isOn: Binding(
                             get: { removeWhiteBackground },
@@ -594,20 +594,20 @@ struct WebWidgetIconPickerPopover: View {
                             }
                         ))
                         .font(.caption)
-                        
+
                         InfoTooltip(text: "Entfernt automatisch weiße Flächen aus quadratischen Logos.")
                     }
                 }
             }
-            
+
             Divider()
-            
+
             // SF Symbols Grid
             VStack(alignment: .leading, spacing: 6) {
                 Text(useFavicon ? "Ersatz-Symbol (Fallback):" : "Symbol auswählen:")
                     .font(.caption2)
                     .foregroundColor(.secondary)
-                
+
                 LazyVGrid(columns: [GridItem(.adaptive(minimum: 28))], spacing: 6) {
                     ForEach([
                         "calendar", "calendar.badge.clock", "note.text",
@@ -633,9 +633,9 @@ struct WebWidgetIconPickerPopover: View {
                     }
                 }
             }
-            
+
             Divider()
-            
+
             HStack {
                 Spacer()
                 Button("Fertig") { onDismiss() }
@@ -673,16 +673,17 @@ struct WebWidgetEditorSheet: View {
     @State private var isEnabled: Bool
     @State private var isPinned: Bool
     @State private var showsAddressBar: Bool
-    
+    @State private var hidesTopBar: Bool
+
     @StateObject private var previewController: WebPanelController
     @ObservedObject private var faviconManager = WebFaviconManager.shared
-    
+
     let isEditing: Bool
     let originalId: UUID?
     let editorWidgetId: UUID
     let onSave: (WebWidgetItem) -> Void
     let onCancel: () -> Void
-    
+
     public init(
         initialWidget: WebWidgetItem?,
         startWithIconPicker: Bool = false,
@@ -693,7 +694,7 @@ struct WebWidgetEditorSheet: View {
         self.originalId = initialWidget?.id
         let targetId = initialWidget?.id ?? UUID()
         self.editorWidgetId = targetId
-        
+
         let initialTitle = initialWidget?.title ?? ""
         let initialURL = initialWidget?.url ?? ""
         let initialIcon = initialWidget?.iconName ?? "globe"
@@ -708,7 +709,8 @@ struct WebWidgetEditorSheet: View {
         let initialEnabled = initialWidget?.isEnabled ?? true
         let initialPinned = initialWidget?.isPinned ?? false
         let initialBar = initialWidget?.showsAddressBar ?? false
-        
+        let initialHidesTopBar = initialWidget?.hidesTopBar ?? false
+
         _title = State(initialValue: initialTitle)
         _url = State(initialValue: initialURL)
         _iconName = State(initialValue: initialIcon)
@@ -726,7 +728,8 @@ struct WebWidgetEditorSheet: View {
         _isEnabled = State(initialValue: initialEnabled)
         _isPinned = State(initialValue: initialPinned)
         _showsAddressBar = State(initialValue: initialBar)
-        
+        _hidesTopBar = State(initialValue: initialHidesTopBar)
+
         let targetW = initialPreset == .custom ? initialW : initialPreset.dimensions.width
         let preview = WebPanelController(
             initialURL: initialURL.isEmpty ? "about:blank" : initialURL,
@@ -746,19 +749,19 @@ struct WebWidgetEditorSheet: View {
             )
         }
         _previewController = StateObject(wrappedValue: preview)
-        
+
         self.onSave = onSave
         self.onCancel = onCancel
     }
-    
+
     var effectiveWidth: CGFloat {
         sizePreset == .custom ? customWidth : sizePreset.dimensions.width
     }
-    
+
     var effectiveHeight: CGFloat {
         sizePreset == .custom ? customHeight : sizePreset.dimensions.height
     }
-    
+
     var body: some View {
         VStack(spacing: 0) {
             // Wizard Header
@@ -774,9 +777,9 @@ struct WebWidgetEditorSheet: View {
             .padding(.horizontal, 20)
             .padding(.vertical, 14)
             .background(Color(nsColor: .controlBackgroundColor))
-            
+
             Divider()
-            
+
             // Main Content: Split into Settings (Left) and Live-Preview (Right)
             HStack(spacing: 0) {
                 // Left Column: Configuration Forms
@@ -786,13 +789,13 @@ struct WebWidgetEditorSheet: View {
                         VStack(alignment: .leading, spacing: 14) {
                             Text("1. Name & Ziel-Webseite (URL)")
                                 .font(.headline)
-                            
+
                             // Name Row
                             VStack(alignment: .leading, spacing: 5) {
                                 Text("Name des Web-Widgets:")
                                     .font(.caption)
                                     .foregroundColor(.secondary)
-                                
+
                                 HStack(spacing: 10) {
                                     // Live Icon Preview Badge
                                     ZStack {
@@ -803,7 +806,7 @@ struct WebWidgetEditorSheet: View {
                                                 RoundedRectangle(cornerRadius: 8)
                                                     .stroke(Color.primary.opacity(0.15), lineWidth: 1)
                                             )
-                                        
+
                                         if useFavicon, let favicon = faviconManager.previewIcon(for: url, widgetId: editorWidgetId, selectedFaviconURL: selectedFaviconURL, removeWhite: removeWhiteBackground) {
                                             Image(nsImage: favicon)
                                                 .resizable()
@@ -817,31 +820,31 @@ struct WebWidgetEditorSheet: View {
                                         }
                                     }
                                     .help("Aktuelles Icon / Logo")
-                                    
+
                                     TextField("z. B. Proton Kalender, Gemini, Notizen...", text: $title)
                                         .textFieldStyle(.roundedBorder)
                                 }
                             }
-                            
+
                             // URL Row
                             VStack(alignment: .leading, spacing: 5) {
                                 Text("Website-Adresse (URL):")
                                     .font(.caption)
                                     .foregroundColor(.secondary)
-                                
+
                                 HStack(spacing: 8) {
                                     TextField("https://...", text: $url, onCommit: {
                                         applyURLChange()
                                     })
                                     .textFieldStyle(.roundedBorder)
-                                    
+
                                     Button("Laden") {
                                         applyURLChange()
                                     }
                                     .buttonStyle(.bordered)
                                 }
                             }
-                            
+
                             // Schnellvorlagen
                             VStack(alignment: .leading, spacing: 6) {
                                 HStack(spacing: 5) {
@@ -850,7 +853,7 @@ struct WebWidgetEditorSheet: View {
                                         .foregroundColor(.secondary)
                                     InfoTooltip(text: "Klicke auf eine Vorlage, um Name, Ziel-Adresse und optimale Fenstergröße sofort zu übernehmen.")
                                 }
-                                
+
                                 LazyVGrid(columns: [GridItem(.adaptive(minimum: 120))], spacing: 6) {
                                     QuickButton(name: "Google Gemini", icon: "sparkles") {
                                         setPreset(url: "https://gemini.google.com", name: "Google Gemini", icon: "sparkles", preset: .smartphone)
@@ -876,13 +879,13 @@ struct WebWidgetEditorSheet: View {
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .padding()
                         .background(RoundedRectangle(cornerRadius: 10).fill(Color(nsColor: .controlBackgroundColor)))
-                        
+
                         // Menüleisten-Symbol & Logo (Als einklappbares Untermenü)
                         DisclosureGroup(isExpanded: $isLogoSettingsExpanded) {
                             VStack(alignment: .leading, spacing: 12) {
                                 Divider()
                                     .padding(.vertical, 4)
-                                
+
                                 // Website Logo Option
                                 VStack(alignment: .leading, spacing: 8) {
                                     HStack(spacing: 6) {
@@ -890,7 +893,7 @@ struct WebWidgetEditorSheet: View {
                                             .fontWeight(.medium)
                                         InfoTooltip(text: "Verwendet das farbige Original-Logo der Website. Transparente Symbole werden bevorzugt.")
                                     }
-                                    
+
                                     if useFavicon {
                                         // Status & Refresh
                                         HStack(spacing: 8) {
@@ -912,9 +915,9 @@ struct WebWidgetEditorSheet: View {
                                                     .font(.caption2)
                                                     .foregroundColor(.secondary)
                                             }
-                                            
+
                                             Spacer()
-                                            
+
                                             if !url.isEmpty {
                                                 Button(action: {
                                                     if let web = previewController.webView {
@@ -943,7 +946,7 @@ struct WebWidgetEditorSheet: View {
                                         }
                                         .padding(8)
                                         .background(RoundedRectangle(cornerRadius: 6).fill(Color.primary.opacity(0.04)))
-                                        
+
                                         // Discovered Favicon Options Gallery
                                         let options = faviconManager.options(for: editorWidgetId)
                                         if !options.isEmpty {
@@ -954,9 +957,9 @@ struct WebWidgetEditorSheet: View {
                                                         .fontWeight(.medium)
                                                         .foregroundColor(.primary)
                                                     InfoTooltip(text: "Gefundene Favicon- und App-Icon-Varianten. Klicke ein Logo an, um es festzulegen.")
-                                                    
+
                                                     Spacer()
-                                                    
+
                                                     if selectedFaviconURL != nil {
                                                         Button("Automatisch wählen") {
                                                             selectedFaviconURL = nil
@@ -965,14 +968,14 @@ struct WebWidgetEditorSheet: View {
                                                         .buttonStyle(.link)
                                                     }
                                                 }
-                                                
+
                                                 let editorColumns = [GridItem(.adaptive(minimum: 70, maximum: 84), spacing: 8)]
                                                 let editorGrid = LazyVGrid(columns: editorColumns, spacing: 8) {
                                                     ForEach(options) { opt in
                                                         let isAuto = (selectedFaviconURL == nil && opt == options.first)
                                                         let isChosen = (selectedFaviconURL == opt.urlString)
                                                         let isSelected = isChosen || isAuto
-                                                        
+
                                                         Button(action: {
                                                             selectedFaviconURL = opt.urlString
                                                         }) {
@@ -981,7 +984,7 @@ struct WebWidgetEditorSheet: View {
                                                                     RoundedRectangle(cornerRadius: 6)
                                                                         .fill(Color(nsColor: .controlBackgroundColor))
                                                                         .frame(width: 34, height: 34)
-                                                                    
+
                                                                     if let img = faviconManager.icon(forOption: opt.urlString, widgetId: editorWidgetId, removeWhite: removeWhiteBackground) {
                                                                         Image(nsImage: img)
                                                                             .resizable()
@@ -1008,12 +1011,12 @@ struct WebWidgetEditorSheet: View {
                                                                         }
                                                                     }
                                                                 )
-                                                                
+
                                                                 Text(opt.label)
                                                                     .font(.system(size: 9, weight: isSelected ? .bold : .regular))
                                                                     .foregroundColor(.primary)
                                                                     .lineLimit(1)
-                                                                
+
                                                                 Text(opt.isTransparent ? "Transparent" : "Mit Hintergrund")
                                                                     .font(.system(size: 8, weight: .medium))
                                                                     .foregroundColor(opt.isTransparent ? .green : .secondary)
@@ -1034,7 +1037,7 @@ struct WebWidgetEditorSheet: View {
                                                 }
                                                 .padding(.vertical, 3)
                                                 .padding(.horizontal, 1)
-                                                
+
                                                 if options.count > 10 {
                                                     ScrollView(.vertical, showsIndicators: true) {
                                                         editorGrid
@@ -1045,7 +1048,7 @@ struct WebWidgetEditorSheet: View {
                                                 }
                                             }
                                         }
-                                        
+
                                         // Remove White Background Toggle
                                         HStack(spacing: 6) {
                                             Toggle("Weißer Hintergrund transparent machen", isOn: $removeWhiteBackground)
@@ -1055,10 +1058,10 @@ struct WebWidgetEditorSheet: View {
                                         }
                                     }
                                 }
-                                
+
                                 Divider()
                                     .padding(.vertical, 2)
-                                
+
                                 // Symbol Selection
                                 VStack(alignment: .leading, spacing: 6) {
                                     HStack(spacing: 5) {
@@ -1069,7 +1072,7 @@ struct WebWidgetEditorSheet: View {
                                             InfoTooltip(text: "Wird in der Menüleiste angezeigt, falls die Website kein Web-Logo liefert.")
                                         }
                                     }
-                                    
+
                                     LazyVGrid(columns: [GridItem(.adaptive(minimum: 32))], spacing: 6) {
                                         ForEach([
                                             "calendar", "calendar.badge.clock", "note.text",
@@ -1122,13 +1125,13 @@ struct WebWidgetEditorSheet: View {
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .padding()
                         .background(RoundedRectangle(cornerRadius: 10).fill(Color(nsColor: .controlBackgroundColor)))
-                        
+
                         // 2. Fenstergröße & Ansicht (Einklappbar)
                         DisclosureGroup(isExpanded: $isSizeSettingsExpanded) {
                             VStack(alignment: .leading, spacing: 10) {
                                 Divider()
                                     .padding(.vertical, 4)
-                                
+
                                 Picker("Größe:", selection: $sizePreset) {
                                     ForEach(WebSizePreset.allCases) { preset in
                                         Text(preset.rawValue).tag(preset)
@@ -1145,7 +1148,7 @@ struct WebWidgetEditorSheet: View {
                                     }
                                     updateLivePreview()
                                 }
-                                
+
                                 VStack(alignment: .leading, spacing: 6) {
                                     HStack {
                                         Text("Breite:")
@@ -1162,7 +1165,7 @@ struct WebWidgetEditorSheet: View {
                                         }
                                         updateLivePreview()
                                     }
-                                    
+
                                     HStack {
                                         Text("Höhe:")
                                             .font(.caption)
@@ -1179,9 +1182,9 @@ struct WebWidgetEditorSheet: View {
                                         updateLivePreview()
                                     }
                                 }
-                                
+
                                 Divider()
-                                
+
                                 VStack(alignment: .leading, spacing: 6) {
                                     HStack(spacing: 5) {
                                         Text("Seiten-Skalierung (Zoom):")
@@ -1197,16 +1200,16 @@ struct WebWidgetEditorSheet: View {
                                         updateLivePreview()
                                     }
                                 }
-                                
+
                                 Divider()
-                                
+
                                 HStack(spacing: 5) {
                                     Text("Darstellung:")
                                         .font(.subheadline)
                                         .fontWeight(.medium)
                                     InfoTooltip(text: "Mobil erzwingt ein schmales Smartphone-Layout (ideal für Widgets). Desktop lädt die Standard-Website.")
                                 }
-                                
+
                                 Picker("", selection: $userAgentMode) {
                                     ForEach(WebUserAgentMode.allCases) { mode in
                                         Text(mode.rawValue).tag(mode)
@@ -1247,21 +1250,26 @@ struct WebWidgetEditorSheet: View {
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .padding()
                         .background(RoundedRectangle(cornerRadius: 10).fill(Color(nsColor: .controlBackgroundColor)))
-                        
+
                         // 3. Weitere Optionen (Einklappbar)
                         DisclosureGroup(isExpanded: $isExtraOptionsExpanded) {
                             VStack(alignment: .leading, spacing: 10) {
                                 Divider()
                                     .padding(.vertical, 4)
-                                
+
                                 HStack(spacing: 6) {
                                     Toggle("Fenster anheften (Pin)", isOn: $isPinned)
                                     InfoTooltip(text: "Hält das Widget-Fenster dauerhaft geöffnet, auch wenn du in eine andere App klickst oder außerhalb des Fensters tippst.")
                                 }
-                                
+
                                 HStack(spacing: 6) {
-                                    Toggle("Such- & Navigationsleiste anzeigen", isOn: $showsAddressBar)
-                                    InfoTooltip(text: "Blendet eine Leiste mit Adress-/Suchfeld sowie Vor-, Zurück-, Neuladen- und Zoom-Buttons am unteren Rand des Widgets ein.")
+                                    Toggle("Navigationsleiste", isOn: $showsAddressBar)
+                                    InfoTooltip(text: "Blendet eine Leiste mit Vor-, Zurück-, Neuladen- und Zoom-Buttons am unteren Rand des Widgets ein.")
+                                }
+
+                                HStack(spacing: 6) {
+                                    Toggle("Obere Leiste mit Link entfernen", isOn: $hidesTopBar)
+                                    InfoTooltip(text: "Entfernt die Kopfzeile mit der Web-Adresse (URL) am oberen Fensterrand für eine komplett rahmenlose Widget-Ansicht.")
                                 }
                             }
                         } label: {
@@ -1272,7 +1280,7 @@ struct WebWidgetEditorSheet: View {
                                     .font(.subheadline)
                                     .fontWeight(.medium)
                                 Spacer()
-                                Text(isPinned && showsAddressBar ? "Pin & Suchleiste" : (isPinned ? "Angeheftet" : (showsAddressBar ? "Suchleiste" : "Standard")))
+                                Text(isPinned && showsAddressBar ? "Pin & Navigationsleiste" : (isPinned ? "Angeheftet" : (showsAddressBar ? "Navigationsleiste" : (hidesTopBar ? "Ohne Link-Leiste" : "Standard"))))
                                     .font(.caption2)
                                     .foregroundColor(.secondary)
                             }
@@ -1297,9 +1305,9 @@ struct WebWidgetEditorSheet: View {
                     .padding(16)
                 }
                 .frame(width: 380)
-                
+
                 Divider()
-                
+
                 // Right Column: Live Preview Area!
                 VStack(spacing: 12) {
                     HStack {
@@ -1308,7 +1316,7 @@ struct WebWidgetEditorSheet: View {
                         Text("Live-Vorschau (\(Int(effectiveWidth)) × \(Int(effectiveHeight)) pt)")
                             .font(.headline)
                         Spacer()
-                        
+
                         Button(action: {
                             previewController.reload()
                         }) {
@@ -1324,40 +1332,42 @@ struct WebWidgetEditorSheet: View {
                     }
                     .padding(.horizontal, 16)
                     .padding(.top, 14)
-                    
+
                     // Live Preview with isolated layout bounds
                     GeometryReader { geo in
                         let scale = previewScale(containerWidth: geo.size.width, containerHeight: geo.size.height)
                         let deviceW = max(1, effectiveWidth)
-                        let deviceH = max(1, effectiveHeight + 28)
-                        
+                        let deviceH = max(1, effectiveHeight + (hidesTopBar ? 0 : 28))
+
                         ZStack {
                             // Device Frame Outline
                             VStack(spacing: 0) {
-                                // Fake Titlebar
-                                HStack(spacing: 6) {
-                                    Circle().fill(Color.red.opacity(0.8)).frame(width: 8, height: 8)
-                                    Circle().fill(Color.yellow.opacity(0.8)).frame(width: 8, height: 8)
-                                    Circle().fill(Color.green.opacity(0.8)).frame(width: 8, height: 8)
-                                    Spacer()
-                                    Text(title.isEmpty ? (url.isEmpty ? "Vorschau" : url) : title)
-                                        .font(.system(size: 10, weight: .medium))
-                                        .foregroundColor(.secondary)
-                                        .lineLimit(1)
-                                    Spacer()
-                                    Text(userAgentMode == .desktop ? "Desktop" : "Mobil")
-                                        .font(.system(size: 8, weight: .bold))
-                                        .padding(.horizontal, 4)
-                                        .padding(.vertical, 1)
-                                        .background(Capsule().fill(Color.accentColor.opacity(0.2)))
-                                        .foregroundColor(.accentColor)
+                                if !hidesTopBar {
+                                    // Fake Titlebar
+                                    HStack(spacing: 6) {
+                                        Circle().fill(Color.red.opacity(0.8)).frame(width: 8, height: 8)
+                                        Circle().fill(Color.yellow.opacity(0.8)).frame(width: 8, height: 8)
+                                        Circle().fill(Color.green.opacity(0.8)).frame(width: 8, height: 8)
+                                        Spacer()
+                                        Text(title.isEmpty ? (url.isEmpty ? "Vorschau" : url) : title)
+                                            .font(.system(size: 10, weight: .medium))
+                                            .foregroundColor(.secondary)
+                                            .lineLimit(1)
+                                        Spacer()
+                                        Text(userAgentMode == .desktop ? "Desktop" : "Mobil")
+                                            .font(.system(size: 8, weight: .bold))
+                                            .padding(.horizontal, 4)
+                                            .padding(.vertical, 1)
+                                            .background(Capsule().fill(Color.accentColor.opacity(0.2)))
+                                            .foregroundColor(.accentColor)
+                                    }
+                                    .padding(.horizontal, 8)
+                                    .padding(.vertical, 6)
+                                    .background(Color(nsColor: .controlBackgroundColor))
+
+                                    Divider()
                                 }
-                                .padding(.horizontal, 8)
-                                .padding(.vertical, 6)
-                                .background(Color(nsColor: .controlBackgroundColor))
-                                
-                                Divider()
-                                
+
                                 // Live WebView or Placeholder when empty
                                 if url.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                                     VStack(spacing: 12) {
@@ -1397,9 +1407,9 @@ struct WebWidgetEditorSheet: View {
                 }
                 .background(Color(nsColor: .underPageBackgroundColor).opacity(0.5))
             }
-            
+
             Divider()
-            
+
             // Bottom Action Bar
             HStack {
                 Button("Abbrechen") {
@@ -1417,7 +1427,7 @@ struct WebWidgetEditorSheet: View {
                     }
                     let defaultTitle = URL(string: finalURL)?.host ?? "Web-Widget"
                     let finalTitle = title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? defaultTitle : title
-                    
+
                     let item = WebWidgetItem(
                         id: originalId ?? editorWidgetId,
                         title: finalTitle,
@@ -1433,7 +1443,8 @@ struct WebWidgetEditorSheet: View {
                         zoomScale: zoomScale,
                         isEnabled: isEnabled,
                         isPinned: isPinned,
-                        showsAddressBar: showsAddressBar
+                        showsAddressBar: showsAddressBar,
+                        hidesTopBar: hidesTopBar
                     )
                     onSave(item)
                 }
@@ -1453,7 +1464,7 @@ struct WebWidgetEditorSheet: View {
             }
         }
     }
-    
+
     private func previewScale(containerWidth: CGFloat, containerHeight: CGFloat) -> CGFloat {
         let padding: CGFloat = 36
         let availW = max(50, containerWidth - padding)
@@ -1464,7 +1475,7 @@ struct WebWidgetEditorSheet: View {
         let scaleH = availH / targetH
         return min(1.0, min(scaleW, scaleH))
     }
-    
+
     private func applyURLChange() {
         var str = url.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !str.isEmpty else { return }
@@ -1478,7 +1489,7 @@ struct WebWidgetEditorSheet: View {
             faviconManager.discoverFavicons(for: str, widgetId: editorWidgetId)
         }
     }
-    
+
     private func setPreset(url newURL: String, name: String, icon: String, preset: WebSizePreset) {
         self.url = newURL
         self.title = name
@@ -1495,7 +1506,7 @@ struct WebWidgetEditorSheet: View {
             faviconManager.discoverFavicons(for: newURL, widgetId: editorWidgetId)
         }
     }
-    
+
     private func updateLivePreview() {
         var str = url.trimmingCharacters(in: .whitespacesAndNewlines)
         if str.isEmpty {
@@ -1525,7 +1536,7 @@ struct QuickButton: View {
     let name: String
     let icon: String
     let action: () -> Void
-    
+
     var body: some View {
         Button(action: action) {
             HStack(spacing: 4) {
