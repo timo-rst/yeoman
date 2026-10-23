@@ -30,7 +30,7 @@ rm -f "$ZIP_FILE"
 # Plain ZIP: no AppleDouble sidecar entries outside Yeoman.app.
 (cd dist && /usr/bin/zip -q -r -X Yeoman.zip Yeoman.app)
 : "${YEOMAN_UPDATE_PRIVATE_KEY_FILE:?Set external private-key file; never store it in this repository}"
-.build/release/YeomanReleaseSign "${YEOMAN_VERSION:-0.2.2}" "$ZIP_FILE" "$YEOMAN_UPDATE_PRIVATE_KEY_FILE" dist/Yeoman.update.json
+.build/release/YeomanReleaseSign "${YEOMAN_VERSION:-0.2.3}" "$ZIP_FILE" "$YEOMAN_UPDATE_PRIVATE_KEY_FILE" dist/Yeoman.update.json
 echo "    Created: $ZIP_FILE ($(du -h "$ZIP_FILE" | cut -f1))"
 
 # 4. Create Distribution DMG (with Drag-and-Drop /Applications symlink)
