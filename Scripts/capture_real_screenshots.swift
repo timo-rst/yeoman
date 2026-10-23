@@ -9,7 +9,10 @@ struct CaptureRealScreenshots {
         let app = NSApplication.shared
         app.setActivationPolicy(.prohibited)
         NSApp.appearance = NSAppearance(named: .darkAqua)
-        
+        // Force English localization for documentation and GitHub screenshots
+        UserDefaults.standard.set(AppLanguage.english.rawValue, forKey: "app_language")
+        LocalizationManager.shared.selectedLanguage = .english
+
         let outputDir = URL(fileURLWithPath: "Resources/Mockups")
         try? FileManager.default.createDirectory(at: outputDir, withIntermediateDirectories: true)
         
@@ -20,7 +23,7 @@ struct CaptureRealScreenshots {
         // ----------------------------------------------------
         let settingsWidth: CGFloat = 1020
         let settingsHeight: CGFloat = 650
-        let settingsChrome = WindowChrome(title: "Yeoman – Einstellungen", contentWidth: settingsWidth, contentHeight: settingsHeight) {
+        let settingsChrome = WindowChrome(title: "Yeoman – Settings", contentWidth: settingsWidth, contentHeight: settingsHeight) {
             SettingsView()
         }
         .preferredColorScheme(.dark)
@@ -92,7 +95,7 @@ struct CaptureRealScreenshots {
         
         let webWidth: CGFloat = 880
         let webHeight: CGFloat = 560
-        let webChrome = WindowChrome(title: "Yeoman – Web-Widgets", contentWidth: webWidth, contentHeight: webHeight) {
+        let webChrome = WindowChrome(title: "Yeoman – Web Widgets", contentWidth: webWidth, contentHeight: webHeight) {
             WebPanelSettingsView(module: webModule)
         }
         .preferredColorScheme(.dark)
@@ -142,7 +145,7 @@ struct CaptureRealScreenshots {
         
         let menuWidth: CGFloat = 880
         let menuHeight: CGFloat = 560
-        let menuChrome = WindowChrome(title: "Yeoman – Menüleisten-Optimizer", contentWidth: menuWidth, contentHeight: menuHeight) {
+        let menuChrome = WindowChrome(title: "Yeoman – Menu Bar Spacing", contentWidth: menuWidth, contentHeight: menuHeight) {
             MenuBarSettingsView(module: menuBarModule)
         }
         .preferredColorScheme(.dark)

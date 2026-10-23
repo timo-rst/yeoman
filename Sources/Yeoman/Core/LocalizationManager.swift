@@ -872,6 +872,60 @@ public final class LocalizationManager: ObservableObject {
             .spanish: "Eliminar",
             .french: "Supprimer"
         ],
+        "clipboard.characters": [
+            .german: "Zeichen",
+            .english: "chars",
+            .spanish: "caracteres",
+            .french: "caractères"
+        ],
+        "clipboard.items_count_format": [
+            .german: "%d von %d Einträgen",
+            .english: "%d of %d items",
+            .spanish: "%d de %d elementos",
+            .french: "%d sur %d éléments"
+        ],
+        "clipboard.empty_images_title": [
+            .german: "Keine Bilder im Zwischenspeicher",
+            .english: "No images in clipboard",
+            .spanish: "No hay imágenes en el portapapeles",
+            .french: "Aucune image dans le presse-papiers"
+        ],
+        "clipboard.empty_images_sub": [
+            .german: "Kopiere ein Bild im Browser, erstelle einen Screenshot oder kopiere eine Bilddatei im Finder – sie erscheint sofort hier.",
+            .english: "Copy an image in the browser, take a screenshot, or copy an image file in Finder – it will appear here instantly.",
+            .spanish: "Copia una imagen en el navegador, haz una captura o copia un archivo de imagen en Finder: aparecerá aquí al instante.",
+            .french: "Copiez une image dans le navigateur, faites une capture d'écran ou copiez un fichier image dans le Finder : elle apparaîtra instantanément ici."
+        ],
+        "clipboard.empty_pinned_title": [
+            .german: "Keine Favoriten vorhanden",
+            .english: "No favorites saved",
+            .spanish: "No hay favoritos guardados",
+            .french: "Aucun favori enregistré"
+        ],
+        "clipboard.empty_pinned_sub": [
+            .german: "Bewege die Maus über einen Eintrag und klicke auf das Pin-Symbol, um ihn dauerhaft oben zu behalten.",
+            .english: "Hover over an entry and click the pin icon to keep it pinned at the top.",
+            .spanish: "Pasa el ratón sobre un elemento y haz clic en el icono de chincheta para mantenerlo fijado arriba.",
+            .french: "Survolez un élément et cliquez sur l'épingle pour le garder en haut."
+        ],
+        "clipboard.empty_history_title": [
+            .german: "Zwischenablage ist leer",
+            .english: "Clipboard is empty",
+            .spanish: "El portapapeles está vacío",
+            .french: "Le presse-papiers est vide"
+        ],
+        "clipboard.empty_no_results": [
+            .german: "Keine Treffer gefunden",
+            .english: "No results found",
+            .spanish: "No se encontraron resultados",
+            .french: "Aucun résultat trouvé"
+        ],
+        "clipboard.empty_history_sub": [
+            .german: "Kopierte Texte, Links und Bilder werden hier automatisch erfasst.",
+            .english: "Copied text, links, and images will be captured here automatically.",
+            .spanish: "Los textos, enlaces e imágenes copiados se guardarán aquí automáticamente.",
+            .french: "Les textes, liens et images copiés seront automatiquement enregistrés ici."
+        ],
 
         // Common
         "common.enabled": [

@@ -180,11 +180,11 @@ public struct ClipboardView: View {
             
             // Footer
             HStack {
-                Text("\(displayedItems.count) von \(store.items.count) Einträgen")
+                Text(String(format: l10n("clipboard.items_count_format"), displayedItems.count, store.items.count))
                     .font(.caption2)
                     .foregroundColor(.secondary)
                 Spacer()
-                Text("Klick zum Kopieren in Zwischenablage")
+                Text(l10n("clipboard.footer_hint"))
                     .font(.caption2)
                     .foregroundColor(.secondary.opacity(0.8))
             }
@@ -208,9 +208,9 @@ public struct ClipboardView: View {
                 Image(systemName: "photo")
                     .font(.system(size: 38))
                     .foregroundColor(.accentColor.opacity(0.7))
-                Text("Keine Bilder im Zwischenspeicher")
+                Text(l10n("clipboard.empty_images_title"))
                     .font(.headline)
-                Text("Kopiere ein Bild im Browser, erstelle einen Screenshot oder kopiere eine Bilddatei im Finder – sie erscheint sofort hier.")
+                Text(l10n("clipboard.empty_images_sub"))
                     .font(.caption)
                     .multilineTextAlignment(.center)
                     .foregroundColor(.secondary)
@@ -219,9 +219,9 @@ public struct ClipboardView: View {
                 Image(systemName: "pin.slash")
                     .font(.system(size: 36))
                     .foregroundColor(.secondary.opacity(0.6))
-                Text("Keine Favoriten vorhanden")
+                Text(l10n("clipboard.empty_pinned_title"))
                     .font(.headline)
-                Text("Bewege die Maus über einen Eintrag und klicke auf das Pin-Symbol, um ihn dauerhaft oben zu behalten.")
+                Text(l10n("clipboard.empty_pinned_sub"))
                     .font(.caption)
                     .multilineTextAlignment(.center)
                     .foregroundColor(.secondary)
@@ -230,9 +230,9 @@ public struct ClipboardView: View {
                 Image(systemName: "doc.on.clipboard")
                     .font(.system(size: 36))
                     .foregroundColor(.secondary.opacity(0.6))
-                Text(store.searchQuery.isEmpty ? "Zwischenablage ist leer" : "Keine Treffer gefunden")
+                Text(store.searchQuery.isEmpty ? l10n("clipboard.empty_history_title") : l10n("clipboard.empty_no_results"))
                     .font(.headline)
-                Text("Kopierte Texte, Links und Bilder werden hier automatisch erfasst.")
+                Text(l10n("clipboard.empty_history_sub"))
                     .font(.caption)
                     .foregroundColor(.secondary)
             }
@@ -406,7 +406,7 @@ struct ClipboardRowView: View {
                                 .font(.caption2)
                                 .foregroundColor(.secondary.opacity(0.6))
                         } else if item.type != .image {
-                            Text("• \(item.characterCount) Zeichen")
+                            Text("• \(item.characterCount) \(l10n("clipboard.characters"))")
                                 .font(.caption2)
                                 .foregroundColor(.secondary.opacity(0.6))
                         }
@@ -493,6 +493,7 @@ struct ClipboardRowView: View {
     private func formatTime(_ date: Date) -> String {
         let formatter = RelativeDateTimeFormatter()
         formatter.unitsStyle = .short
+        formatter.locale = Locale(identifier: LocalizationManager.shared.effectiveLanguage.rawValue)
         return formatter.localizedString(for: date, relativeTo: Date())
     }
 }
