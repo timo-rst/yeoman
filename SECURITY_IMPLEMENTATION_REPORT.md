@@ -3,7 +3,7 @@
 As of: 23 October 2026
 Audit Baseline: `c3c8e75`  
 Platform: macOS 14+, Swift/AppKit/SwiftUI  
-Status: Remediated and verified for the v0.2.1 maintenance release. Final update-metadata signing requires the externally held private key.
+Status: Remediated, verified, and packaged for the v0.2.1 maintenance release.
 
 ## Trust Model
 
@@ -61,5 +61,6 @@ Per explicit user direction, Apple Developer ID signing and notarization are not
 - `swift test`: unavailable with the installed Command Line Tools because they do not expose an XCTest or Swift Testing module to SwiftPM; the repository's executable test harness remains the supported entry point.
 - `./Scripts/build_app.sh release`: Successful; app bundle and helper signed with ad-hoc signatures.
 - `codesign --verify --deep --strict dist/Yeoman.app`: Valid.
-- `./Scripts/package_release.sh`: v0.2.1 packaging remains gated on `YEOMAN_UPDATE_PRIVATE_KEY_FILE`; the private key is intentionally external to the repository and environment.
+- `./Scripts/package_release.sh`: Successful for v0.2.1 using the external `0600` release key; produced `dist/Yeoman.dmg`, `dist/Yeoman.zip`, and signed `dist/Yeoman.update.json`.
+- Signed manifest verification: Successful; Ed25519 signature, version `0.2.1`, archive size `3425184`, and archive SHA-256 all match.
 - `git diff --check`: Clean; no whitespace or syntax errors.

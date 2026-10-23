@@ -12,7 +12,7 @@ Runtime verification used macOS 26.5, arm64, and Apple Swift 6.3.3. macOS 14 com
 
 The current implementation is substantially safer than the baseline. Signed update metadata is pinned to a configured Ed25519 key and binds the archive digest, size, version, and product identity. Archive extraction uses descriptor-relative operations with path, type, collision, entry-count, byte, and time limits. The installer binds staged and installed bundles to fresh metadata, the signed executable digest, and a mandatory code-directory hash. Native favicon networking is removed, WebKit profiles are separated, persistent clipboard and widget documents use AES-GCM, process termination binds PID, UID, and start time, and event/clipboard limits are enforced.
 
-All findings `AUD-01` through `AUD-10` and follow-up findings `RR-01` through `RR-04` have been remediated for their demonstrated vectors. The remaining concerns are explicit operational boundaries: same-UID confidentiality is out of scope for the chosen file secret store, final v0.2.1 update metadata still needs the external signing key, and macOS 14 runtime behavior has not been exercised in this environment.
+All findings `AUD-01` through `AUD-10` and follow-up findings `RR-01` through `RR-04` have been remediated for their demonstrated vectors. The remaining concerns are explicit operational boundaries: same-UID confidentiality is out of scope for the chosen file secret store, and macOS 14 runtime behavior has not been exercised in this environment.
 
 **Security posture delta:** high-risk update, archive, clipboard-migration, WebKit-crash, and installer-integrity weaknesses from the first review have been removed or materially reduced. No remaining exploitable Critical, High, or Medium finding was demonstrated.
 
@@ -75,16 +75,16 @@ The executable `YeomanTests` harness contains **70 tests**. Normal and ThreadSan
 - `./Scripts/build_app.sh release`: passed; bundle version is 0.2.1.
 - `codesign --verify --deep --strict dist/Yeoman.app`: passed.
 - `.build/release/YeomanReleaseSign --check-trust`: passed.
+- `Scripts/package_release.sh`: passed with the external `0600` key; the v0.2.1 Ed25519 manifest and ZIP digest verified independently.
 - `git diff --check`: passed.
 
 `swift test` cannot run tests with the installed Command Line Tools because neither XCTest nor Swift Testing is exposed to SwiftPM. A proposed test-target conversion was therefore removed instead of committing a platform-specific package configuration. `swift run YeomanTests` remains the supported command and is used by project CI.
 
-The suite contains negative tests for signatures, keys, downgrades, archive digests and paths, links and special files, quotas, URL policy, ciphertext tampering, migration ordering, image limits, process identity, numeric bounds, secret-name collisions, persistent UUID repair, delayed WebPanel disposal, and signed-resource substitution. Remaining environment coverage gaps are a real macOS 14 run, real TCC revocation, and regeneration of signed v0.2.1 update metadata with the external private key.
+The suite contains negative tests for signatures, keys, downgrades, archive digests and paths, links and special files, quotas, URL policy, ciphertext tampering, migration ordering, image limits, process identity, numeric bounds, secret-name collisions, persistent UUID repair, delayed WebPanel disposal, and signed-resource substitution. Remaining environment coverage gaps are a real macOS 14 run and real TCC revocation.
 
 ## 5. Prioritized action plan
 
-1. Supply `YEOMAN_UPDATE_PRIVATE_KEY_FILE` from external custody, run `Scripts/package_release.sh` for v0.2.1, and verify the generated manifest and archive before publishing the tag.
-2. Run the existing CI job on a macOS 14 host to cover the minimum supported runtime.
-3. Publish v0.2.1 as the maintenance replacement for v0.2.0 and preserve the accepted same-UID secret-store boundary in release documentation.
+1. Run the existing CI job on a macOS 14 host to cover the minimum supported runtime.
+2. Publish v0.2.1 as the maintenance replacement for v0.2.0 and preserve the accepted same-UID secret-store boundary in release documentation.
 
-No source-level security remediation remains open from this review. Release publication is gated only by external signing material and minimum-OS execution evidence.
+No source-level security remediation remains open from this review. The release artifacts and signed manifest are complete; minimum-OS execution remains an environment coverage concern.
