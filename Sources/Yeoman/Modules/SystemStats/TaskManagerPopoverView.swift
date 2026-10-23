@@ -3,6 +3,7 @@ import AppKit
 
 public struct TaskManagerPopoverView: View {
     @ObservedObject var provider = SystemMetricsProvider.shared
+    @ObservedObject var l10nObj = LocalizationManager.shared
     @State private var hoveredPid: Int?
     @State private var killedPid: Int?
     @State private var isSearchExpanded: Bool = false
@@ -18,7 +19,7 @@ public struct TaskManagerPopoverView: View {
                 HardwareMetricCard(
                     title: "CPU",
                     value: "\(Int(provider.cpuUsagePercent))%",
-                    subtitle: "\(ProcessInfo.processInfo.processorCount) Kerne",
+                    subtitle: String(format: l10n("system_stats.cores_format"), ProcessInfo.processInfo.processorCount),
                     history: provider.cpuHistory,
                     accentColor: .blue
                 )
@@ -36,7 +37,7 @@ public struct TaskManagerPopoverView: View {
                 HardwareMetricCard(
                     title: "GPU",
                     value: "\(Int(provider.gpuUsagePercent))%",
-                    subtitle: "Grafik-Engine",
+                    subtitle: l10n("system_stats.graphics_engine"),
                     history: provider.gpuHistory,
                     accentColor: .green
                 )
@@ -55,7 +56,7 @@ public struct TaskManagerPopoverView: View {
                             .foregroundColor(.secondary)
                             .font(.system(size: 11))
                         
-                        TextField("Prozess suchen...", text: $provider.searchQuery)
+                        TextField(l10n("system_stats.search_processes"), text: $provider.searchQuery)
                             .textFieldStyle(.plain)
                             .font(.system(size: 12))
                             .focused($isSearchFocused)
@@ -79,9 +80,9 @@ public struct TaskManagerPopoverView: View {
                     
                     // Compact Sort Picker
                     Picker("", selection: $provider.sortMode) {
-                        Text("CPU").tag(SystemMetricsProvider.TaskSortMode.cpu)
-                        Text("RAM").tag(SystemMetricsProvider.TaskSortMode.memory)
-                        Text("Name").tag(SystemMetricsProvider.TaskSortMode.name)
+                        Text(SystemMetricsProvider.TaskSortMode.cpu.localizedTitle).tag(SystemMetricsProvider.TaskSortMode.cpu)
+                        Text(SystemMetricsProvider.TaskSortMode.memory.localizedTitle).tag(SystemMetricsProvider.TaskSortMode.memory)
+                        Text(SystemMetricsProvider.TaskSortMode.name.localizedTitle).tag(SystemMetricsProvider.TaskSortMode.name)
                     }
                     .pickerStyle(.segmented)
                     .frame(width: 140)
@@ -105,12 +106,12 @@ public struct TaskManagerPopoverView: View {
                         )
                     }
                     .buttonStyle(.plain)
-                    .help("Nach Prozessen suchen")
+                    .help(l10n("system_stats.search_tooltip"))
                     
                     // Full-width Sort Picker
                     Picker("", selection: $provider.sortMode) {
                         ForEach(SystemMetricsProvider.TaskSortMode.allCases, id: \.self) { mode in
-                            Text(mode.rawValue).tag(mode)
+                            Text(mode.localizedTitle).tag(mode)
                         }
                     }
                     .pickerStyle(.segmented)
@@ -125,14 +126,14 @@ public struct TaskManagerPopoverView: View {
             if let error = provider.processError { Text(error).font(.caption).foregroundColor(.red) }
             // Column Headers
             HStack {
-                Text("PROZESS")
+                Text(l10n("system_stats.col_process"))
                     .frame(minWidth: 160, alignment: .leading)
                 Spacer()
-                Text("CPU")
+                Text(l10n("system_stats.col_cpu"))
                     .frame(width: 55, alignment: .trailing)
-                Text("RAM")
+                Text(l10n("system_stats.col_ram"))
                     .frame(width: 70, alignment: .trailing)
-                Text("AKTION")
+                Text(l10n("system_stats.col_action"))
                     .frame(width: 40, alignment: .trailing)
             }
             .font(.system(size: 10, weight: .bold))
@@ -177,7 +178,7 @@ public struct TaskManagerPopoverView: View {
             
             // Footer
             HStack {
-                Text("\(provider.processes.count) Prozesse • Klick auf ✕ beendet Prozess sofort")
+                Text(String(format: l10n("system_stats.kill_hint"), provider.processes.count))
                     .font(.caption2)
                     .foregroundColor(.secondary)
                 
@@ -189,7 +190,7 @@ public struct TaskManagerPopoverView: View {
                 }) {
                     HStack(spacing: 4) {
                         Image(systemName: "chart.bar.doc.horizontal")
-                        Text("Aktivitätsanzeige")
+                        Text(l10n("system_stats.activity_monitor_short"))
                     }
                     .font(.caption2)
                 }
@@ -367,7 +368,7 @@ struct TaskRowView: View {
                             )
                     }
                     .buttonStyle(.plain)
-                    .help("Prozess '\(item.name)' sofort beenden")
+                    .help(String(format: l10n("system_stats.kill_tooltip"), item.name))
                 }
             }
             .frame(width: 40, alignment: .trailing)

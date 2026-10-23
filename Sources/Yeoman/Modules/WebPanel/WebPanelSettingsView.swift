@@ -52,7 +52,8 @@ public struct WebPanelSettingsView: View {
                 isEnabled: $module.isEnabled,
                 extraContent: {
                     HStack {
-                        Text("\(module.widgets.count) Web-Widget(s) eingerichtet • \(module.widgets.filter { $0.isEnabled }.count) aktiv in der Menüleiste")
+                        let activeCount = module.widgets.filter { $0.isEnabled }.count
+                        Text(String(format: l10n("web_panel.status_count"), module.widgets.count, activeCount))
                             .font(.caption)
                             .foregroundColor(.secondary)
                         Spacer()
@@ -62,7 +63,7 @@ public struct WebPanelSettingsView: View {
                         }) {
                             HStack(spacing: 6) {
                                 Image(systemName: "plus.circle.fill")
-                                Text("Neues Web-Widget hinzufügen")
+                                Text(l10n("web_panel.add_button"))
                             }
                             .fontWeight(.medium)
                         }
@@ -83,7 +84,7 @@ public struct WebPanelSettingsView: View {
                 // Widgets List
                 VStack(alignment: .leading, spacing: 14) {
                     HStack {
-                        Text("Deine aktiven Web-Widgets")
+                        Text(l10n("web_panel.active_widgets"))
                             .font(.headline)
                         Spacer()
                     }
@@ -93,16 +94,16 @@ public struct WebPanelSettingsView: View {
                             Image(systemName: "globe")
                                 .font(.system(size: 44))
                                 .foregroundColor(.secondary.opacity(0.5))
-                            Text("Noch keine Web-Widgets erstellt")
+                            Text(l10n("web_panel.empty_title"))
                                 .font(.headline)
                                 .foregroundColor(.secondary)
-                            Text("Klicke auf den Button oben, um dein erstes Web-Widget anzulegen.")
+                            Text(l10n("web_panel.empty_subtitle"))
                                 .font(.caption)
                                 .foregroundColor(.secondary)
                                 .multilineTextAlignment(.center)
                                 .frame(maxWidth: 320)
 
-                            Button("Jetzt erstes Widget anlegen") {
+                            Button(l10n("web_panel.empty_btn")) {
                                 editorMode = .create
                             }
                             .buttonStyle(.borderedProminent)
@@ -140,15 +141,15 @@ public struct WebPanelSettingsView: View {
                 // Website Data & Cache
                 VStack(alignment: .leading, spacing: 10) {
                     HStack(spacing: 6) {
-                        Text("Sitzungen & Cache")
+                        Text(l10n("web_panel.cache_title"))
                             .font(.headline)
-                        InfoTooltip(text: "Cookies und Logins aller Widgets (z. B. Proton Calendar oder Google) werden dauerhaft im WebKit-Speicher gesichert.")
+                        InfoTooltip(text: l10n("web_panel.cache_tooltip"))
                     }
 
                     Button(role: .destructive, action: clearAllWebsiteData) {
                         HStack(spacing: 6) {
                             Image(systemName: "trash")
-                            Text("Alle Cache- und Website-Daten löschen")
+                            Text(l10n("web_panel.cache_clear_btn"))
                         }
                     }
                     .buttonStyle(.bordered)
@@ -181,16 +182,16 @@ public struct WebPanelSettingsView: View {
             .id(mode.id)
         }
         .confirmationDialog(
-            "Möchtest du das Web-Widget „\(widgetToDelete?.title ?? "")“ wirklich löschen?",
+            String(format: l10n("web_panel.delete_alert_message"), widgetToDelete?.title ?? ""),
             isPresented: $showingDeleteConfirm,
             titleVisibility: .visible
         ) {
-            Button("Löschen", role: .destructive) {
+            Button(l10n("common.delete"), role: .destructive) {
                 if let id = widgetToDelete?.id {
                     module.deleteWidget(id: id)
                 }
             }
-            Button("Abbrechen", role: .cancel) {}
+            Button(l10n("common.cancel"), role: .cancel) {}
         }
     }
 
@@ -255,14 +256,14 @@ struct WebWidgetRowView: View {
                         .lineLimit(1)
 
                     if widget.useFavicon {
-                        Text("Web-Icon")
+                        Text(l10n("web_panel.badge_web_icon"))
                             .font(.caption2)
                             .padding(.horizontal, 6)
                             .padding(.vertical, 2)
                             .background(Capsule().fill(Color.purple.opacity(0.18)))
                             .foregroundColor(.purple)
                     } else {
-                        Text("Symbol")
+                        Text(l10n("web_panel.badge_symbol"))
                             .font(.caption2)
                             .padding(.horizontal, 6)
                             .padding(.vertical, 2)
@@ -278,7 +279,7 @@ struct WebWidgetRowView: View {
                         .foregroundColor(.secondary)
 
                     if widget.userAgentMode == .mobile {
-                        Text("Smartphone")
+                        Text(l10n("web_panel.badge_smartphone"))
                             .font(.caption2)
                             .padding(.horizontal, 6)
                             .padding(.vertical, 2)
@@ -295,30 +296,30 @@ struct WebWidgetRowView: View {
 
             Spacer(minLength: 12)
 
-            // Actions: Arranged in a balanced 2x2 grid (Öffnen + Icon oben, Bearbeiten + Löschen unten)
+            // Actions: Arranged in a balanced 2x2 grid
             Grid(horizontalSpacing: 8, verticalSpacing: 6) {
                 GridRow {
                     Button(action: onOpen) {
                         HStack(spacing: 5) {
                             Image(systemName: "arrow.up.right.square")
-                            Text("Öffnen")
+                            Text(l10n("web_panel.btn_open"))
                         }
                         .frame(maxWidth: .infinity)
                     }
                     .buttonStyle(.bordered)
                     .controlSize(.regular)
-                    .help("Fenster in Menüleiste öffnen")
+                    .help(l10n("web_panel.btn_open"))
 
                     Button(action: { showIconPopover.toggle() }) {
                         HStack(spacing: 5) {
                             Image(systemName: "photo")
-                            Text("Icon")
+                            Text(l10n("web_panel.btn_icon"))
                         }
                         .frame(maxWidth: .infinity)
                     }
                     .buttonStyle(.bordered)
                     .controlSize(.regular)
-                    .help("Menüleisten-Symbol & Logo anpassen")
+                    .help(l10n("web_panel.btn_icon"))
                     .popover(isPresented: $showIconPopover, arrowEdge: .trailing) {
                         WebWidgetIconPickerPopover(
                             widget: widget,
@@ -332,25 +333,25 @@ struct WebWidgetRowView: View {
                     Button(action: onEdit) {
                         HStack(spacing: 5) {
                             Image(systemName: "pencil")
-                            Text("Bearbeiten")
+                            Text(l10n("web_panel.btn_edit"))
                         }
                         .frame(maxWidth: .infinity)
                     }
                     .buttonStyle(.bordered)
                     .controlSize(.regular)
-                    .help("Widget bearbeiten")
+                    .help(l10n("web_panel.btn_edit"))
 
                     Button(role: .destructive, action: onDelete) {
                         HStack(spacing: 5) {
                             Image(systemName: "trash")
-                            Text("Löschen")
+                            Text(l10n("common.delete"))
                         }
                         .foregroundColor(.red)
                         .frame(maxWidth: .infinity)
                     }
                     .buttonStyle(.bordered)
                     .controlSize(.regular)
-                    .help("Widget löschen")
+                    .help(l10n("common.delete"))
                 }
             }
             .fixedSize(horizontal: true, vertical: false)
@@ -368,7 +369,7 @@ struct WebWidgetRowView: View {
                 .toggleStyle(.switch)
                 .labelsHidden()
 
-                Text("Menüleiste")
+                Text(l10n("web_panel.menubar_label"))
                     .font(.system(size: 9))
                     .foregroundColor(.secondary)
             }
@@ -438,7 +439,7 @@ struct WebWidgetIconPickerPopover: View {
                 }
 
                 VStack(alignment: .leading, spacing: 1) {
-                    Text("Symbol & Logo wählen")
+                    Text(l10n("web_panel.logo_picker_header"))
                         .font(.system(size: 12, weight: .semibold))
                     Text(widget.title)
                         .font(.caption2)
@@ -454,7 +455,7 @@ struct WebWidgetIconPickerPopover: View {
                         .foregroundColor(.secondary.opacity(0.7))
                 }
                 .buttonStyle(.plain)
-                .help("Schließen")
+                .help(l10n("common.close"))
             }
 
             Divider()
@@ -462,7 +463,7 @@ struct WebWidgetIconPickerPopover: View {
             // Web Favicon Options
             VStack(alignment: .leading, spacing: 8) {
                 HStack(spacing: 6) {
-                    Toggle("Website-Logo verwenden", isOn: Binding(
+                    Toggle(l10n("web_panel.logo_picker_website_logo"), isOn: Binding(
                         get: { useFavicon },
                         set: { val in
                             useFavicon = val
@@ -471,7 +472,7 @@ struct WebWidgetIconPickerPopover: View {
                     ))
                     .fontWeight(.medium)
 
-                    InfoTooltip(text: "Verwendet das farbige Original-Logo der Website direkt in der Menüleiste.")
+                    InfoTooltip(text: l10n("web_panel.logo_picker_website_logo_tooltip"))
                 }
 
                 if useFavicon {
@@ -479,14 +480,14 @@ struct WebWidgetIconPickerPopover: View {
                     if !options.isEmpty {
                         VStack(alignment: .leading, spacing: 5) {
                             HStack(spacing: 4) {
-                                Text("Verfügbare Logos (\(options.count)):")
+                                Text(String(format: l10n("web_panel.logo_picker_available"), options.count))
                                     .font(.caption2)
                                     .foregroundColor(.secondary)
 
                                 Spacer()
 
                                 if selectedFaviconURL != nil {
-                                    Button("Automatisch") {
+                                    Button(l10n("web_panel.logo_picker_auto")) {
                                         selectedFaviconURL = nil
                                         applyChange()
                                     }
@@ -501,7 +502,7 @@ struct WebWidgetIconPickerPopover: View {
                                         .font(.system(size: 10))
                                 }
                                 .buttonStyle(.plain)
-                                .help("Neu scannen")
+                                .help(l10n("web_panel.editor_rescan"))
                             }
 
                             let columns = [GridItem(.adaptive(minimum: 64, maximum: 74), spacing: 6)]
@@ -553,7 +554,7 @@ struct WebWidgetIconPickerPopover: View {
                                                 .foregroundColor(.primary)
                                                 .lineLimit(1)
 
-                                            Text(opt.isTransparent ? "Transparent" : "Hintergrund")
+                                            Text(opt.isTransparent ? l10n("web_panel.editor_badge_transparent") : l10n("web_panel.editor_badge_background"))
                                                 .font(.system(size: 7, weight: .medium))
                                                 .foregroundColor(opt.isTransparent ? .green : .secondary)
                                                 .padding(.horizontal, 3)
@@ -586,7 +587,7 @@ struct WebWidgetIconPickerPopover: View {
                     }
 
                     HStack(spacing: 6) {
-                        Toggle("Weißer Hintergrund transparent machen", isOn: Binding(
+                        Toggle(l10n("web_panel.logo_picker_transparent_bg"), isOn: Binding(
                             get: { removeWhiteBackground },
                             set: { val in
                                 removeWhiteBackground = val
@@ -595,7 +596,7 @@ struct WebWidgetIconPickerPopover: View {
                         ))
                         .font(.caption)
 
-                        InfoTooltip(text: "Entfernt automatisch weiße Flächen aus quadratischen Logos.")
+                        InfoTooltip(text: l10n("web_panel.logo_picker_transparent_bg_tooltip"))
                     }
                 }
             }
@@ -604,7 +605,7 @@ struct WebWidgetIconPickerPopover: View {
 
             // SF Symbols Grid
             VStack(alignment: .leading, spacing: 6) {
-                Text(useFavicon ? "Ersatz-Symbol (Fallback):" : "Symbol auswählen:")
+                Text(useFavicon ? l10n("web_panel.logo_picker_fallback_symbol") : l10n("web_panel.logo_picker_select_symbol"))
                     .font(.caption2)
                     .foregroundColor(.secondary)
 
@@ -638,7 +639,7 @@ struct WebWidgetIconPickerPopover: View {
 
             HStack {
                 Spacer()
-                Button("Fertig") { onDismiss() }
+                Button(l10n("common.done")) { onDismiss() }
                     .buttonStyle(.borderedProminent)
                     .controlSize(.small)
             }
@@ -767,10 +768,10 @@ struct WebWidgetEditorSheet: View {
             // Wizard Header
             HStack {
                 HStack(spacing: 6) {
-                    Text(isEditing ? "Web-Widget bearbeiten" : "Neues Web-Widget")
+                    Text(isEditing ? l10n("web_panel.editor_edit_title") : l10n("web_panel.editor_new_title"))
                         .font(.title3)
                         .fontWeight(.bold)
-                    InfoTooltip(text: "Konfiguriere URL, Größe und Ansicht mit interaktiver Live-Vorschau.")
+                    InfoTooltip(text: l10n("web_panel.editor_subtitle"))
                 }
                 Spacer()
             }
@@ -787,12 +788,12 @@ struct WebWidgetEditorSheet: View {
                     VStack(alignment: .leading, spacing: 16) {
                         // 1. Name & Ziel-Webseite (URL)
                         VStack(alignment: .leading, spacing: 14) {
-                            Text("1. Name & Ziel-Webseite (URL)")
+                            Text(l10n("web_panel.editor_sec1"))
                                 .font(.headline)
 
                             // Name Row
                             VStack(alignment: .leading, spacing: 5) {
-                                Text("Name des Web-Widgets:")
+                                Text(l10n("web_panel.editor_name_label"))
                                     .font(.caption)
                                     .foregroundColor(.secondary)
 
@@ -819,16 +820,16 @@ struct WebWidgetEditorSheet: View {
                                                 .foregroundColor(.accentColor)
                                         }
                                     }
-                                    .help("Aktuelles Icon / Logo")
+                                    .help(l10n("web_panel.editor_logo_section"))
 
-                                    TextField("z. B. Proton Kalender, Gemini, Notizen...", text: $title)
+                                    TextField(l10n("web_panel.editor_name_placeholder"), text: $title)
                                         .textFieldStyle(.roundedBorder)
                                 }
                             }
 
                             // URL Row
                             VStack(alignment: .leading, spacing: 5) {
-                                Text("Website-Adresse (URL):")
+                                Text(l10n("web_panel.editor_url_label"))
                                     .font(.caption)
                                     .foregroundColor(.secondary)
 
@@ -838,7 +839,7 @@ struct WebWidgetEditorSheet: View {
                                     })
                                     .textFieldStyle(.roundedBorder)
 
-                                    Button("Laden") {
+                                    Button(l10n("web_panel.editor_load_btn")) {
                                         applyURLChange()
                                     }
                                     .buttonStyle(.bordered)
@@ -848,10 +849,10 @@ struct WebWidgetEditorSheet: View {
                             // Schnellvorlagen
                             VStack(alignment: .leading, spacing: 6) {
                                 HStack(spacing: 5) {
-                                    Text("Schnellvorlagen:")
+                                    Text(l10n("web_panel.editor_templates"))
                                         .font(.caption2)
                                         .foregroundColor(.secondary)
-                                    InfoTooltip(text: "Klicke auf eine Vorlage, um Name, Ziel-Adresse und optimale Fenstergröße sofort zu übernehmen.")
+                                    InfoTooltip(text: l10n("web_panel.editor_templates_tooltip"))
                                 }
 
                                 LazyVGrid(columns: [GridItem(.adaptive(minimum: 120))], spacing: 6) {
@@ -859,10 +860,10 @@ struct WebWidgetEditorSheet: View {
                                         setPreset(url: "https://gemini.google.com", name: "Google Gemini", icon: "sparkles", preset: .smartphone)
                                     }
                                     QuickButton(name: "Proton Calendar", icon: "calendar") {
-                                        setPreset(url: "https://calendar.proton.me", name: "Proton Kalender", icon: "calendar", preset: .widget)
+                                        setPreset(url: "https://calendar.proton.me", name: l10n("web_panel.template_proton_cal"), icon: "calendar", preset: .widget)
                                     }
                                     QuickButton(name: "Google Calendar", icon: "calendar") {
-                                        setPreset(url: "https://calendar.google.com", name: "Google Kalender", icon: "calendar", preset: .widget)
+                                        setPreset(url: "https://calendar.google.com", name: l10n("web_panel.template_google_cal"), icon: "calendar", preset: .widget)
                                     }
                                     QuickButton(name: "Notion", icon: "note.text") {
                                         setPreset(url: "https://www.notion.so", name: "Notion", icon: "note.text", preset: .large)
@@ -889,9 +890,9 @@ struct WebWidgetEditorSheet: View {
                                 // Website Logo Option
                                 VStack(alignment: .leading, spacing: 8) {
                                     HStack(spacing: 6) {
-                                        Toggle("Website-Logo automatisch verwenden", isOn: $useFavicon)
+                                        Toggle(l10n("web_panel.editor_auto_logo"), isOn: $useFavicon)
                                             .fontWeight(.medium)
-                                        InfoTooltip(text: "Verwendet das farbige Original-Logo der Website. Transparente Symbole werden bevorzugt.")
+                                        InfoTooltip(text: l10n("web_panel.editor_auto_logo_tooltip"))
                                     }
 
                                     if useFavicon {
@@ -903,7 +904,7 @@ struct WebWidgetEditorSheet: View {
                                                     .aspectRatio(contentMode: .fit)
                                                     .frame(width: 18, height: 18)
                                                     .clipShape(RoundedRectangle(cornerRadius: 3))
-                                                Text(selectedFaviconURL != nil ? "Ausgewähltes Logo aktiv" : "Bestes transparentes Logo aktiv")
+                                                Text(selectedFaviconURL != nil ? l10n("web_panel.editor_selected_logo_active") : l10n("web_panel.editor_best_logo_active"))
                                                     .font(.caption2)
                                                     .foregroundColor(.green)
                                                     .fontWeight(.medium)
@@ -911,7 +912,7 @@ struct WebWidgetEditorSheet: View {
                                                 Image(systemName: "arrow.clockwise")
                                                     .font(.caption2)
                                                     .foregroundColor(.secondary)
-                                                Text(url.isEmpty ? "Gib oben eine URL ein" : "Logos werden gesucht...")
+                                                Text(url.isEmpty ? l10n("web_panel.editor_enter_url_hint") : l10n("web_panel.editor_searching_logos"))
                                                     .font(.caption2)
                                                     .foregroundColor(.secondary)
                                             }
@@ -937,7 +938,7 @@ struct WebWidgetEditorSheet: View {
                                                 }) {
                                                     HStack(spacing: 4) {
                                                         Image(systemName: "arrow.clockwise")
-                                                        Text("Neu scannen")
+                                                        Text(l10n("web_panel.editor_rescan"))
                                                     }
                                                 }
                                                 .buttonStyle(.bordered)
@@ -952,16 +953,16 @@ struct WebWidgetEditorSheet: View {
                                         if !options.isEmpty {
                                             VStack(alignment: .leading, spacing: 6) {
                                                 HStack(spacing: 5) {
-                                                    Text("Verfügbare Logos (\(options.count)):")
+                                                    Text(String(format: l10n("web_panel.logo_picker_available"), options.count))
                                                         .font(.caption2)
                                                         .fontWeight(.medium)
                                                         .foregroundColor(.primary)
-                                                    InfoTooltip(text: "Gefundene Favicon- und App-Icon-Varianten. Klicke ein Logo an, um es festzulegen.")
+                                                    InfoTooltip(text: l10n("web_panel.editor_options_tooltip"))
 
                                                     Spacer()
 
                                                     if selectedFaviconURL != nil {
-                                                        Button("Automatisch wählen") {
+                                                        Button(l10n("web_panel.editor_auto_select")) {
                                                             selectedFaviconURL = nil
                                                         }
                                                         .font(.caption2)
@@ -1017,7 +1018,7 @@ struct WebWidgetEditorSheet: View {
                                                                     .foregroundColor(.primary)
                                                                     .lineLimit(1)
 
-                                                                Text(opt.isTransparent ? "Transparent" : "Mit Hintergrund")
+                                                                Text(opt.isTransparent ? l10n("web_panel.editor_badge_transparent") : l10n("web_panel.editor_badge_background"))
                                                                     .font(.system(size: 8, weight: .medium))
                                                                     .foregroundColor(opt.isTransparent ? .green : .secondary)
                                                                     .padding(.horizontal, 4)
@@ -1051,10 +1052,10 @@ struct WebWidgetEditorSheet: View {
 
                                         // Remove White Background Toggle
                                         HStack(spacing: 6) {
-                                            Toggle("Weißer Hintergrund transparent machen", isOn: $removeWhiteBackground)
+                                            Toggle(l10n("web_panel.logo_picker_transparent_bg"), isOn: $removeWhiteBackground)
                                                 .font(.caption)
                                                 .fontWeight(.medium)
-                                            InfoTooltip(text: "Entfernt automatisch weiße Flächen aus Logos (z. B. bei quadratischen iOS-Kacheln).")
+                                            InfoTooltip(text: l10n("web_panel.editor_remove_white_tooltip"))
                                         }
                                     }
                                 }
@@ -1065,11 +1066,11 @@ struct WebWidgetEditorSheet: View {
                                 // Symbol Selection
                                 VStack(alignment: .leading, spacing: 6) {
                                     HStack(spacing: 5) {
-                                        Text(useFavicon ? "Ersatz-Symbol:" : "Symbol für Menüleiste:")
+                                        Text(useFavicon ? l10n("web_panel.editor_fallback_symbol_label") : l10n("web_panel.editor_menubar_symbol_label"))
                                             .font(.caption2)
                                             .foregroundColor(.secondary)
                                         if useFavicon {
-                                            InfoTooltip(text: "Wird in der Menüleiste angezeigt, falls die Website kein Web-Logo liefert.")
+                                            InfoTooltip(text: l10n("web_panel.editor_fallback_symbol_tooltip"))
                                         }
                                     }
 
@@ -1100,11 +1101,11 @@ struct WebWidgetEditorSheet: View {
                             HStack(spacing: 8) {
                                 Image(systemName: "photo.badge.checkmark")
                                     .foregroundColor(.accentColor)
-                                Text("Menüleisten-Symbol & Logo anpassen")
+                                Text(l10n("web_panel.editor_logo_section"))
                                     .font(.subheadline)
                                     .fontWeight(.medium)
                                 Spacer()
-                                Text(useFavicon ? "Automatisch" : "Symbol")
+                                Text(useFavicon ? l10n("web_panel.logo_picker_auto") : l10n("web_panel.badge_symbol"))
                                     .font(.caption2)
                                     .foregroundColor(.secondary)
                             }
@@ -1132,9 +1133,9 @@ struct WebWidgetEditorSheet: View {
                                 Divider()
                                     .padding(.vertical, 4)
 
-                                Picker("Größe:", selection: $sizePreset) {
+                                Picker(l10n("web_panel.editor_size_label"), selection: $sizePreset) {
                                     ForEach(WebSizePreset.allCases) { preset in
-                                        Text(preset.rawValue).tag(preset)
+                                        Text(preset.localizedTitle).tag(preset)
                                     }
                                 }
                                 .pickerStyle(.menu)
@@ -1151,7 +1152,7 @@ struct WebWidgetEditorSheet: View {
 
                                 VStack(alignment: .leading, spacing: 6) {
                                     HStack {
-                                        Text("Breite:")
+                                        Text(l10n("web_panel.editor_width"))
                                             .font(.caption)
                                             .foregroundColor(.secondary)
                                         Spacer()
@@ -1167,7 +1168,7 @@ struct WebWidgetEditorSheet: View {
                                     }
 
                                     HStack {
-                                        Text("Höhe:")
+                                        Text(l10n("web_panel.editor_height"))
                                             .font(.caption)
                                             .foregroundColor(.secondary)
                                         Spacer()
@@ -1187,10 +1188,10 @@ struct WebWidgetEditorSheet: View {
 
                                 VStack(alignment: .leading, spacing: 6) {
                                     HStack(spacing: 5) {
-                                        Text("Seiten-Skalierung (Zoom):")
+                                        Text(l10n("web_panel.editor_zoom"))
                                             .font(.subheadline)
                                             .fontWeight(.medium)
-                                        InfoTooltip(text: "Skaliert Webseiten herunter, damit sie im Widget optimal ohne horizontales Scrollen lesbar sind.")
+                                        InfoTooltip(text: l10n("web_panel.editor_zoom_tooltip"))
                                         Spacer()
                                         Text("\(Int(zoomScale * 100))%").monospacedDigit()
                                             .foregroundColor(.accentColor)
@@ -1204,15 +1205,15 @@ struct WebWidgetEditorSheet: View {
                                 Divider()
 
                                 HStack(spacing: 5) {
-                                    Text("Darstellung:")
+                                    Text(l10n("web_panel.editor_appearance"))
                                         .font(.subheadline)
                                         .fontWeight(.medium)
-                                    InfoTooltip(text: "Mobil erzwingt ein schmales Smartphone-Layout (ideal für Widgets). Desktop lädt die Standard-Website.")
+                                    InfoTooltip(text: l10n("web_panel.editor_appearance_tooltip"))
                                 }
 
                                 Picker("", selection: $userAgentMode) {
                                     ForEach(WebUserAgentMode.allCases) { mode in
-                                        Text(mode.rawValue).tag(mode)
+                                        Text(mode.localizedTitle).tag(mode)
                                     }
                                 }
                                 .pickerStyle(.radioGroup)
@@ -1224,7 +1225,7 @@ struct WebWidgetEditorSheet: View {
                             HStack(spacing: 8) {
                                 Image(systemName: "aspectratio")
                                     .foregroundColor(.accentColor)
-                                Text("2. Fenstergröße & Ansicht")
+                                Text(l10n("web_panel.editor_sec2"))
                                     .font(.subheadline)
                                     .fontWeight(.medium)
                                 Spacer()
@@ -1258,25 +1259,25 @@ struct WebWidgetEditorSheet: View {
                                     .padding(.vertical, 4)
 
                                 HStack(spacing: 6) {
-                                    Toggle("Fenster anheften (Pin)", isOn: $isPinned)
-                                    InfoTooltip(text: "Hält das Widget-Fenster dauerhaft geöffnet, auch wenn du in eine andere App klickst oder außerhalb des Fensters tippst.")
+                                    Toggle(l10n("web_panel.editor_pin"), isOn: $isPinned)
+                                    InfoTooltip(text: l10n("web_panel.editor_pin_tooltip"))
                                 }
 
                                 HStack(spacing: 6) {
-                                    Toggle("Navigationsleiste", isOn: $showsAddressBar)
-                                    InfoTooltip(text: "Blendet eine Leiste mit Vor-, Zurück-, Neuladen- und Zoom-Buttons am unteren Rand des Widgets ein.")
+                                    Toggle(l10n("web_panel.editor_nav_bar"), isOn: $showsAddressBar)
+                                    InfoTooltip(text: l10n("web_panel.editor_nav_bar_tooltip"))
                                 }
 
                                 HStack(spacing: 6) {
-                                    Toggle("Obere Adressleiste", isOn: $showsTopBar)
-                                    InfoTooltip(text: "Zeigt die Web-Adresse (URL) am oberen Rand des Widgets an. Deaktivieren für eine komplett rahmenlose Ansicht.")
+                                    Toggle(l10n("web_panel.editor_top_bar"), isOn: $showsTopBar)
+                                    InfoTooltip(text: l10n("web_panel.editor_top_bar_tooltip"))
                                 }
                             }
                         } label: {
                             HStack(spacing: 8) {
                                 Image(systemName: "slider.horizontal.3")
                                     .foregroundColor(.accentColor)
-                                Text("3. Weitere Optionen")
+                                Text(l10n("web_panel.editor_sec3"))
                                     .font(.subheadline)
                                     .fontWeight(.medium)
                                 Spacer()
@@ -1310,7 +1311,7 @@ struct WebWidgetEditorSheet: View {
                     HStack {
                         Image(systemName: "eye.fill")
                             .foregroundColor(.accentColor)
-                        Text("Live-Vorschau (\(Int(effectiveWidth)) × \(Int(effectiveHeight)) pt)")
+                        Text(String(format: l10n("web_panel.preview_title"), Int(effectiveWidth), Int(effectiveHeight)))
                             .font(.headline)
                         Spacer()
 
@@ -1319,7 +1320,7 @@ struct WebWidgetEditorSheet: View {
                         }) {
                             HStack(spacing: 4) {
                                 Image(systemName: "arrow.clockwise")
-                                Text("Neu laden")
+                                Text(l10n("web_panel.preview_reload"))
                             }
                             .font(.caption)
                         }
@@ -1371,10 +1372,10 @@ struct WebWidgetEditorSheet: View {
                                         Image(systemName: "globe")
                                             .font(.system(size: 40))
                                             .foregroundColor(.secondary.opacity(0.35))
-                                        Text("Noch keine Webseite geladen")
+                                        Text(l10n("web_panel.preview_empty_title"))
                                             .font(.headline)
                                             .foregroundColor(.secondary)
-                                        Text("Gib links eine URL ein oder wähle eine Vorlage, um die Live-Vorschau zu starten.")
+                                        Text(l10n("web_panel.preview_empty_sub"))
                                             .font(.caption)
                                             .foregroundColor(.secondary)
                                             .multilineTextAlignment(.center)
@@ -1409,7 +1410,7 @@ struct WebWidgetEditorSheet: View {
 
             // Bottom Action Bar
             HStack {
-                Button("Abbrechen") {
+                Button(l10n("common.cancel")) {
                     if !isEditing {
                         faviconManager.removeWidget(WebWidgetItem(id: editorWidgetId, title: "", url: ""))
                     }
@@ -1417,7 +1418,7 @@ struct WebWidgetEditorSheet: View {
                 }
                 .keyboardShortcut(.cancelAction)
                 Spacer()
-                Button(isEditing ? "Änderungen speichern" : "Web-Widget erstellen") {
+                Button(isEditing ? l10n("common.save") : l10n("web_panel.editor_create_btn")) {
                     var finalURL = url.trimmingCharacters(in: .whitespacesAndNewlines)
                     if !finalURL.isEmpty && !finalURL.hasPrefix("http://") && !finalURL.hasPrefix("https://") {
                         finalURL = "https://" + finalURL

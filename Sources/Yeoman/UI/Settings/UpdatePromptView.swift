@@ -60,7 +60,7 @@ public struct UpdatePromptView: View {
                             .foregroundColor(.accentColor)
                     }
                     
-                    Text("Yeoman **\(version)** ist verfügbar (installiert: \(updater.currentVersion)).")
+                    Text(String(format: l10n.localized("updates.popup_version_info"), version, updater.currentVersion))
                         .font(.subheadline)
                         .foregroundColor(.secondary)
                     
@@ -85,7 +85,7 @@ public struct UpdatePromptView: View {
                     .foregroundColor(.secondary)
                 
                 ScrollView {
-                    Text(notes.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? "Keine weiteren Versionshinweise vorhanden." : notes)
+                    Text(notes.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? l10n.localized("updates.no_release_notes") : notes)
                         .font(.system(.caption, design: .default))
                         .foregroundColor(.primary.opacity(0.9))
                         .frame(maxWidth: .infinity, alignment: .leading)
@@ -115,7 +115,7 @@ public struct UpdatePromptView: View {
                     ProgressView()
                         .scaleEffect(0.6)
                         .frame(width: 14, height: 14)
-                    Text("Update wird verifiziert und installiert...")
+                    Text(l10n.localized("updates.verifying_installing"))
                         .font(.caption2)
                         .foregroundColor(.secondary)
                 }

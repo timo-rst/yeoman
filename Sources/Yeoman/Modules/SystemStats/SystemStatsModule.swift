@@ -5,12 +5,27 @@ import Combine
 public enum StatsLayoutMode: String, CaseIterable, Codable {
     case vertical = "Vertikal gestapelt"
     case horizontal = "Horizontal nebeneinander"
+
+    public var localizedTitle: String {
+        switch self {
+        case .vertical: return l10n("system_stats.layout_vertical")
+        case .horizontal: return l10n("system_stats.layout_horizontal")
+        }
+    }
 }
 
 public enum StatsGraphStyle: String, CaseIterable, Codable {
     case miniBar = "Vertikaler Füllbalken"
     case sparkline = "Mini-Verlaufskurve"
     case none = "Kein Graph"
+
+    public var localizedTitle: String {
+        switch self {
+        case .miniBar: return l10n("system_stats.graph_minibar")
+        case .sparkline: return l10n("system_stats.graph_sparkline")
+        case .none: return l10n("system_stats.graph_none")
+        }
+    }
 }
 
 public final class SystemStatsModule: NSObject, CustomizerModule, ObservableObject {
@@ -394,12 +409,12 @@ public struct SystemStatsSettingsView: View {
                     Group {
                     // Menüleisten-Anzeige Konfiguration
                     VStack(alignment: .leading, spacing: 14) {
-                        Text("Menüleisten-Anzeige konfigurieren")
+                        Text(l10n("system_stats.configure_header"))
                             .font(.headline)
                         
                         // Live Vorschau
                         HStack {
-                            Text("Live-Vorschau:")
+                            Text(l10n("system_stats.live_preview"))
                                 .font(.subheadline)
                                 .foregroundColor(.secondary)
                             Spacer()
@@ -413,47 +428,47 @@ public struct SystemStatsSettingsView: View {
                         
                         Divider()
                         
-                        Text("Aktive Messwerte in der Menüleiste:")
+                        Text(l10n("system_stats.active_metrics"))
                             .font(.subheadline)
                             .fontWeight(.medium)
                         
                         HStack(spacing: 24) {
                             Toggle("CPU", isOn: $module.showCPU)
-                            Toggle("RAM (Speicher)", isOn: $module.showRAM)
-                            Toggle("GPU (Grafik)", isOn: $module.showGPU)
+                            Toggle(l10n("system_stats.metric_ram_label"), isOn: $module.showRAM)
+                            Toggle(l10n("system_stats.metric_gpu_label"), isOn: $module.showGPU)
                         }
                         
                         Divider()
                         
-                        Text("Layout & Text-Ausrichtung:")
+                        Text(l10n("system_stats.layout_alignment"))
                             .font(.subheadline)
                             .fontWeight(.medium)
                         
-                        Picker("Layout-Stil:", selection: $module.layoutMode) {
+                        Picker(l10n("system_stats.layout_style"), selection: $module.layoutMode) {
                             ForEach(StatsLayoutMode.allCases, id: \.self) { mode in
-                                Text(mode.rawValue).tag(mode)
+                                Text(mode.localizedTitle).tag(mode)
                             }
                         }
                         .pickerStyle(.segmented)
                         
-                        Picker("Graph-Typ:", selection: $module.graphStyle) {
+                        Picker(l10n("system_stats.graph_type"), selection: $module.graphStyle) {
                             ForEach(StatsGraphStyle.allCases, id: \.self) { style in
-                                Text(style.rawValue).tag(style)
+                                Text(style.localizedTitle).tag(style)
                             }
                         }
                         .pickerStyle(.segmented)
                         
                         Divider()
                         
-                        Text("Darstellungs-Optionen:")
+                        Text(l10n("system_stats.display_options"))
                             .font(.subheadline)
                             .fontWeight(.medium)
                         
                         VStack(alignment: .leading, spacing: 10) {
-                            Toggle("Text-Bezeichnung anzeigen (z.B. „CPU“, „RAM“, „GPU“)", isOn: $module.showLabels)
-                            Toggle("Prozentwert als Text anzeigen (z.B. „10%“, „61%“)", isOn: $module.showPercentage)
-                            Toggle("Mini-Graphen & Balken anzeigen", isOn: $module.showGraphs)
-                            Toggle("Dezenter Kapsel-Hintergrund (Pill)", isOn: $module.useSubtleBackground)
+                            Toggle(l10n("system_stats.opt_show_labels"), isOn: $module.showLabels)
+                            Toggle(l10n("system_stats.opt_show_percentage"), isOn: $module.showPercentage)
+                            Toggle(l10n("system_stats.opt_show_graphs"), isOn: $module.showGraphs)
+                            Toggle(l10n("system_stats.opt_subtle_background"), isOn: $module.useSubtleBackground)
                         }
                     }
                     .padding()
@@ -461,13 +476,13 @@ public struct SystemStatsSettingsView: View {
                     
                     // Live Snapshot Preview
                     VStack(alignment: .leading, spacing: 12) {
-                        Text("Aktuelle System-Auslastung")
+                        Text(l10n("system_stats.current_usage"))
                             .font(.headline)
                         
                         HStack(spacing: 12) {
-                            MetricInfoBox(title: "CPU", value: "\(Int(provider.cpuUsagePercent))%", subtitle: "\(ProcessInfo.processInfo.processorCount) Cores", color: .blue)
+                            MetricInfoBox(title: "CPU", value: "\(Int(provider.cpuUsagePercent))%", subtitle: String(format: l10n("system_stats.cores_format"), ProcessInfo.processInfo.processorCount), color: .blue)
                             MetricInfoBox(title: "RAM", value: "\(Int(provider.memoryUsagePercent))%", subtitle: "\(String(format: "%.1f", provider.memoryUsedGB)) GB", color: .purple)
-                            MetricInfoBox(title: "GPU", value: "\(Int(provider.gpuUsagePercent))%", subtitle: "Metal Engine", color: .green)
+                            MetricInfoBox(title: "GPU", value: "\(Int(provider.gpuUsagePercent))%", subtitle: l10n("system_stats.graphics_engine"), color: .green)
                         }
                     }
                     .padding()
@@ -476,17 +491,17 @@ public struct SystemStatsSettingsView: View {
                     // Process Management Information
                     VStack(alignment: .leading, spacing: 12) {
                         HStack(spacing: 6) {
-                            Text("Laufende Prozesse & Task-Manager")
+                            Text(l10n("system_stats.task_manager_header"))
                                 .font(.headline)
-                            InfoTooltip(text: "Über das Menüleisten-Symbol kannst du Prozesse einsehen und nicht reagierende Apps direkt beenden.")
+                            InfoTooltip(text: l10n("system_stats.task_manager_tooltip"))
                             Spacer()
-                            Text("\(provider.processes.count) Prozesse aktiv")
+                            Text(String(format: l10n("system_stats.active_processes_count"), provider.processes.count))
                                 .font(.caption)
                                 .foregroundColor(.secondary)
                         }
                         
                         HStack {
-                            Button("Aktivitätsanzeige öffnen") {
+                            Button(l10n("system_stats.open_activity_monitor")) {
                                 let url = URL(fileURLWithPath: "/System/Applications/Utilities/Activity Monitor.app")
                                 NSWorkspace.shared.openApplication(at: url, configuration: NSWorkspace.OpenConfiguration(), completionHandler: nil)
                             }

@@ -39,9 +39,9 @@ public struct ScrollReverserSettingsView: View {
                                     .foregroundColor(.orange)
                                 
                                 VStack(alignment: .leading, spacing: 3) {
-                                    Text("Bedienungshilfen-Berechtigung erforderlich")
+                                    Text(l10n("scroll_reverser.permission_required"))
                                         .fontWeight(.medium)
-                                    Text("macOS erfordert die Erlaubnis für Bedienungshilfen, damit die Scrollrichtung der Maus angepasst werden kann.")
+                                    Text(l10n("scroll_reverser.permission_description"))
                                         .font(.caption)
                                         .foregroundColor(.secondary)
                                 }
@@ -49,13 +49,13 @@ public struct ScrollReverserSettingsView: View {
                                 Spacer()
                                 
                                 HStack(spacing: 8) {
-                                    Button("Erneut prüfen") {
+                                    Button(l10n("scroll_reverser.check_again")) {
                                         manager.checkAccessibility(prompt: false)
                                     }
                                     .buttonStyle(.bordered)
                                     .controlSize(.small)
                                     
-                                    Button("In Systemeinstellungen öffnen") {
+                                    Button(l10n("scroll_reverser.open_settings")) {
                                         manager.openAccessibilitySettings()
                                     }
                                     .buttonStyle(.borderedProminent)
@@ -69,7 +69,7 @@ public struct ScrollReverserSettingsView: View {
                                 Image(systemName: "info.circle")
                                     .font(.caption)
                                     .foregroundColor(.secondary)
-                                Text("Hinweis: Falls Yeoman in den Systemeinstellungen bereits auf AN steht, bitte den Schalter dort einmal kurz **AUS und wieder AN** schalten (oder mit '-' entfernen und neu hinzufügen), damit macOS die Signatur des App-Updates übernimmt.")
+                                Text(l10n("scroll_reverser.permission_hint"))
                                     .font(.caption2)
                                     .foregroundColor(.secondary)
                             }
@@ -98,23 +98,23 @@ public struct ScrollReverserSettingsView: View {
                         HStack(spacing: 6) {
                             Toggle(l10n("scroll_reverser.reverse_vertical"), isOn: $manager.reverseMouseVertical)
                                 .font(.subheadline)
-                            InfoTooltip(text: "Empfohlen: Aktiviert. Wenn macOS auf 'Natürliches Scrollen' steht, scrollt die Maus hiermit gewohnt nach unten, während das Trackpad unverändert bleibt.")
+                            InfoTooltip(text: l10n("scroll_reverser.mouse_vertical_tooltip"))
                         }
                         
                         Toggle(l10n("scroll_reverser.reverse_horizontal"), isOn: $manager.reverseMouseHorizontal)
                             .font(.subheadline)
                         
                         HStack(spacing: 6) {
-                            Text("Scrollrad-Schrittmultiplikator:")
+                            Text(l10n("scroll_reverser.step_multiplier"))
                                 .font(.subheadline)
-                            InfoTooltip(text: "Erhöht die Scroll-Geschwindigkeit pro Mausrad-Rasterung.")
+                            InfoTooltip(text: l10n("scroll_reverser.step_multiplier_tooltip"))
                             Spacer()
                             Picker("", selection: $manager.mouseStepMultiplier) {
-                                Text("1x (Standard)").tag(1)
-                                Text("2x (Schneller)").tag(2)
+                                Text(l10n("scroll_reverser.step_standard")).tag(1)
+                                Text(l10n("scroll_reverser.step_faster")).tag(2)
                                 Text("3x").tag(3)
                                 Text("4x").tag(4)
-                                Text("5x (Maximum)").tag(5)
+                                Text(l10n("scroll_reverser.step_max")).tag(5)
                             }
                             .frame(width: 150)
                         }
@@ -138,7 +138,7 @@ public struct ScrollReverserSettingsView: View {
                         HStack(spacing: 6) {
                             Toggle(l10n("scroll_reverser.reverse_vertical"), isOn: $manager.reverseTrackpadVertical)
                                 .font(.subheadline)
-                            InfoTooltip(text: "Empfohlen: Deaktiviert. Das Trackpad behält so das native macOS-Verhalten (Zwei-Finger-Wischgeste wie auf Touchscreens).")
+                            InfoTooltip(text: l10n("scroll_reverser.trackpad_vertical_tooltip"))
                         }
                         
                         Toggle(l10n("scroll_reverser.reverse_horizontal"), isOn: $manager.reverseTrackpadHorizontal)
@@ -149,13 +149,13 @@ public struct ScrollReverserSettingsView: View {
                     
                     // Card 3: Menu Bar Integration
                     VStack(alignment: .leading, spacing: 14) {
-                        Text("Menüleisten-Integration")
+                        Text(l10n("scroll_reverser.menubar_integration"))
                             .font(.headline)
                         
                         HStack(spacing: 6) {
-                            Toggle("Eigenes Symbol in der Menüleiste anzeigen", isOn: $module.showsDedicatedStatusItem)
+                            Toggle(l10n("scroll_reverser.menubar_toggle"), isOn: $module.showsDedicatedStatusItem)
                                 .font(.subheadline)
-                            InfoTooltip(text: "Zeigt ein separates Maus-Symbol in der Menüleiste an, über das du die Richtung per Klick umschalten kannst.")
+                            InfoTooltip(text: l10n("scroll_reverser.menubar_tooltip"))
                         }
                     }
                     .padding()
@@ -167,17 +167,17 @@ public struct ScrollReverserSettingsView: View {
                             Circle()
                                 .fill(manager.isRunning ? Color.green : Color.secondary)
                                 .frame(width: 8, height: 8)
-                            Text("Status")
+                            Text(l10n("scroll_reverser.status"))
                                 .font(.headline)
                             Spacer()
-                            Text(manager.isRunning ? "Aktiv" : "Angehalten")
+                            Text(manager.isRunning ? l10n("scroll_reverser.status_active") : l10n("scroll_reverser.status_paused"))
                                 .font(.caption)
                                 .foregroundColor(manager.isRunning ? .green : .secondary)
                         }
                         
                         HStack(spacing: 12) {
                             VStack(alignment: .leading, spacing: 4) {
-                                Text("Zuletzt erkanntes Gerät:")
+                                Text(l10n("scroll_reverser.last_device"))
                                     .font(.caption2)
                                     .foregroundColor(.secondary)
                                 Text(manager.lastEventDevice)
@@ -188,7 +188,7 @@ public struct ScrollReverserSettingsView: View {
                             Spacer()
                             
                             VStack(alignment: .trailing, spacing: 4) {
-                                Text("Aktion:")
+                                Text(l10n("scroll_reverser.action"))
                                     .font(.caption2)
                                     .foregroundColor(.secondary)
                                 Text(manager.lastEventSummary)

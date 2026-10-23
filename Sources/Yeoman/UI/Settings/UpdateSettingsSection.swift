@@ -114,7 +114,7 @@ public struct UpdateSettingsSection: View {
             if case .downloading(let progress) = updater.status {
                 VStack(alignment: .leading, spacing: 6) {
                     HStack {
-                        Text("Update wird heruntergeladen...")
+                        Text(l10n.localized("updates.downloading"))
                             .font(.caption)
                             .fontWeight(.medium)
                         Spacer()
@@ -134,7 +134,7 @@ public struct UpdateSettingsSection: View {
                 HStack(spacing: 8) {
                     ProgressView()
                         .scaleEffect(0.7)
-                    Text("Update wird installiert & Yeoman neu gestartet...")
+                    Text(l10n.localized("updates.installing"))
                         .font(.caption)
                         .foregroundColor(.secondary)
                 }

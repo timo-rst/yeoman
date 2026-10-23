@@ -3,6 +3,7 @@ import AppKit
 
 public struct MenuBarItemsView: View {
     @ObservedObject var scanner = MenuBarItemScanner.shared
+    @ObservedObject var l10nObj = LocalizationManager.shared
     
     public init() {}
     
@@ -13,11 +14,11 @@ public struct MenuBarItemsView: View {
                 // Row 1: Section Title & Live Stats + Action Buttons
                 HStack(alignment: .center) {
                     VStack(alignment: .leading, spacing: 2) {
-                        Text("Menüleisten-Elemente & Icons")
+                        Text(l10n("menubar.items_header"))
                             .font(.headline)
                         
                         let activeCount = scanner.items.filter { $0.isVisibleInMenuBar }.count
-                        Text("\(scanner.items.count) Symbole gefunden • \(activeCount) aktiv in der Menüleiste")
+                        Text(String(format: l10n("menubar.items_status_count"), scanner.items.count, activeCount))
                             .font(.caption)
                             .foregroundColor(.secondary)
                     }
@@ -32,7 +33,7 @@ public struct MenuBarItemsView: View {
                                 Image(systemName: "arrow.clockwise")
                                     .rotationEffect(.degrees(scanner.isScanning ? 360 : 0))
                                     .animation(scanner.isScanning ? Animation.linear(duration: 1).repeatForever(autoreverses: false) : .default, value: scanner.isScanning)
-                                Text("Neu scannen")
+                                Text(l10n("menubar.rescan"))
                             }
                         }
                         .buttonStyle(.bordered)
@@ -43,7 +44,7 @@ public struct MenuBarItemsView: View {
                         }) {
                             HStack(spacing: 4) {
                                 Image(systemName: "gearshape")
-                                Text("Kontrollzentrum...")
+                                Text(l10n("menubar.control_center"))
                             }
                         }
                         .buttonStyle(.bordered)
@@ -70,7 +71,7 @@ public struct MenuBarItemsView: View {
                             .font(.system(size: 11, weight: .medium))
                             .foregroundColor(.secondary)
                         
-                        TextField("Elemente suchen...", text: $scanner.searchQuery)
+                        TextField(l10n("menubar.search_placeholder"), text: $scanner.searchQuery)
                             .textFieldStyle(.plain)
                             .font(.system(size: 12))
                         
@@ -101,10 +102,10 @@ public struct MenuBarItemsView: View {
                     HStack(spacing: 8) {
                         Image(systemName: "checkmark.circle.fill")
                             .foregroundColor(.accentColor)
-                        Text("System-Symbole geändert. Klicke auf 'Übernehmen', um die Menüleiste zu aktualisieren:")
+                        Text(l10n("menubar.system_symbols_changed"))
                             .font(.caption)
                         Spacer()
-                        Button("Jetzt übernehmen") {
+                        Button(l10n("menubar.apply_changes_btn")) {
                             scanner.applySystemChanges()
                         }
                         .buttonStyle(.borderedProminent)
@@ -126,7 +127,7 @@ public struct MenuBarItemsView: View {
                     Image(systemName: "menubar.rectangle")
                         .font(.system(size: 40))
                         .foregroundColor(.secondary.opacity(0.5))
-                    Text("Keine passenden Menüleisten-Elemente gefunden.")
+                    Text(l10n("menubar.no_matching_items"))
                         .font(.headline)
                         .foregroundColor(.secondary)
                 }
@@ -213,7 +214,7 @@ struct MenuBarItemRow: View {
                     }
                     
                     if item.type == .thirdParty {
-                        Text(item.isRunning ? "• Läuft im Hintergrund" : "• Beendet")
+                        Text(item.isRunning ? l10n("menubar.status_running") : l10n("menubar.status_stopped"))
                             .font(.caption2)
                             .foregroundColor(item.isRunning ? .green : .secondary)
                     }
@@ -223,7 +224,7 @@ struct MenuBarItemRow: View {
             Spacer()
             
             // Status Tag
-            Text(item.isVisibleInMenuBar ? "In Menüleiste" : "Ausgeblendet")
+            Text(item.isVisibleInMenuBar ? l10n("menubar.status_in_menubar") : l10n("menubar.status_hidden"))
                 .font(.caption)
                 .foregroundColor(item.isVisibleInMenuBar ? .primary : .secondary)
                 .frame(width: 90, alignment: .trailing)

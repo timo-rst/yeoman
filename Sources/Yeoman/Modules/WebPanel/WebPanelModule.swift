@@ -8,6 +8,14 @@ public enum WebUserAgentMode: String, CaseIterable, Identifiable, Codable {
     case desktop = "Immer Desktop"
 
     public var id: String { rawValue }
+
+    public var localizedTitle: String {
+        switch self {
+        case .auto: return l10n("web_panel.ua_auto")
+        case .mobile: return l10n("web_panel.ua_mobile")
+        case .desktop: return l10n("web_panel.ua_desktop")
+        }
+    }
 }
 
 public enum WebSizePreset: String, CaseIterable, Identifiable, Codable {
@@ -17,6 +25,15 @@ public enum WebSizePreset: String, CaseIterable, Identifiable, Codable {
     case large = "500 × 700 (Großes Fenster)"
 
     public var id: String { rawValue }
+
+    public var localizedTitle: String {
+        switch self {
+        case .custom: return l10n("web_panel.preset_custom")
+        case .widget: return l10n("web_panel.preset_widget")
+        case .smartphone: return l10n("web_panel.preset_smartphone")
+        case .large: return l10n("web_panel.preset_large")
+        }
+    }
 
     public var dimensions: (width: CGFloat, height: CGFloat) {
         switch self {

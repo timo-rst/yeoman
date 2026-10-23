@@ -75,29 +75,29 @@ public struct ClipboardSettingsView: View {
                 ScrollView {
                     VStack(alignment: .leading, spacing: 20) {
                         VStack(alignment: .leading, spacing: 14) {
-                            Toggle("Aufzeichnung pausieren", isOn: $monitor.isPaused)
-                            TextField("Ausgeschlossene Bundle-IDs, durch Kommas getrennt", text: $monitor.excludedBundleIDs)
-                            Toggle("Verlauf verschlüsselt auf diesem Mac speichern", isOn: Binding(get: { store.isPersistent }, set: { store.setPersistent($0) }))
+                            Toggle(l10n("clipboard.pause_recording"), isOn: $monitor.isPaused)
+                            TextField(l10n("clipboard.excluded_bundle_ids"), text: $monitor.excludedBundleIDs)
+                            Toggle(l10n("clipboard.save_encrypted"), isOn: Binding(get: { store.isPersistent }, set: { store.setPersistent($0) }))
                             if let error = store.storageError { Text(error).foregroundColor(.red).font(.caption) }
-                            Text("Überwachung & Sicherheit")
+                            Text(l10n("clipboard.options_monitoring_title"))
                                 .font(.headline)
                             
                             HStack(spacing: 6) {
-                                Toggle("Passwörter und sensible Daten nicht speichern", isOn: $monitor.ignorePasswordManagers)
+                                Toggle(l10n("clipboard.ignore_passwords"), isOn: $monitor.ignorePasswordManagers)
                                     .font(.subheadline)
-                                InfoTooltip(text: "Kopierte Passwörter aus Passwort-Managern und Browser-Erweiterungen werden automatisch erkannt und vom Verlauf ausgeschlossen.")
+                                InfoTooltip(text: l10n("clipboard.ignore_passwords_tooltip"))
                             }
                             
                             Divider()
                             
                             HStack {
-                                Text("Maximale Anzahl gespeicherter Elemente:")
+                                Text(l10n("clipboard.options_max_items"))
                                 Spacer()
                                 Picker("", selection: $store.maxItems) {
-                                    Text("50 Einträge").tag(50)
-                                    Text("100 Einträge").tag(100)
-                                    Text("250 Einträge").tag(250)
-                                    Text("500 Einträge").tag(500)
+                                    Text(String(format: l10n("clipboard.options_items_count_format"), 50)).tag(50)
+                                    Text(String(format: l10n("clipboard.options_items_count_format"), 100)).tag(100)
+                                    Text(String(format: l10n("clipboard.options_items_count_format"), 250)).tag(250)
+                                    Text(String(format: l10n("clipboard.options_items_count_format"), 500)).tag(500)
                                 }
                                 .frame(width: 150)
                             }
@@ -106,19 +106,19 @@ public struct ClipboardSettingsView: View {
                         .background(RoundedRectangle(cornerRadius: 12).fill(Color(nsColor: .controlBackgroundColor)))
                         
                         VStack(alignment: .leading, spacing: 14) {
-                            Text("Verlauf verwalten")
+                            Text(l10n("clipboard.options_manage_title"))
                                 .font(.headline)
                             
                             HStack {
                                 VStack(alignment: .leading, spacing: 2) {
-                                    Text("Aktuell gespeicherte Einträge: \(store.items.count)")
+                                    Text(String(format: l10n("clipboard.options_current_items_format"), store.items.count))
                                         .fontWeight(.medium)
                                     HStack(spacing: 8) {
-                                        Text("\(store.items.filter { $0.type == .image }.count) Bilder")
+                                        Text(String(format: l10n("clipboard.options_images_format"), store.items.filter { $0.type == .image }.count))
                                         Text("•")
-                                        Text("\(store.items.filter { $0.type != .image }.count) Texte")
+                                        Text(String(format: l10n("clipboard.options_texts_format"), store.items.filter { $0.type != .image }.count))
                                         Text("•")
-                                        Text("\(store.items.filter { $0.isPinned }.count) angepinnt")
+                                        Text(String(format: l10n("clipboard.options_pinned_format"), store.items.filter { $0.isPinned }.count))
                                     }
                                     .font(.caption)
                                     .foregroundColor(.secondary)
@@ -126,11 +126,11 @@ public struct ClipboardSettingsView: View {
                                 
                                 Spacer()
                                 
-                                Button("Nicht angepinnte leeren") {
+                                Button(l10n("clipboard.clear_unpinned")) {
                                     store.clearUnpinned()
                                 }
                                 
-                                Button("Alle löschen", role: .destructive) {
+                                Button(l10n("clipboard.clear_all"), role: .destructive) {
                                     store.clearAll()
                                 }
                             }

@@ -7,9 +7,9 @@ public enum AppLanguage: String, CaseIterable, Identifiable {
     case english = "en"
     case spanish = "es"
     case french = "fr"
-    
+
     public var id: String { rawValue }
-    
+
     public var code: String {
         switch self {
         case .german: return "DE"
@@ -18,11 +18,11 @@ public enum AppLanguage: String, CaseIterable, Identifiable {
         case .french: return "FR"
         }
     }
-    
+
     public var flatFlagImage: NSImage {
         FlatFlagRenderer.flagImage(for: self)
     }
-    
+
     public func displayName(in language: AppLanguage) -> String {
         switch self {
         case .german:
@@ -35,7 +35,7 @@ public enum AppLanguage: String, CaseIterable, Identifiable {
             return "Français"
         }
     }
-    
+
     public var nativeName: String {
         displayName(in: self)
     }
@@ -44,7 +44,7 @@ public enum AppLanguage: String, CaseIterable, Identifiable {
 // MARK: - Clean Flat Flag Vector Graphics
 public final class FlatFlagRenderer {
     private static var cache: [String: NSImage] = [:]
-    
+
     public static func flagImage(for language: AppLanguage, size: CGSize = CGSize(width: 22, height: 15)) -> NSImage {
         let key = "\(language.rawValue)_\(Int(size.width))x\(Int(size.height))"
         if let cached = cache[key] {
@@ -54,37 +54,37 @@ public final class FlatFlagRenderer {
         cache[key] = img
         return img
     }
-    
+
     private static func render(language: AppLanguage, size: CGSize) -> NSImage {
         let image = NSImage(size: size, flipped: false) { rect in
             let cornerRadius: CGFloat = 3.0
             let path = NSBezierPath(roundedRect: rect, xRadius: cornerRadius, yRadius: cornerRadius)
             path.addClip()
-            
+
             switch language {
             case .german:
                 // Germany: 3 equal horizontal stripes (Black, Red, Gold)
                 let h = rect.height / 3.0
                 NSColor(srgbRed: 0.12, green: 0.12, blue: 0.12, alpha: 1.0).setFill()
                 NSRect(x: 0, y: 2 * h, width: rect.width, height: h).fill()
-                
+
                 NSColor(srgbRed: 0.86, green: 0.15, blue: 0.15, alpha: 1.0).setFill()
                 NSRect(x: 0, y: h, width: rect.width, height: h).fill()
-                
+
                 NSColor(srgbRed: 1.0, green: 0.78, blue: 0.15, alpha: 1.0).setFill()
                 NSRect(x: 0, y: 0, width: rect.width, height: h).fill()
-                
+
             case .english:
                 // UK Flag (Union Jack) - clean mathematical geometry
                 // 1. Royal Navy Blue field
                 NSColor(srgbRed: 0.01, green: 0.14, blue: 0.45, alpha: 1.0).setFill()
                 rect.fill()
-                
+
                 let cx = rect.width / 2.0
                 let cy = rect.height / 2.0
                 let h = rect.height
                 let w = rect.width
-                
+
                 // 2. White Saltire (St. Andrew diagonals)
                 let whiteDiag = NSBezierPath()
                 whiteDiag.lineWidth = round(h * 0.24)
@@ -95,7 +95,7 @@ public final class FlatFlagRenderer {
                 whiteDiag.line(to: NSPoint(x: w, y: 0))
                 NSColor.white.setStroke()
                 whiteDiag.stroke()
-                
+
                 // 3. Red Saltire (St. Patrick rays to center)
                 let redDiag = NSBezierPath()
                 redDiag.lineWidth = max(1.2, round(h * 0.10))
@@ -110,42 +110,42 @@ public final class FlatFlagRenderer {
                 redDiag.line(to: NSPoint(x: cx, y: cy))
                 NSColor(srgbRed: 0.82, green: 0.10, blue: 0.15, alpha: 1.0).setStroke()
                 redDiag.stroke()
-                
+
                 // 4. White St. George Cross
                 let whiteCrossW = round(h * 0.34)
                 NSColor.white.setFill()
                 NSRect(x: round(cx - whiteCrossW / 2.0), y: 0, width: whiteCrossW, height: h).fill()
                 NSRect(x: 0, y: round(cy - whiteCrossW / 2.0), width: w, height: whiteCrossW).fill()
-                
+
                 // 5. Red St. George Cross
                 let redCrossW = max(2.0, round(h * 0.20))
                 NSColor(srgbRed: 0.82, green: 0.10, blue: 0.15, alpha: 1.0).setFill()
                 NSRect(x: round(cx - redCrossW / 2.0), y: 0, width: redCrossW, height: h).fill()
                 NSRect(x: 0, y: round(cy - redCrossW / 2.0), width: w, height: redCrossW).fill()
-                
+
             case .spanish:
                 // Spain (La Rojigualda): Red (25%), Yellow (50%), Red (25%)
                 let hRed = round(rect.height * 0.25)
                 let hYellow = rect.height - (hRed * 2.0)
-                
+
                 // Top Red
                 NSColor(srgbRed: 0.80, green: 0.08, blue: 0.15, alpha: 1.0).setFill()
                 NSRect(x: 0, y: rect.height - hRed, width: rect.width, height: hRed).fill()
-                
+
                 // Middle Yellow
                 NSColor(srgbRed: 1.00, green: 0.77, blue: 0.00, alpha: 1.0).setFill()
                 NSRect(x: 0, y: hRed, width: rect.width, height: hYellow).fill()
-                
+
                 // Bottom Red
                 NSColor(srgbRed: 0.80, green: 0.08, blue: 0.15, alpha: 1.0).setFill()
                 NSRect(x: 0, y: 0, width: rect.width, height: hRed).fill()
-                
+
                 // Stylized Spanish Coat of Arms
                 let crestX = round(rect.width * 0.26)
                 let crestY = hRed + round(hYellow * 0.10)
                 let crestH = round(hYellow * 0.80)
                 let crestW = round(crestH * 0.82)
-                
+
                 // Pillars of Hercules
                 let pillarW = max(0.8, round(crestW * 0.15))
                 let pillarH = crestH * 0.85
@@ -153,7 +153,7 @@ public final class FlatFlagRenderer {
                 NSColor(srgbRed: 0.75, green: 0.55, blue: 0.10, alpha: 0.9).setFill()
                 NSRect(x: crestX - pillarW - 1.2, y: pillarY, width: pillarW, height: pillarH).fill()
                 NSRect(x: crestX + crestW + 1.2, y: pillarY, width: pillarW, height: pillarH).fill()
-                
+
                 // Crown on top
                 let crownH = round(crestH * 0.28)
                 let crownY = crestY + crestH - crownH
@@ -166,7 +166,7 @@ public final class FlatFlagRenderer {
                 crown.close()
                 NSColor(srgbRed: 0.90, green: 0.70, blue: 0.10, alpha: 1.0).setFill()
                 crown.fill()
-                
+
                 // Shield
                 let shieldH = crestH - crownH - 0.5
                 let shieldRect = NSRect(x: crestX, y: crestY, width: crestW, height: shieldH)
@@ -185,7 +185,7 @@ public final class FlatFlagRenderer {
                 shield.close()
                 NSColor(srgbRed: 0.80, green: 0.08, blue: 0.15, alpha: 1.0).setFill()
                 shield.fill()
-                
+
                 // Gold inner charge / emblem on shield
                 let innerW = shieldRect.width * 0.45
                 let innerH = shieldH * 0.45
@@ -197,26 +197,26 @@ public final class FlatFlagRenderer {
                 )
                 NSColor(srgbRed: 1.00, green: 0.85, blue: 0.20, alpha: 1.0).setFill()
                 innerRect.fill()
-                
+
             case .french:
                 // France: 3 equal vertical stripes (Blue, White, Red)
                 let w = rect.width / 3.0
                 NSColor(srgbRed: 0.08, green: 0.28, blue: 0.72, alpha: 1.0).setFill()
                 NSRect(x: 0, y: 0, width: w, height: rect.height).fill()
-                
+
                 NSColor.white.setFill()
                 NSRect(x: w, y: 0, width: w, height: rect.height).fill()
-                
+
                 NSColor(srgbRed: 0.90, green: 0.18, blue: 0.22, alpha: 1.0).setFill()
                 NSRect(x: 2 * w, y: 0, width: w, height: rect.height).fill()
             }
-            
+
             // Crisp 0.5pt subtle border for clean contrast on any background
             let border = NSBezierPath(roundedRect: rect.insetBy(dx: 0.25, dy: 0.25), xRadius: cornerRadius, yRadius: cornerRadius)
             border.lineWidth = 0.5
             NSColor.black.withAlphaComponent(0.18).setStroke()
             border.stroke()
-            
+
             return true
         }
         return image
@@ -226,12 +226,12 @@ public final class FlatFlagRenderer {
 public struct FlatFlagView: View {
     public let language: AppLanguage
     public var size: CGSize
-    
+
     public init(language: AppLanguage, size: CGSize = CGSize(width: 22, height: 15)) {
         self.language = language
         self.size = size
     }
-    
+
     public var body: some View {
         Image(nsImage: FlatFlagRenderer.flagImage(for: language, size: size))
             .resizable()
@@ -247,9 +247,9 @@ public struct FlatFlagView: View {
 
 public final class LocalizationManager: ObservableObject {
     public static let shared = LocalizationManager()
-    
+
     private let storageKey = "app_language"
-    
+
     /// Resolves the default language matching the macOS system setting.
     /// German for German, Spanish for Spanish, French for French, otherwise English as fallback.
     public static var defaultLanguageForSystem: AppLanguage {
@@ -262,14 +262,14 @@ public final class LocalizationManager: ObservableObject {
         default: return .english
         }
     }
-    
+
     @Published public var selectedLanguage: AppLanguage {
         didSet {
             defaults.set(selectedLanguage.rawValue, forKey: storageKey)
             NotificationCenter.default.post(name: .appLanguageDidChange, object: nil)
         }
     }
-    
+
     private let defaults: UserDefaults
     public init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
@@ -280,15 +280,15 @@ public final class LocalizationManager: ObservableObject {
             self.selectedLanguage = Self.defaultLanguageForSystem
         }
     }
-    
+
     public var systemLanguage: AppLanguage {
         Self.defaultLanguageForSystem
     }
-    
+
     public var effectiveLanguage: AppLanguage {
         selectedLanguage
     }
-    
+
     public func localized(_ key: String, for language: AppLanguage? = nil) -> String {
         let lang = language ?? effectiveLanguage
         if let table = translations[key], let val = table[lang] ?? table[.english] ?? table[.german] {
@@ -296,7 +296,7 @@ public final class LocalizationManager: ObservableObject {
         }
         return key
     }
-    
+
     // MARK: - Translation Dictionary
     private let translations: [String: [AppLanguage: String]] = [
         // Language Display
@@ -306,7 +306,7 @@ public final class LocalizationManager: ObservableObject {
             .spanish: "Predeterminado del sistema",
             .french: "Par défaut du système"
         ],
-        
+
         // Window Title
         "window.settings_title": [
             .german: "Yeoman Einstellungen",
@@ -314,7 +314,7 @@ public final class LocalizationManager: ObservableObject {
             .spanish: "Configuración de Yeoman",
             .french: "Paramètres de Yeoman"
         ],
-        
+
         // Settings Tabs
         "tab.general": [
             .german: "Allgemein",
@@ -358,7 +358,7 @@ public final class LocalizationManager: ObservableObject {
             .spanish: "Acerca de Yeoman",
             .french: "À propos de Yeoman"
         ],
-        
+
         // General Settings View
         "general.title": [
             .german: "Allgemeine Einstellungen",
@@ -504,7 +504,7 @@ public final class LocalizationManager: ObservableObject {
             .spanish: "Mostrar icono en la barra de menús",
             .french: "Afficher l'icône dans la barre des menus"
         ],
-        
+
         // Menu Bar Menu
         "menu.settings": [
             .german: "Einstellungen...",
@@ -548,7 +548,7 @@ public final class LocalizationManager: ObservableObject {
             .spanish: "Borrar historial",
             .french: "Effacer l'historique"
         ],
-        
+
         // Update Manager
         "updates.title": [
             .german: "Software-Aktualisierung",
@@ -718,7 +718,7 @@ public final class LocalizationManager: ObservableObject {
             .spanish: "Error al conectar con GitHub. Compruebe la conexión a Internet.",
             .french: "Échec de connexion à GitHub. Veuillez vérifier votre connexion Internet."
         ],
-        
+
         // Menu Bar Optimizer
         "menubar.title": [
             .german: "Menüleisten-Optimizer",
@@ -792,7 +792,7 @@ public final class LocalizationManager: ObservableObject {
             .spanish: "Restablecer valores predeterminados",
             .french: "Rétablir les paramètres par défaut"
         ],
-        
+
         // Clipboard View
         "clipboard.search": [
             .german: "Zwischenablage durchsuchen...",
@@ -872,7 +872,7 @@ public final class LocalizationManager: ObservableObject {
             .spanish: "Eliminar",
             .french: "Supprimer"
         ],
-        
+
         // Common
         "common.enabled": [
             .german: "Aktiviert",
@@ -898,13 +898,43 @@ public final class LocalizationManager: ObservableObject {
             .spanish: "Cancelar",
             .french: "Annuler"
         ],
+        "common.save": [
+            .german: "Speichern",
+            .english: "Save",
+            .spanish: "Guardar",
+            .french: "Enregistrer"
+        ],
+        "common.delete": [
+            .german: "Löschen",
+            .english: "Delete",
+            .spanish: "Eliminar",
+            .french: "Supprimer"
+        ],
+        "common.done": [
+            .german: "Fertig",
+            .english: "Done",
+            .spanish: "Listo",
+            .french: "Terminé"
+        ],
+        "common.edit": [
+            .german: "Bearbeiten",
+            .english: "Edit",
+            .spanish: "Editar",
+            .french: "Modifier"
+        ],
+        "common.open": [
+            .german: "Öffnen",
+            .english: "Open",
+            .spanish: "Abrir",
+            .french: "Ouvrir"
+        ],
         "module.disabled_hint": [
             .german: "Dieses Modul ist deaktiviert. Aktiviere den Schalter oben rechts, um es einzuschalten.",
             .english: "This module is disabled. Turn on the switch in the top right to enable it.",
             .spanish: "Este módulo está desactivado. Activa el interruptor en la esquina superior derecha para habilitarlo.",
             .french: "Ce module est désactivé. Activez l'interrupteur en haut à droite pour l'activer."
         ],
-        
+
         // About View
         "about.tagline": [
             .german: "Die modulare All-in-One Steuerzentrale für deine macOS Anpassungen.",
@@ -962,7 +992,7 @@ public final class LocalizationManager: ObservableObject {
             .spanish: "Espaciado de iconos",
             .french: "Espacement des icônes"
         ],
-        
+
         // Scroll Reverser
         "scroll_reverser.title": [
             .german: "Scroll-Richtung (Maus)",
@@ -1012,7 +1042,7 @@ public final class LocalizationManager: ObservableObject {
             .spanish: "Invertir desplazamiento horizontal",
             .french: "Inverser le défilement horizontal"
         ],
-        
+
         // System Stats
         "system_stats.title": [
             .german: "System-Monitor",
@@ -1026,8 +1056,8 @@ public final class LocalizationManager: ObservableObject {
             .spanish: "Supervisión en tiempo real del procesador, la memoria y los gráficos en la barra de menús.",
             .french: "Surveillance en temps réel du processeur, de la mémoire et des graphiques dans la barre des menus."
         ],
-        
-        // Web Panel
+
+        // Web Panel (full page & editor)
         "web_panel.title": [
             .german: "Web-Widgets",
             .english: "Web Widgets",
@@ -1040,7 +1070,455 @@ public final class LocalizationManager: ObservableObject {
             .spanish: "Usa aplicaciones web directamente como iconos en la barra de menús con ventana interactiva.",
             .french: "Utilisez des applications Web directement comme icônes de barre de menus avec fenêtre dynamique."
         ],
-        
+        "web_panel.status_count": [
+            .german: "%d Web-Widget(s) eingerichtet • %d aktiv in der Menüleiste",
+            .english: "%d web widget(s) configured • %d active in menu bar",
+            .spanish: "%d widget(s) web configurado(s) • %d activo(s) en la barra de menús",
+            .french: "%d widget(s) Web configuré(s) • %d actif(s) dans la barre des menus"
+        ],
+        "web_panel.add_button": [
+            .german: "Neues Web-Widget hinzufügen",
+            .english: "Add New Web Widget",
+            .spanish: "Añadir nuevo widget web",
+            .french: "Ajouter un nouveau widget Web"
+        ],
+        "web_panel.active_widgets": [
+            .german: "Deine aktiven Web-Widgets",
+            .english: "Your Active Web Widgets",
+            .spanish: "Tus widgets web activos",
+            .french: "Vos widgets Web actifs"
+        ],
+        "web_panel.empty_title": [
+            .german: "Noch keine Web-Widgets erstellt",
+            .english: "No web widgets created yet",
+            .spanish: "Aún no se han creado widgets web",
+            .french: "Aucun widget Web créé pour le moment"
+        ],
+        "web_panel.empty_subtitle": [
+            .german: "Klicke auf den Button oben, um dein erstes Web-Widget anzulegen.",
+            .english: "Click the button above to create your first web widget.",
+            .spanish: "Haz clic en el botón de arriba para crear tu primer widget web.",
+            .french: "Cliquez sur le bouton ci-dessus pour créer votre premier widget Web."
+        ],
+        "web_panel.btn_open": [
+            .german: "Öffnen",
+            .english: "Open",
+            .spanish: "Abrir",
+            .french: "Ouvrir"
+        ],
+        "web_panel.btn_icon": [
+            .german: "Icon",
+            .english: "Icon",
+            .spanish: "Icono",
+            .french: "Icône"
+        ],
+        "web_panel.btn_edit": [
+            .german: "Bearbeiten",
+            .english: "Edit",
+            .spanish: "Editar",
+            .french: "Modifier"
+        ],
+        "web_panel.menubar_label": [
+            .german: "Menüleiste",
+            .english: "Menu Bar",
+            .spanish: "Barra de menús",
+            .french: "Barre des menus"
+        ],
+        "web_panel.badge_web_icon": [
+            .german: "Web-Icon",
+            .english: "Web Icon",
+            .spanish: "Icono web",
+            .french: "Icône Web"
+        ],
+        "web_panel.badge_symbol": [
+            .german: "Symbol",
+            .english: "Symbol",
+            .spanish: "Símbolo",
+            .french: "Symbole"
+        ],
+        "web_panel.badge_smartphone": [
+            .german: "Smartphone",
+            .english: "Smartphone",
+            .spanish: "Móvil",
+            .french: "Mobile"
+        ],
+        "web_panel.cache_title": [
+            .german: "Sitzungen & Cache",
+            .english: "Sessions & Cache",
+            .spanish: "Sesiones y caché",
+            .french: "Sessions et cache"
+        ],
+        "web_panel.cache_tooltip": [
+            .german: "Löscht Cookies, Local Storage und temporäre WebKit-Caches aller Web-Widgets. Du wirst danach auf Webseiten abgemeldet.",
+            .english: "Clears cookies, local storage, and temporary WebKit caches for all web widgets. You will be logged out of websites.",
+            .spanish: "Borra cookies, almacenamiento local y caché temporal de WebKit de todos los widgets web. Se cerrará tu sesión en los sitios web.",
+            .french: "Efface les cookies, le stockage local et les caches WebKit temporaires de tous les widgets Web. Vous serez déconnecté des sites Web."
+        ],
+        "web_panel.cache_clear_btn": [
+            .german: "Alle Cache- und Website-Daten löschen",
+            .english: "Clear All Cache & Website Data",
+            .spanish: "Borrar toda la caché y datos de sitios web",
+            .french: "Effacer toutes les données de cache et de sites Web"
+        ],
+        "web_panel.cache_alert_title": [
+            .german: "Alle Web-Daten löschen?",
+            .english: "Clear all web data?",
+            .spanish: "¿Borrar todos los datos web?",
+            .french: "Effacer toutes les données Web ?"
+        ],
+        "web_panel.cache_alert_message": [
+            .german: "Dies meldet dich von allen Webseiten ab und löscht gespeicherte Browserdaten aller Widgets.",
+            .english: "This will log you out of all websites and delete stored browsing data for all widgets.",
+            .spanish: "Esto cerrará tu sesión en todos los sitios web y eliminará los datos de navegación almacenados de todos los widgets.",
+            .french: "Cela vous déconnectera de tous les sites Web et supprimera les données de navigation stockées pour tous les widgets."
+        ],
+        "web_panel.delete_alert_title": [
+            .german: "Web-Widget löschen?",
+            .english: "Delete Web Widget?",
+            .spanish: "¿Eliminar widget web?",
+            .french: "Supprimer le widget Web ?"
+        ],
+        "web_panel.delete_alert_message": [
+            .german: "Möchtest du das Web-Widget „%@“ wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.",
+            .english: "Are you sure you want to delete the web widget \"%@\"? This action cannot be undone.",
+            .spanish: "¿Seguro que deseas eliminar el widget web \"%@\"? Esta acción no se puede deshacer.",
+            .french: "Voulez-vous vraiment supprimer le widget Web « %@ » ? Cette action est irréversible."
+        ],
+        "web_panel.logo_picker_title": [
+            .german: "Symbol & Logo wählen",
+            .english: "Choose Symbol & Logo",
+            .spanish: "Elegir símbolo y logotipo",
+            .french: "Choisir un symbole et un logo"
+        ],
+        "web_panel.logo_picker_auto": [
+            .german: "Favicon der Webseite automatisch als Icon nutzen",
+            .english: "Automatically use website favicon as icon",
+            .spanish: "Usar automáticamente el favicon del sitio web como icono",
+            .french: "Utiliser automatiquement le favicon du site comme icône"
+        ],
+        "web_panel.logo_picker_transparent": [
+            .german: "Weißen Hintergrund bei Favicons transparent machen",
+            .english: "Make white background in favicons transparent",
+            .spanish: "Hacer transparente el fondo blanco en los favicons",
+            .french: "Rendre le fond blanc des favicons transparent"
+        ],
+        "web_panel.logo_picker_available": [
+            .german: "Verfügbare Logos (%d):",
+            .english: "Available logos (%d):",
+            .spanish: "Logotipos disponibles (%d):",
+            .french: "Logos disponibles (%d) :"
+        ],
+        "web_panel.logo_picker_symbols": [
+            .german: "Oder wähle ein System-Symbol:",
+            .english: "Or choose a system symbol:",
+            .spanish: "O elige un símbolo del sistema:",
+            .french: "Ou choisissez un symbole système :"
+        ],
+        "web_panel.editor_edit_title": [
+            .german: "Web-Widget bearbeiten",
+            .english: "Edit Web Widget",
+            .spanish: "Editar widget web",
+            .french: "Modifier le widget Web"
+        ],
+        "web_panel.editor_new_title": [
+            .german: "Neues Web-Widget anlegen",
+            .english: "Create New Web Widget",
+            .spanish: "Crear nuevo widget web",
+            .french: "Créer un nouveau widget Web"
+        ],
+        "web_panel.editor_subtitle": [
+            .german: "Passe Namen, URL, Icon und Fenstergröße an.",
+            .english: "Customize name, URL, icon, and window dimensions.",
+            .spanish: "Personaliza el nombre, URL, icono y tamaño de ventana.",
+            .french: "Personnalisez le nom, l'URL, l'icône et la taille de la fenêtre."
+        ],
+        "web_panel.editor_sec1": [
+            .german: "1. Name & Ziel-Webseite (URL)",
+            .english: "1. Name & Target Website (URL)",
+            .spanish: "1. Nombre y sitio web de destino (URL)",
+            .french: "1. Nom et site Web cible (URL)"
+        ],
+        "web_panel.editor_name_label": [
+            .german: "Name des Web-Widgets:",
+            .english: "Web Widget Name:",
+            .spanish: "Nombre del widget web:",
+            .french: "Nom du widget Web :"
+        ],
+        "web_panel.editor_name_placeholder": [
+            .german: "z. B. Proton Kalender",
+            .english: "e.g. Proton Calendar",
+            .spanish: "p. ej. Proton Calendar",
+            .french: "ex. Calendrier Proton"
+        ],
+        "web_panel.editor_url_label": [
+            .german: "Website-Adresse (URL):",
+            .english: "Website Address (URL):",
+            .spanish: "Dirección del sitio web (URL):",
+            .french: "Adresse du site Web (URL) :"
+        ],
+        "web_panel.editor_templates": [
+            .german: "Schnellvorlagen:",
+            .english: "Quick Templates:",
+            .spanish: "Plantillas rápidas:",
+            .french: "Modèles rapides :"
+        ],
+        "web_panel.editor_logo_section": [
+            .german: "Menüleisten-Symbol & Logo anpassen",
+            .english: "Customize Menu Bar Icon & Logo",
+            .spanish: "Personalizar icono y logotipo de la barra de menús",
+            .french: "Personnaliser l'icône et le logo de la barre des menus"
+        ],
+        "web_panel.editor_rescan": [
+            .german: "Neu scannen",
+            .english: "Rescan",
+            .spanish: "Reescanear",
+            .french: "Analyser à nouveau"
+        ],
+        "web_panel.editor_sec2": [
+            .german: "2. Fenstergröße & Ansicht",
+            .english: "2. Window Size & View",
+            .spanish: "2. Tamaño de ventana y vista",
+            .french: "2. Taille de fenêtre et affichage"
+        ],
+        "web_panel.editor_width": [
+            .german: "Breite:",
+            .english: "Width:",
+            .spanish: "Ancho:",
+            .french: "Largeur :"
+        ],
+        "web_panel.editor_height": [
+            .german: "Höhe:",
+            .english: "Height:",
+            .spanish: "Alto:",
+            .french: "Hauteur :"
+        ],
+        "web_panel.editor_zoom": [
+            .german: "Seiten-Skalierung (Zoom):",
+            .english: "Page Scale (Zoom):",
+            .spanish: "Escala de página (Zoom):",
+            .french: "Mise à l'échelle (Zoom) :"
+        ],
+        "web_panel.editor_appearance": [
+            .german: "Darstellung:",
+            .english: "Appearance:",
+            .spanish: "Aspecto:",
+            .french: "Apparence :"
+        ],
+        "web_panel.editor_sec3": [
+            .german: "3. Weitere Optionen",
+            .english: "3. Additional Options",
+            .spanish: "3. Opciones adicionales",
+            .french: "3. Options supplémentaires"
+        ],
+        "web_panel.editor_pin": [
+            .german: "Fenster anheften (Pin)",
+            .english: "Pin Window",
+            .spanish: "Fijar ventana (Pin)",
+            .french: "Épingler la fenêtre"
+        ],
+        "web_panel.editor_pin_tooltip": [
+            .german: "Hält das Widget-Fenster dauerhaft geöffnet, auch wenn du in eine andere App klickst oder außerhalb des Fensters tippst.",
+            .english: "Keeps the widget window open permanently, even when clicking into another app or outside the window.",
+            .spanish: "Mantiene la ventana del widget abierta de forma permanente, incluso al hacer clic en otra app.",
+            .french: "Maintient la fenêtre du widget ouverte en permanence, même en cliquant dans une autre application."
+        ],
+        "web_panel.editor_nav_bar": [
+            .german: "Navigationsleiste",
+            .english: "Navigation Bar",
+            .spanish: "Barra de navegación",
+            .french: "Barre de navigation"
+        ],
+        "web_panel.editor_nav_bar_tooltip": [
+            .german: "Blendet eine Leiste mit Vor-, Zurück-, Neuladen- und Zoom-Buttons am unteren Rand des Widgets ein.",
+            .english: "Shows a bar with back, forward, reload, and zoom buttons at the bottom of the widget.",
+            .spanish: "Muestra una barra con botones de retroceso, avance, recarga y zoom en la parte inferior del widget.",
+            .french: "Affiche une barre avec les boutons précédent, suivant, recharger et zoom en bas du widget."
+        ],
+        "web_panel.editor_top_bar": [
+            .german: "Obere Adressleiste",
+            .english: "Top Address Bar",
+            .spanish: "Barra de dirección superior",
+            .french: "Barre d'adresse supérieure"
+        ],
+        "web_panel.editor_top_bar_tooltip": [
+            .german: "Zeigt die Web-Adresse (URL) am oberen Rand des Widgets an. Deaktivieren für eine komplett rahmenlose Ansicht.",
+            .english: "Displays the web address (URL) at the top of the widget. Disable for a completely frameless view.",
+            .spanish: "Muestra la dirección web (URL) en la parte superior del widget. Desactívalo para una vista sin marcos.",
+            .french: "Affiche l'adresse Web (URL) en haut du widget. Désactivez pour une vue totalement sans cadre."
+        ],
+        "web_panel.preview_title": [
+            .german: "Live-Vorschau (%d × %d pt)",
+            .english: "Live Preview (%d × %d pt)",
+            .spanish: "Vista previa en vivo (%d × %d pt)",
+            .french: "Aperçu en direct (%d × %d pt)"
+        ],
+        "web_panel.preview_reload": [
+            .german: "Neu laden",
+            .english: "Reload",
+            .spanish: "Recargar",
+            .french: "Recharger"
+        ],
+        "web_panel.preview_empty_title": [
+            .german: "Noch keine Webseite geladen",
+            .english: "No website loaded yet",
+            .spanish: "Ningún sitio web cargado aún",
+            .french: "Aucun site Web chargé"
+        ],
+        "web_panel.preview_empty_sub": [
+            .german: "Gib links eine URL ein oder wähle eine Vorlage, um die Live-Vorschau zu starten.",
+            .english: "Enter a URL on the left or select a template to start the live preview.",
+            .spanish: "Introduce una URL a la izquierda o elige una plantilla para iniciar la vista previa en vivo.",
+            .french: "Entrez une URL à gauche ou choisissez un modèle pour lancer l'aperçu en direct."
+        ],
+        "web_panel.editor_create_btn": [
+            .german: "Widget erstellen",
+            .english: "Create Widget",
+            .spanish: "Crear widget",
+            .french: "Créer le widget"
+        ],
+
+        // Menu Bar Additional Keys
+        "menubar.integration_title": [
+            .german: "Menüleisten-Integration",
+            .english: "Menu Bar Integration",
+            .spanish: "Integración de barra de menús",
+            .french: "Intégration de la barre des menus"
+        ],
+        "menubar.integration_toggle": [
+            .german: "Eigenes Symbol in der Menüleiste anzeigen",
+            .english: "Show dedicated icon in menu bar",
+            .spanish: "Mostrar icono dedicado en la barra de menús",
+            .french: "Afficher une icône dédiée dans la barre des menus"
+        ],
+        "menubar.integration_tooltip": [
+            .german: "Ermöglicht das schnelle Wechseln der Abstands-Presets direkt über ein Menüleisten-Symbol.",
+            .english: "Allows quick switching of spacing presets directly from a menu bar icon.",
+            .spanish: "Permite cambiar rápidamente los ajustes de espaciado desde un icono en la barra de menús.",
+            .french: "Permet de basculer rapidement entre les préréglages d'espacement directement depuis la barre des menus."
+        ],
+        "menubar.spacing_presets_title": [
+            .german: "Abstand-Presets",
+            .english: "Spacing Presets",
+            .spanish: "Ajustes de espaciado",
+            .french: "Préréglages d'espacement"
+        ],
+        "menubar.applying": [
+            .german: "Wird angewendet...",
+            .english: "Applying...",
+            .spanish: "Aplicando...",
+            .french: "Application en cours..."
+        ],
+        "menubar.fine_tuning": [
+            .german: "Feinabstimmung (Pixel-genau)",
+            .english: "Fine Tuning (Pixel-precise)",
+            .spanish: "Ajuste fino (precisión de píxel)",
+            .french: "Réglage fin (au pixel près)"
+        ],
+        "menubar.preset_generous": [
+            .german: "Großzügig",
+            .english: "Generous",
+            .spanish: "Generoso",
+            .french: "Généreux"
+        ],
+        "menubar.items_header": [
+            .german: "Menüleisten-Elemente & Icons",
+            .english: "Menu Bar Items & Icons",
+            .spanish: "Elementos e iconos de la barra de menús",
+            .french: "Éléments et icônes de la barre des menus"
+        ],
+        "menubar.items_status_count": [
+            .german: "%d Symbole gefunden • %d aktiv in der Menüleiste",
+            .english: "%d icons found • %d active in menu bar",
+            .spanish: "%d iconos encontrados • %d activos en la barra de menús",
+            .french: "%d icônes trouvées • %d actives dans la barre des menus"
+        ],
+        "menubar.rescan": [
+            .german: "Neu scannen",
+            .english: "Rescan",
+            .spanish: "Reescanear",
+            .french: "Analyser à nouveau"
+        ],
+        "menubar.control_center": [
+            .german: "Kontrollzentrum...",
+            .english: "Control Center...",
+            .spanish: "Centro de control...",
+            .french: "Centre de contrôle..."
+        ],
+        "menubar.no_matching_items": [
+            .german: "Keine passenden Menüleisten-Elemente gefunden.",
+            .english: "No matching menu bar items found.",
+            .spanish: "No se encontraron elementos de la barra de menús que coincidan.",
+            .french: "Aucun élément de la barre des menus correspondant trouvé."
+        ],
+
+        // Clipboard Options Keys
+        "clipboard.options_monitoring_title": [
+            .german: "Überwachung & Sicherheit",
+            .english: "Monitoring & Security",
+            .spanish: "Supervisión y seguridad",
+            .french: "Surveillance et sécurité"
+        ],
+        "clipboard.options_max_items": [
+            .german: "Maximale Anzahl gespeicherter Elemente:",
+            .english: "Maximum number of saved items:",
+            .spanish: "Número máximo de elementos guardados:",
+            .french: "Nombre maximal d'éléments enregistrés :"
+        ],
+        "clipboard.options_items_count_format": [
+            .german: "%d Einträge",
+            .english: "%d items",
+            .spanish: "%d elementos",
+            .french: "%d éléments"
+        ],
+        "clipboard.options_manage_title": [
+            .german: "Verlauf verwalten",
+            .english: "Manage History",
+            .spanish: "Gestionar historial",
+            .french: "Gérer l'historique"
+        ],
+        "clipboard.options_current_items_format": [
+            .german: "Aktuell gespeicherte Einträge: %d",
+            .english: "Currently saved items: %d",
+            .spanish: "Elementos guardados actualmente: %d",
+            .french: "Éléments actuellement enregistrés : %d"
+        ],
+        "clipboard.options_pinned_format": [
+            .german: "%d angepinnt",
+            .english: "%d pinned",
+            .spanish: "%d fijados",
+            .french: "%d épinglés"
+        ],
+        "clipboard.options_images_format": [
+            .german: "%d Bilder",
+            .english: "%d images",
+            .spanish: "%d imágenes",
+            .french: "%d images"
+        ],
+        "clipboard.options_texts_format": [
+            .german: "%d Texte",
+            .english: "%d texts",
+            .spanish: "%d textos",
+            .french: "%d textes"
+        ],
+        "clipboard.options_clear_all_btn": [
+            .german: "Gesamten Verlauf löschen",
+            .english: "Clear Entire History",
+            .spanish: "Borrar todo el historial",
+            .french: "Effacer tout l'historique"
+        ],
+        "clipboard.options_clear_confirm_title": [
+            .german: "Verlauf wirklich löschen?",
+            .english: "Clear history?",
+            .spanish: "¿Borrar historial?",
+            .french: "Effacer l'historique ?"
+        ],
+        "clipboard.options_clear_confirm_msg": [
+            .german: "Möchtest du den gesamten Zwischenablage-Verlauf wirklich löschen? Angepinnte Favoriten bleiben erhalten.",
+            .english: "Are you sure you want to clear the entire clipboard history? Pinned favorites will be kept.",
+            .spanish: "¿Seguro que deseas borrar todo el historial del portapapeles? Los favoritos fijados se conservarán.",
+            .french: "Voulez-vous vraiment effacer tout l'historique du presse-papiers ? Les favoris épinglés seront conservés."
+        ],
+
         // Clipboard Subtabs & Subtitle
         "clipboard.subtab_history": [
             .german: "Inhalte & Verlauf",
@@ -1059,6 +1537,832 @@ public final class LocalizationManager: ObservableObject {
             .english: "History of copied texts, links, and images with search and filter.",
             .spanish: "Historial de textos, enlaces e imágenes copiados con búsqueda y filtro.",
             .french: "Historique des textes, liens et images copiés avec recherche et filtres."
+        ],
+        "clipboard.pause_recording": [
+            .german: "Aufzeichnung pausieren",
+            .english: "Pause recording",
+            .spanish: "Pausar grabación",
+            .french: "Mettre en pause l'enregistrement"
+        ],
+        "clipboard.excluded_bundle_ids": [
+            .german: "Ausgeschlossene Bundle-IDs, durch Kommas getrennt",
+            .english: "Excluded Bundle IDs, comma separated",
+            .spanish: "IDs de bundle excluidos, separados por comas",
+            .french: "Identifiants de paquet exclus, séparés par des virgules"
+        ],
+        "clipboard.save_encrypted": [
+            .german: "Verlauf verschlüsselt auf diesem Mac speichern",
+            .english: "Save history encrypted on this Mac",
+            .spanish: "Guardar historial cifrado en este Mac",
+            .french: "Enregistrer l'historique chiffré sur ce Mac"
+        ],
+        "clipboard.ignore_passwords": [
+            .german: "Passwörter und sensible Daten nicht speichern",
+            .english: "Do not save passwords and sensitive data",
+            .spanish: "No guardar contraseñas ni datos confidenciales",
+            .french: "Ne pas enregistrer les mots de passe et données sensibles"
+        ],
+        "clipboard.ignore_passwords_tooltip": [
+            .german: "Kopierte Passwörter aus Passwort-Managern und Browser-Erweiterungen werden automatisch erkannt und vom Verlauf ausgeschlossen.",
+            .english: "Copied passwords from password managers and browser extensions are automatically detected and excluded from history.",
+            .spanish: "Las contraseñas copiadas de gestores de contraseñas y extensiones de navegador se detectan automáticamente y se excluyen del historial.",
+            .french: "Les mots de passe copiés depuis des gestionnaires de mots de passe et extensions sont automatiquement détectés et exclus de l'historique."
+        ],
+
+        // Menu Bar Extra Keys
+        "menubar.item_spacing": [
+            .german: "Abstand zwischen Symbolen:",
+            .english: "Spacing between icons:",
+            .spanish: "Espacio entre iconos:",
+            .french: "Espacement entre les icônes :"
+        ],
+        "menubar.click_area": [
+            .german: "Klickbereich um Symbole:",
+            .english: "Click area around icons:",
+            .spanish: "Área de clic alrededor de iconos:",
+            .french: "Zone de clic autour des icônes :"
+        ],
+        "menubar.auto_restart": [
+            .german: "Änderungen automatisch anwenden",
+            .english: "Apply changes automatically",
+            .spanish: "Aplicar cambios automáticamente",
+            .french: "Appliquer les modifications automatiquement"
+        ],
+        "menubar.auto_restart_tooltip": [
+            .german: "Startet das macOS ControlCenter bei Abstandsänderungen automatisch im Hintergrund neu.",
+            .english: "Automatically restarts macOS Control Center in the background when spacing changes.",
+            .spanish: "Reinicia automáticamente el Centro de Control de macOS en segundo plano cuando cambia el espaciado.",
+            .french: "Redémarre automatiquement le Centre de contrôle de macOS en arrière-plan lors des modifications d'espacement."
+        ],
+        "menubar.apply_now": [
+            .german: "Menüleiste jetzt aktualisieren",
+            .english: "Restart menu bar now",
+            .spanish: "Reiniciar barra de menús ahora",
+            .french: "Redémarrer la barre des menus maintenant"
+        ],
+        "menubar.system_symbols_changed": [
+            .german: "System-Symbole geändert. Klicke auf 'Übernehmen', um die Menüleiste zu aktualisieren:",
+            .english: "System icons changed. Click 'Apply' to update menu bar:",
+            .spanish: "Iconos del sistema modificados. Haz clic en 'Aplicar' para actualizar la barra de menús:",
+            .french: "Icônes système modifiées. Cliquez sur 'Appliquer' pour mettre à jour la barre des menus :"
+        ],
+        "menubar.apply_changes_btn": [
+            .german: "Jetzt übernehmen",
+            .english: "Apply Now",
+            .spanish: "Aplicar ahora",
+            .french: "Appliquer maintenant"
+        ],
+        "menubar.search_placeholder": [
+            .german: "Elemente suchen...",
+            .english: "Search items...",
+            .spanish: "Buscar elementos...",
+            .french: "Rechercher des éléments..."
+        ],
+        "menubar.status_running": [
+            .german: "• Läuft im Hintergrund",
+            .english: "• Running in background",
+            .spanish: "• Ejecutándose en segundo plano",
+            .french: "• En cours d'exécution en arrière-plan"
+        ],
+        "menubar.status_stopped": [
+            .german: "• Beendet",
+            .english: "• Terminated",
+            .spanish: "• Finalizado",
+            .french: "• Arrêté"
+        ],
+        "menubar.status_in_menubar": [
+            .german: "In Menüleiste",
+            .english: "In Menu Bar",
+            .spanish: "En barra de menús",
+            .french: "Dans la barre des menus"
+        ],
+        "menubar.status_hidden": [
+            .german: "Ausgeblendet",
+            .english: "Hidden",
+            .spanish: "Oculto",
+            .french: "Masqué"
+        ],
+
+        // Scroll Reverser Extra Keys
+        "scroll_reverser.permission_required": [
+            .german: "Bedienungshilfen-Berechtigung erforderlich",
+            .english: "Accessibility permission required",
+            .spanish: "Permiso de accesibilidad requerido",
+            .french: "Autorisation d'accessibilité requise"
+        ],
+        "scroll_reverser.permission_description": [
+            .german: "macOS erfordert die Erlaubnis für Bedienungshilfen, damit die Scrollrichtung der Maus angepasst werden kann.",
+            .english: "macOS requires accessibility permission to adjust the scroll direction of your mouse.",
+            .spanish: "macOS requiere permiso de accesibilidad para ajustar la dirección de desplazamiento del ratón.",
+            .french: "macOS nécessite l'autorisation d'accessibilité pour ajuster le sens de défilement de la souris."
+        ],
+        "scroll_reverser.check_again": [
+            .german: "Erneut prüfen",
+            .english: "Check Again",
+            .spanish: "Comprobar de nuevo",
+            .french: "Vérifier à nouveau"
+        ],
+        "scroll_reverser.open_settings": [
+            .german: "In Systemeinstellungen öffnen",
+            .english: "Open System Settings",
+            .spanish: "Abrir ajustes del sistema",
+            .french: "Ouvrir les réglages système"
+        ],
+        "scroll_reverser.permission_hint": [
+            .german: "Hinweis: Falls Yeoman in den Systemeinstellungen bereits auf AN steht, bitte den Schalter dort einmal kurz **AUS und wieder AN** schalten (oder mit '-' entfernen und neu hinzufügen), damit macOS die Signatur des App-Updates übernimmt.",
+            .english: "Note: If Yeoman is already toggled ON in System Settings, please toggle it **OFF and ON again** (or remove with '-' and re-add) so macOS applies the updated app signature.",
+            .spanish: "Nota: Si Yeoman ya está activado en Ajustes del Sistema, **desactívalo y vuelve a activarlo** (o elimínalo con '-' y agrégalo de nuevo) para que macOS aplique la firma actualizada.",
+            .french: "Remarque : Si Yeoman est déjà activé dans les Réglages Système, veuillez le **désactiver puis le réactiver** (ou le supprimer avec '-' et le réajouter) pour que macOS applique la nouvelle signature."
+        ],
+        "scroll_reverser.step_multiplier": [
+            .german: "Scrollrad-Schrittmultiplikator:",
+            .english: "Scroll wheel step multiplier:",
+            .spanish: "Multiplicador de pasos de la rueda:",
+            .french: "Multiplicateur de pas de la molette :"
+        ],
+        "scroll_reverser.step_multiplier_tooltip": [
+            .german: "Erhöht die Scroll-Geschwindigkeit pro Mausrad-Rasterung.",
+            .english: "Increases the scroll speed per mouse wheel notch.",
+            .spanish: "Aumenta la velocidad de desplazamiento por paso de la rueda.",
+            .french: "Augmente la vitesse de défilement par cran de la molette."
+        ],
+        "scroll_reverser.step_standard": [
+            .german: "1x (Standard)",
+            .english: "1x (Standard)",
+            .spanish: "1x (Estándar)",
+            .french: "1x (Standard)"
+        ],
+        "scroll_reverser.step_faster": [
+            .german: "2x (Schneller)",
+            .english: "2x (Faster)",
+            .spanish: "2x (Más rápido)",
+            .french: "2x (Plus rapide)"
+        ],
+        "scroll_reverser.step_max": [
+            .german: "5x (Maximum)",
+            .english: "5x (Maximum)",
+            .spanish: "5x (Máximo)",
+            .french: "5x (Maximum)"
+        ],
+        "scroll_reverser.menubar_integration": [
+            .german: "Menüleisten-Integration",
+            .english: "Menu Bar Integration",
+            .spanish: "Integración de barra de menús",
+            .french: "Intégration de la barre des menus"
+        ],
+        "scroll_reverser.menubar_toggle": [
+            .german: "Eigenes Symbol in der Menüleiste anzeigen",
+            .english: "Show dedicated icon in menu bar",
+            .spanish: "Mostrar icono dedicado en la barra de menús",
+            .french: "Afficher une icône dédiée dans la barre des menus"
+        ],
+        "scroll_reverser.menubar_tooltip": [
+            .german: "Zeigt ein separates Maus-Symbol in der Menüleiste an, über das du die Richtung per Klick umschalten kannst.",
+            .english: "Shows a separate mouse icon in the menu bar to toggle direction with a click.",
+            .spanish: "Muestra un icono de ratón independiente en la barra de menús para alternar la dirección con un clic.",
+            .french: "Affiche une icône de souris distincte dans la barre des menus pour inverser la direction d'un clic."
+        ],
+        "scroll_reverser.status": [
+            .german: "Status",
+            .english: "Status",
+            .spanish: "Estado",
+            .french: "État"
+        ],
+        "scroll_reverser.status_active": [
+            .german: "Aktiv",
+            .english: "Active",
+            .spanish: "Activo",
+            .french: "Actif"
+        ],
+        "scroll_reverser.status_paused": [
+            .german: "Angehalten",
+            .english: "Paused",
+            .spanish: "Pausado",
+            .french: "En pause"
+        ],
+        "scroll_reverser.last_device": [
+            .german: "Zuletzt erkanntes Gerät:",
+            .english: "Last detected device:",
+            .spanish: "Último dispositivo detectado:",
+            .french: "Dernier appareil détecté :"
+        ],
+        "scroll_reverser.action": [
+            .german: "Aktion:",
+            .english: "Action:",
+            .spanish: "Acción:",
+            .french: "Action :"
+        ],
+
+        // System Stats Extra Keys
+        "system_stats.configure_header": [
+            .german: "Menüleisten-Anzeige konfigurieren",
+            .english: "Configure Menu Bar Display",
+            .spanish: "Configurar visualización en la barra de menús",
+            .french: "Configurer l'affichage dans la barre des menus"
+        ],
+        "system_stats.live_preview": [
+            .german: "Live-Vorschau:",
+            .english: "Live Preview:",
+            .spanish: "Vista previa en vivo:",
+            .french: "Aperçu en direct :"
+        ],
+        "system_stats.active_metrics": [
+            .german: "Aktive Messwerte in der Menüleiste:",
+            .english: "Active metrics in menu bar:",
+            .spanish: "Métricas activas en la barra de menús:",
+            .french: "Métriques actives dans la barre des menus :"
+        ],
+        "system_stats.layout_alignment": [
+            .german: "Layout & Text-Ausrichtung:",
+            .english: "Layout & Alignment:",
+            .spanish: "Diseño y alineación:",
+            .french: "Disposition et alignement :"
+        ],
+        "system_stats.layout_style": [
+            .german: "Layout-Stil:",
+            .english: "Layout Style:",
+            .spanish: "Estilo de diseño:",
+            .french: "Style de disposition :"
+        ],
+        "system_stats.graph_type": [
+            .german: "Graph-Typ:",
+            .english: "Graph Type:",
+            .spanish: "Tipo de gráfico:",
+            .french: "Type de graphique :"
+        ],
+        "system_stats.display_options": [
+            .german: "Darstellungs-Optionen:",
+            .english: "Display Options:",
+            .spanish: "Opciones de visualización:",
+            .french: "Options d'affichage :"
+        ],
+        "system_stats.opt_show_labels": [
+            .german: "Text-Bezeichnung anzeigen (z.B. „CPU“, „RAM“, „GPU“)",
+            .english: "Show text label (e.g. 'CPU', 'RAM', 'GPU')",
+            .spanish: "Mostrar etiqueta de texto (ej. 'CPU', 'RAM', 'GPU')",
+            .french: "Afficher le libellé texte (ex. « CPU », « RAM », « GPU »)"
+        ],
+        "system_stats.opt_show_percentage": [
+            .german: "Prozentwert als Text anzeigen (z.B. „10%“, „61%“)",
+            .english: "Show percentage as text (e.g. '10%', '61%')",
+            .spanish: "Mostrar porcentaje como texto (ej. '10%', '61%')",
+            .french: "Afficher le pourcentage sous forme de texte (ex. « 10 % », « 61 % »)"
+        ],
+        "system_stats.opt_show_graphs": [
+            .german: "Mini-Graphen & Balken anzeigen",
+            .english: "Show mini graphs & bars",
+            .spanish: "Mostrar minigráficos y barras",
+            .french: "Afficher les mini-graphiques et barres"
+        ],
+        "system_stats.opt_subtle_background": [
+            .german: "Dezenter Kapsel-Hintergrund (Pill)",
+            .english: "Subtle pill background",
+            .spanish: "Fondo de cápsula sutil",
+            .french: "Arrière-plan capsule discret"
+        ],
+        "system_stats.current_usage": [
+            .german: "Aktuelle System-Auslastung",
+            .english: "Current System Usage",
+            .spanish: "Uso actual del sistema",
+            .french: "Utilisation actuelle du système"
+        ],
+        "system_stats.task_manager_header": [
+            .german: "Laufende Prozesse & Task-Manager",
+            .english: "Running Processes & Task Manager",
+            .spanish: "Procesos en ejecución y Administrador de tareas",
+            .french: "Processus en cours et Gestionnaire des tâches"
+        ],
+        "system_stats.task_manager_tooltip": [
+            .german: "Über das Menüleisten-Symbol kannst du Prozesse einsehen und nicht reagierende Apps direkt beenden.",
+            .english: "View running processes and terminate unresponsive apps directly from the menu bar icon.",
+            .spanish: "Consulta procesos en ejecución y finaliza apps que no responden directamente desde la barra de menús.",
+            .french: "Affichez les processus et fermez les applications bloquées directement depuis la barre des menus."
+        ],
+        "system_stats.active_processes_count": [
+            .german: "%d Prozesse aktiv",
+            .english: "%d processes active",
+            .spanish: "%d procesos activos",
+            .french: "%d processus actifs"
+        ],
+        "system_stats.open_activity_monitor": [
+            .german: "Aktivitätsanzeige öffnen",
+            .english: "Open Activity Monitor",
+            .spanish: "Abrir Monitor de Actividad",
+            .french: "Ouvrir le Moniteur d'activité"
+        ],
+        "system_stats.search_processes": [
+            .german: "Prozess suchen...",
+            .english: "Search process...",
+            .spanish: "Buscar proceso...",
+            .french: "Rechercher un processus..."
+        ],
+        "system_stats.col_process": [
+            .german: "PROZESS",
+            .english: "PROCESS",
+            .spanish: "PROCESO",
+            .french: "PROCESSUS"
+        ],
+        "system_stats.col_cpu": [
+            .german: "CPU",
+            .english: "CPU",
+            .spanish: "CPU",
+            .french: "CPU"
+        ],
+        "system_stats.col_ram": [
+            .german: "RAM",
+            .english: "RAM",
+            .spanish: "RAM",
+            .french: "RAM"
+        ],
+        "system_stats.col_action": [
+            .german: "AKTION",
+            .english: "ACTION",
+            .spanish: "ACCIÓN",
+            .french: "ACTION"
+        ],
+        "system_stats.kill_hint": [
+            .german: "%d Prozesse • Klick auf ✕ beendet Prozess sofort",
+            .english: "%d processes • Click ✕ to kill immediately",
+            .spanish: "%d procesos • Clic en ✕ finaliza el proceso",
+            .french: "%d processus • Clic sur ✕ termine le processus"
+        ],
+        "system_stats.activity_monitor_short": [
+            .german: "Aktivitätsanzeige",
+            .english: "Activity Monitor",
+            .spanish: "Monitor de Actividad",
+            .french: "Moniteur d'activité"
+        ],
+        "system_stats.cores_format": [
+            .german: "%d Kerne",
+            .english: "%d Cores",
+            .spanish: "%d Núcleos",
+            .french: "%d Cœurs"
+        ],
+        "system_stats.graphics_engine": [
+            .german: "Grafik-Engine",
+            .english: "Graphics Engine",
+            .spanish: "Motor gráfico",
+            .french: "Moteur graphique"
+        ],
+
+        // Updates Extra Keys
+        "updates.popup_version_info": [
+            .german: "Yeoman **%@** ist verfügbar (installiert: %@).",
+            .english: "Yeoman **%@** is available (installed: %@).",
+            .spanish: "Yeoman **%@** está disponible (instalado: %@).",
+            .french: "Yeoman **%@** est disponible (installé : %@)."
+        ],
+        "updates.no_release_notes": [
+            .german: "Keine weiteren Versionshinweise vorhanden.",
+            .english: "No additional release notes available.",
+            .spanish: "No hay notas de la versión adicionales disponibles.",
+            .french: "Aucune note de version supplémentaire disponible."
+        ],
+        "updates.verifying_installing": [
+            .german: "Update wird verifiziert und installiert...",
+            .english: "Verifying and installing update...",
+            .spanish: "Verificando e instalando actualización...",
+            .french: "Vérification et installation de la mise à jour..."
+        ],
+        "updates.installing": [
+            .german: "Update wird installiert & Yeoman neu gestartet...",
+            .english: "Installing update & restarting Yeoman...",
+            .spanish: "Instalando actualización y reiniciando Yeoman...",
+            .french: "Installation de la mise à jour et redémarrage de Yeoman..."
+        ],
+
+        // Web Widget Extra Keys
+        "web_panel.empty_btn": [
+            .german: "Jetzt erstes Widget anlegen",
+            .english: "Create first widget now",
+            .spanish: "Crear primer widget ahora",
+            .french: "Créer le premier widget maintenant"
+        ],
+        "web_panel.logo_picker_header": [
+            .german: "Symbol & Logo wählen",
+            .english: "Select Symbol & Logo",
+            .spanish: "Elegir icono y logotipo",
+            .french: "Choisir le symbole et le logo"
+        ],
+        "web_panel.logo_picker_website_logo": [
+            .german: "Website-Logo verwenden",
+            .english: "Use website logo",
+            .spanish: "Usar logotipo del sitio",
+            .french: "Utiliser le logo du site Web"
+        ],
+        "web_panel.logo_picker_website_logo_tooltip": [
+            .german: "Verwendet das farbige Original-Logo der Website direkt in der Menüleiste.",
+            .english: "Uses the website's original colored logo directly in the menu bar.",
+            .spanish: "Usa el logotipo original a color en la barra de menús.",
+            .french: "Utilise le logo en couleur d'origine dans la barre des menus."
+        ],
+        "web_panel.logo_picker_transparent_bg": [
+            .german: "Weißer Hintergrund transparent machen",
+            .english: "Make white background transparent",
+            .spanish: "Hacer transparente el fondo blanco",
+            .french: "Rendre le fond blanc transparent"
+        ],
+        "web_panel.logo_picker_transparent_bg_tooltip": [
+            .german: "Entfernt automatisch weiße Flächen aus quadratischen Logos.",
+            .english: "Automatically removes white areas from square logos.",
+            .spanish: "Elimina automáticamente las áreas blancas de los logotipos cuadrados.",
+            .french: "Supprime automatiquement les zones blanches des logos carrés."
+        ],
+        "web_panel.logo_picker_fallback_symbol": [
+            .german: "Ersatz-Symbol (Fallback):",
+            .english: "Fallback Symbol:",
+            .spanish: "Icono de respaldo (Fallback):",
+            .french: "Symbole de secours (Fallback) :"
+        ],
+        "web_panel.logo_picker_select_symbol": [
+            .german: "Symbol auswählen:",
+            .english: "Select Symbol:",
+            .spanish: "Seleccionar icono:",
+            .french: "Sélectionner un symbole :"
+        ],
+        "web_panel.editor_load_btn": [
+            .german: "Laden",
+            .english: "Load",
+            .spanish: "Cargar",
+            .french: "Charger"
+        ],
+        "web_panel.editor_templates_tooltip": [
+            .german: "Klicke auf eine Vorlage, um Name, Ziel-Adresse und optimale Fenstergröße sofort zu übernehmen.",
+            .english: "Click a template to apply name, URL, and optimal window size immediately.",
+            .spanish: "Haz clic en una plantilla para aplicar nombre, URL y tamaño de ventana óptimo.",
+            .french: "Cliquez sur un modèle pour appliquer immédiatement le nom, l'URL et la taille de fenêtre optimale."
+        ],
+        "web_panel.editor_auto_logo": [
+            .german: "Website-Logo automatisch verwenden",
+            .english: "Use website logo automatically",
+            .spanish: "Usar logotipo web automáticamente",
+            .french: "Utiliser automatiquement le logo du site Web"
+        ],
+        "web_panel.editor_auto_logo_tooltip": [
+            .german: "Verwendet das farbige Original-Logo der Website. Transparente Symbole werden bevorzugt.",
+            .english: "Uses the original colored logo of the website. Transparent symbols are preferred.",
+            .spanish: "Usa el logotipo original a color de la web. Se prefieren iconos transparentes.",
+            .french: "Utilise le logo original en couleur du site Web. Les symboles transparents sont préférés."
+        ],
+        "web_panel.editor_selected_logo_active": [
+            .german: "Ausgewähltes Logo aktiv",
+            .english: "Selected logo active",
+            .spanish: "Logotipo seleccionado activo",
+            .french: "Logo sélectionné actif"
+        ],
+        "web_panel.editor_best_logo_active": [
+            .german: "Bestes transparentes Logo aktiv",
+            .english: "Best transparent logo active",
+            .spanish: "Mejor logotipo transparente activo",
+            .french: "Meilleur logo transparent actif"
+        ],
+        "web_panel.editor_enter_url_hint": [
+            .german: "Gib oben eine URL ein",
+            .english: "Enter a URL above",
+            .spanish: "Introduce una URL arriba",
+            .french: "Entrez une URL ci-dessus"
+        ],
+        "web_panel.editor_searching_logos": [
+            .german: "Logos werden gesucht...",
+            .english: "Searching logos...",
+            .spanish: "Buscando logotipos...",
+            .french: "Recherche des logos en cours..."
+        ],
+        "web_panel.editor_options_tooltip": [
+            .german: "Gefundene Favicon- und App-Icon-Varianten. Klicke ein Logo an, um es festzulegen.",
+            .english: "Discovered favicon and app icon variants. Click a logo to select it.",
+            .spanish: "Variantes de favicon e iconos de app encontrados. Haz clic para seleccionar.",
+            .french: "Variantes de favicons et d'icônes d'application trouvées. Cliquez pour sélectionner."
+        ],
+        "web_panel.editor_auto_select": [
+            .german: "Automatisch wählen",
+            .english: "Choose automatically",
+            .spanish: "Elegir automáticamente",
+            .french: "Choisir automatiquement"
+        ],
+        "web_panel.editor_badge_transparent": [
+            .german: "Transparent",
+            .english: "Transparent",
+            .spanish: "Transparente",
+            .french: "Transparent"
+        ],
+        "web_panel.editor_badge_background": [
+            .german: "Mit Hintergrund",
+            .english: "With background",
+            .spanish: "Con fondo",
+            .french: "Avec arrière-plan"
+        ],
+        "web_panel.editor_remove_white_tooltip": [
+            .german: "Entfernt automatisch weiße Flächen aus Logos (z. B. bei quadratischen iOS-Kacheln).",
+            .english: "Automatically removes white areas from logos (e.g. square iOS tiles).",
+            .spanish: "Elimina automáticamente áreas blancas de logos (ej. iconos cuadrados de iOS).",
+            .french: "Supprime automatiquement les zones blanches des logos (ex. tuiles iOS carrées)."
+        ],
+        "web_panel.editor_fallback_symbol_label": [
+            .german: "Ersatz-Symbol:",
+            .english: "Fallback Symbol:",
+            .spanish: "Icono de respaldo:",
+            .french: "Symbole de secours :"
+        ],
+        "web_panel.editor_menubar_symbol_label": [
+            .german: "Symbol für Menüleiste:",
+            .english: "Menu Bar Symbol:",
+            .spanish: "Icono para barra de menús:",
+            .french: "Symbole pour barre des menus :"
+        ],
+        "web_panel.editor_fallback_symbol_tooltip": [
+            .german: "Wird in der Menüleiste angezeigt, falls die Website kein Web-Logo liefert.",
+            .english: "Shown in the menu bar if the website provides no web logo.",
+            .spanish: "Se muestra en la barra de menús si el sitio no ofrece logotipo web.",
+            .french: "Affiché dans la barre des menus si le site Web ne fournit aucun logo."
+        ],
+        "web_panel.editor_size_label": [
+            .german: "Größe:",
+            .english: "Size:",
+            .spanish: "Tamaño:",
+            .french: "Taille :"
+        ],
+        "scroll_reverser.mouse_vertical_tooltip": [
+            .german: "Empfohlen: Aktiviert. Wenn macOS auf 'Natürliches Scrollen' steht, scrollt die Maus hiermit gewohnt nach unten, während das Trackpad unverändert bleibt.",
+            .english: "Recommended: Enabled. When macOS is set to 'Natural scrolling', this keeps traditional mouse wheel scrolling down while leaving the trackpad unchanged.",
+            .spanish: "Recomendado: Activado. Cuando macOS está configurado en 'Desplazamiento natural', esto mantiene el desplazamiento tradicional hacia abajo con el ratón sin alterar el trackpad.",
+            .french: "Recommandé : Activé. Lorsque macOS est réglé sur 'Défilement naturel', cela conserve le défilement traditionnel vers le bas de la souris tout en laissant le trackpad inchangé."
+        ],
+        "scroll_reverser.trackpad_vertical_tooltip": [
+            .german: "Empfohlen: Deaktiviert. Das Trackpad behält so das native macOS-Verhalten (Zwei-Finger-Wischgeste wie auf Touchscreens).",
+            .english: "Recommended: Disabled. The trackpad retains native macOS behavior (two-finger swipe like touchscreens).",
+            .spanish: "Recomendado: Desactivado. El trackpad conserva el comportamiento nativo de macOS (gesto de deslizar con dos dedos como en pantallas táctiles).",
+            .french: "Recommandé : Désactivé. Le trackpad conserve le comportement natif de macOS (glissement à deux doigts comme sur écran tactile)."
+        ],
+        "web_panel.preset_custom": [
+            .german: "Benutzerdefiniert",
+            .english: "Custom",
+            .spanish: "Personalizado",
+            .french: "Personnalisé"
+        ],
+        "web_panel.preset_widget": [
+            .german: "320 × 400 (Widget)",
+            .english: "320 × 400 (Widget)",
+            .spanish: "320 × 400 (Widget)",
+            .french: "320 × 400 (Widget)"
+        ],
+        "web_panel.preset_smartphone": [
+            .german: "375 × 667 (Smartphone)",
+            .english: "375 × 667 (Smartphone)",
+            .spanish: "375 × 667 (Smartphone)",
+            .french: "375 × 667 (Smartphone)"
+        ],
+        "web_panel.preset_large": [
+            .german: "500 × 700 (Großes Fenster)",
+            .english: "500 × 700 (Large Window)",
+            .spanish: "500 × 700 (Ventana grande)",
+            .french: "500 × 700 (Grande fenêtre)"
+        ],
+        "web_panel.ua_auto": [
+            .german: "Automatisch (nach Größe)",
+            .english: "Automatic (by size)",
+            .spanish: "Automático (por tamaño)",
+            .french: "Automatique (selon taille)"
+        ],
+        "web_panel.ua_mobile": [
+            .german: "Immer Mobil (iPhone)",
+            .english: "Always Mobile (iPhone)",
+            .spanish: "Siempre Móvil (iPhone)",
+            .french: "Toujours Mobile (iPhone)"
+        ],
+        "web_panel.ua_desktop": [
+            .german: "Immer Desktop",
+            .english: "Always Desktop",
+            .spanish: "Siempre Escritorio",
+            .french: "Toujours Bureau"
+        ],
+        "web_panel.editor_zoom_tooltip": [
+            .german: "Skaliert Webseiten herunter, damit sie im Widget optimal ohne horizontales Scrollen lesbar sind.",
+            .english: "Scales web pages down to fit nicely in the widget without horizontal scrolling.",
+            .spanish: "Reduce las páginas web para que quepan bien en el widget sin desplazamiento horizontal.",
+            .french: "Met à l'échelle les pages web pour les adapter au widget sans défilement horizontal."
+        ],
+        "web_panel.editor_appearance_tooltip": [
+            .german: "Mobil erzwingt ein schmales Smartphone-Layout (ideal für Widgets). Desktop lädt die Standard-Website.",
+            .english: "Mobile forces a narrow smartphone layout (ideal for widgets). Desktop loads the standard website.",
+            .spanish: "Móvil fuerza un diseño estrecho de teléfono (ideal para widgets). Escritorio carga el sitio web estándar.",
+            .french: "Mobile force une disposition étroite de smartphone (idéal pour les widgets). Bureau charge le site web standard."
+        ],
+        "web_panel.template_proton_cal": [
+            .german: "Proton Kalender",
+            .english: "Proton Calendar",
+            .spanish: "Proton Calendar",
+            .french: "Calendrier Proton"
+        ],
+        "web_panel.template_google_cal": [
+            .german: "Google Kalender",
+            .english: "Google Calendar",
+            .spanish: "Google Calendar",
+            .french: "Google Agenda"
+        ],
+        "web_panel.popup_url_placeholder": [
+            .german: "URL eingeben...",
+            .english: "Enter URL...",
+            .spanish: "Introducir URL...",
+            .french: "Saisir l'URL..."
+        ],
+        "web_panel.popup_show_toolbar": [
+            .german: "Navigationsleiste einblenden",
+            .english: "Show navigation bar",
+            .spanish: "Mostrar barra de navegación",
+            .french: "Afficher la barre de navigation"
+        ],
+        "web_panel.popup_close_toolbar": [
+            .german: "Navigationsleiste schließen",
+            .english: "Close navigation bar",
+            .spanish: "Cerrar barra de navegación",
+            .french: "Fermer la barre de navigation"
+        ],
+        "web_panel.popup_home": [
+            .german: "Zur Startseite (%@)",
+            .english: "To home page (%@)",
+            .spanish: "A la página de inicio (%@)",
+            .french: "À la page d'accueil (%@)"
+        ],
+        "web_panel.popup_back": [
+            .german: "Zurück",
+            .english: "Back",
+            .spanish: "Atrás",
+            .french: "Retour"
+        ],
+        "web_panel.popup_forward": [
+            .german: "Vorwärts",
+            .english: "Forward",
+            .spanish: "Adelante",
+            .french: "Suivant"
+        ],
+        "web_panel.popup_reload": [
+            .german: "Neu laden",
+            .english: "Reload",
+            .spanish: "Recargar",
+            .french: "Recharger"
+        ],
+        "web_panel.popup_window_size": [
+            .german: "Fenstergröße",
+            .english: "Window Size",
+            .spanish: "Tamaño de ventana",
+            .french: "Taille de fenêtre"
+        ],
+        "web_panel.popup_user_agent": [
+            .german: "User Agent (Smartphone / Desktop)",
+            .english: "User Agent (Smartphone / Desktop)",
+            .spanish: "User Agent (Smartphone / Escritorio)",
+            .french: "User Agent (Smartphone / Bureau)"
+        ],
+        "web_panel.popup_hide_toolbar_default": [
+            .german: "Navigationsleiste standardmäßig ausblenden",
+            .english: "Hide navigation bar by default",
+            .spanish: "Ocultar barra de navegación por defecto",
+            .french: "Masquer la barre de navigation par défaut"
+        ],
+        "web_panel.popup_show_toolbar_default": [
+            .german: "Navigationsleiste standardmäßig einblenden",
+            .english: "Show navigation bar by default",
+            .spanish: "Mostrar barra de navegación por defecto",
+            .french: "Afficher la barre de navigation par défaut"
+        ],
+        "web_panel.popup_hide_topbar": [
+            .german: "Obere Adressleiste ausblenden",
+            .english: "Hide top address bar",
+            .spanish: "Ocultar barra de direcciones superior",
+            .french: "Masquer la barre d'adresse supérieure"
+        ],
+        "web_panel.popup_show_topbar": [
+            .german: "Obere Adressleiste einblenden",
+            .english: "Show top address bar",
+            .spanish: "Mostrar barra de direcciones superior",
+            .french: "Afficher la barre d'adresse supérieure"
+        ],
+        "web_panel.popup_open_browser": [
+            .german: "Im Browser öffnen",
+            .english: "Open in Browser",
+            .spanish: "Abrir en navegador",
+            .french: "Ouvrir dans le navigateur"
+        ],
+        "web_panel.popup_settings": [
+            .german: "Einstellungen...",
+            .english: "Settings...",
+            .spanish: "Ajustes...",
+            .french: "Réglages..."
+        ],
+        "web_panel.popup_adjust_size": [
+            .german: "Fenstergröße anpassen",
+            .english: "Adjust window size",
+            .spanish: "Ajustar tamaño de ventana",
+            .french: "Ajuster la taille de la fenêtre"
+        ],
+        "web_panel.popup_autofit_format": [
+            .german: "Konfiguriert: %d × %d pt (automatisch an Bildschirm angepasst)",
+            .english: "Configured: %d × %d pt (automatically adjusted to screen)",
+            .spanish: "Configurado: %d × %d pt (ajustado automáticamente a la pantalla)",
+            .french: "Configuré : %d × %d pt (automatiquement ajusté à l'écran)"
+        ],
+        "web_panel.popup_zoom_section": [
+            .german: "Seiten-Skalierung (Zoom)",
+            .english: "Page Scaling (Zoom)",
+            .spanish: "Escala de página (Zoom)",
+            .french: "Mise à l'échelle (Zoom)"
+        ],
+        "web_panel.popup_edit_url": [
+            .german: "URL bearbeiten",
+            .english: "Edit URL",
+            .spanish: "Editar URL",
+            .french: "Modifier l'URL"
+        ],
+        "web_panel.popup_unpin": [
+            .german: "Fenster lösen",
+            .english: "Unpin window",
+            .spanish: "Desanclar ventana",
+            .french: "Détacher la fenêtre"
+        ],
+        "web_panel.popup_pin": [
+            .german: "Fenster anheften (offen halten)",
+            .english: "Pin window (keep open)",
+            .spanish: "Anclar ventana (mantener abierta)",
+            .french: "Épingler la fenêtre (garder ouverte)"
+        ],
+        "web_panel.popup_open_default_browser": [
+            .german: "Im Standard-Browser öffnen",
+            .english: "Open in default browser",
+            .spanish: "Abrir en navegador predeterminado",
+            .french: "Ouvrir dans le navigateur par défaut"
+        ],
+        "system_stats.layout_vertical": [
+            .german: "Vertikal gestapelt",
+            .english: "Vertically stacked",
+            .spanish: "Apilado verticalmente",
+            .french: "Empilé verticalement"
+        ],
+        "system_stats.layout_horizontal": [
+            .german: "Horizontal nebeneinander",
+            .english: "Horizontally side by side",
+            .spanish: "Horizontal uno al lado del otro",
+            .french: "Horizontalement côte à côte"
+        ],
+        "system_stats.graph_minibar": [
+            .german: "Vertikaler Füllbalken",
+            .english: "Vertical Fill Bar",
+            .spanish: "Barra de llenado vertical",
+            .french: "Barre de remplissage verticale"
+        ],
+        "system_stats.graph_sparkline": [
+            .german: "Mini-Verlaufskurve",
+            .english: "Mini Trend Curve",
+            .spanish: "Mini curva de tendencia",
+            .french: "Mini courbe de tendance"
+        ],
+        "system_stats.graph_none": [
+            .german: "Kein Graph",
+            .english: "No Graph",
+            .spanish: "Sin gráfico",
+            .french: "Aucun graphique"
+        ],
+        "system_stats.sort_cpu": [
+            .german: "CPU %",
+            .english: "CPU %",
+            .spanish: "CPU %",
+            .french: "CPU %"
+        ],
+        "system_stats.sort_memory": [
+            .german: "Arbeitsspeicher",
+            .english: "Memory",
+            .spanish: "Memoria",
+            .french: "Mémoire"
+        ],
+        "system_stats.sort_name": [
+            .german: "Name",
+            .english: "Name",
+            .spanish: "Nombre",
+            .french: "Nom"
+        ],
+        "system_stats.metric_ram_label": [
+            .german: "RAM (Speicher)",
+            .english: "RAM (Memory)",
+            .spanish: "RAM (Memoria)",
+            .french: "RAM (Mémoire)"
+        ],
+        "system_stats.metric_gpu_label": [
+            .german: "GPU (Grafik)",
+            .english: "GPU (Graphics)",
+            .spanish: "GPU (Gráficos)",
+            .french: "GPU (Graphiques)"
+        ],
+        "system_stats.search_tooltip": [
+            .german: "Nach Prozessen suchen",
+            .english: "Search processes",
+            .spanish: "Buscar procesos",
+            .french: "Rechercher des processus"
+        ],
+        "system_stats.kill_tooltip": [
+            .german: "Prozess '%@' sofort beenden",
+            .english: "Kill process '%@' immediately",
+            .spanish: "Finalizar proceso '%@' de inmediato",
+            .french: "Arrêter immédiatement le processus '%@'"
         ]
     ]
 }

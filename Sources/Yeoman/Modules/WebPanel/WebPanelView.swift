@@ -361,6 +361,7 @@ public struct WebViewRepresentable: NSViewRepresentable {
 public struct WebPanelView: View {
     @ObservedObject var instance: WebWidgetInstanceController
     @ObservedObject var controller: WebPanelController
+    @ObservedObject var l10nObj = LocalizationManager.shared
     public var onUpdateItem: ((WebWidgetItem) -> Void)?
 
     var item: WebWidgetItem {
@@ -397,7 +398,7 @@ public struct WebPanelView: View {
                         .font(.system(size: 11))
                         .foregroundColor(.secondary)
 
-                    TextField("URL eingeben...", text: $inputURL, onCommit: {
+                    TextField(l10n("web_panel.popup_url_placeholder"), text: $inputURL, onCommit: {
                         controller.loadURL(inputURL)
                         isShowingAddressInput = false
                     })
@@ -453,7 +454,7 @@ public struct WebPanelView: View {
                     .buttonStyle(.plain)
                     .padding(6)
                     .opacity(isHovered ? 0.9 : 0.0)
-                    .help("Navigationsleiste einblenden")
+                    .help(l10n("web_panel.popup_show_toolbar"))
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -470,7 +471,7 @@ public struct WebPanelView: View {
                         .font(.system(size: 11))
                 }
                 .buttonStyle(.plain)
-                .help("Zur Startseite (\(item.title))")
+                .help(String(format: l10n("web_panel.popup_home"), item.title))
 
                 // Back
                 Button(action: { controller.goBack() }) {
@@ -479,7 +480,7 @@ public struct WebPanelView: View {
                 }
                 .buttonStyle(.plain)
                 .disabled(!controller.canGoBack)
-                .help("Zurück")
+                .help(l10n("web_panel.popup_back"))
 
                 // Forward
                 Button(action: { controller.goForward() }) {
@@ -488,7 +489,7 @@ public struct WebPanelView: View {
                 }
                 .buttonStyle(.plain)
                 .disabled(!controller.canGoForward)
-                .help("Vorwärts")
+                .help(l10n("web_panel.popup_forward"))
 
                 // Reload
                 Button(action: { controller.reload() }) {
@@ -496,13 +497,13 @@ public struct WebPanelView: View {
                         .font(.system(size: 11))
                 }
                 .buttonStyle(.plain)
-                .help("Neu laden")
+                .help(l10n("web_panel.popup_reload"))
 
                 Spacer()
 
                 // Size Preset Menu
                 Menu {
-                    Section("Fenstergröße") {
+                    Section(l10n("web_panel.popup_window_size")) {
                         ForEach(WebSizePreset.allCases) { preset in
                             Button(action: {
                                 var updated = item
@@ -518,7 +519,7 @@ public struct WebPanelView: View {
                                 onUpdateItem?(updated)
                             }) {
                                 HStack {
-                                    Text(preset.rawValue)
+                                    Text(preset.localizedTitle)
                                     if item.sizePreset == preset {
                                         Image(systemName: "checkmark")
                                     }
@@ -527,7 +528,7 @@ public struct WebPanelView: View {
                         }
                     }
 
-                    Section("User Agent (Smartphone / Desktop)") {
+                    Section(l10n("web_panel.popup_user_agent")) {
                         ForEach(WebUserAgentMode.allCases) { mode in
                             Button(action: {
                                 var updated = item
@@ -535,7 +536,7 @@ public struct WebPanelView: View {
                                 onUpdateItem?(updated)
                             }) {
                                 HStack {
-                                    Text(mode.rawValue)
+                                    Text(mode.localizedTitle)
                                     if item.userAgentMode == mode {
                                         Image(systemName: "checkmark")
                                     }
@@ -546,25 +547,25 @@ public struct WebPanelView: View {
 
                     Divider()
 
-                    Button(item.showsAddressBar ? "Navigationsleiste standardmäßig ausblenden" : "Navigationsleiste standardmäßig einblenden") {
+                    Button(item.showsAddressBar ? l10n("web_panel.popup_hide_toolbar_default") : l10n("web_panel.popup_show_toolbar_default")) {
                         var updated = item
                         updated.showsAddressBar.toggle()
                         onUpdateItem?(updated)
                     }
 
-                    Button(item.showsTopBar ? "Obere Adressleiste ausblenden" : "Obere Adressleiste einblenden") {
+                    Button(item.showsTopBar ? l10n("web_panel.popup_hide_topbar") : l10n("web_panel.popup_show_topbar")) {
                         var updated = item
                         updated.showsTopBar.toggle()
                         onUpdateItem?(updated)
                     }
 
-                    Button("Im Browser öffnen") {
+                    Button(l10n("web_panel.popup_open_browser")) {
                         if let url = SecurityPolicy.webURL(controller.currentURL) {
                             NSWorkspace.shared.open(url)
                         }
                     }
 
-                    Button("Einstellungen...") {
+                    Button(l10n("web_panel.popup_settings")) {
                         StatusItemController.shared.openSettingsWindow()
                     }
                 } label: {
@@ -591,11 +592,11 @@ public struct WebPanelView: View {
                 }
                 .menuStyle(.borderlessButton)
                 .fixedSize()
-                .help(instance.autoFitScale < 0.99 ? "Konfiguriert: \(Int(item.effectiveWidth)) × \(Int(item.effectiveHeight)) pt (automatisch an Bildschirm angepasst)" : "Fenstergröße anpassen")
+                .help(instance.autoFitScale < 0.99 ? String(format: l10n("web_panel.popup_autofit_format"), Int(item.effectiveWidth), Int(item.effectiveHeight)) : l10n("web_panel.popup_adjust_size"))
 
                 // Zoom Level Menu (scales website to fit widget)
                 Menu {
-                    Section("Seiten-Skalierung (Zoom)") {
+                    Section(l10n("web_panel.popup_zoom_section")) {
                         ForEach([0.5, 0.65, 0.75, 0.85, 1.0, 1.15, 1.25, 1.5], id: \.self) { z in
                             Button(action: {
                                 var updated = item
@@ -636,7 +637,7 @@ public struct WebPanelView: View {
                         .foregroundColor(isShowingAddressInput ? .accentColor : .primary)
                 }
                 .buttonStyle(.plain)
-                .help("URL bearbeiten")
+                .help(l10n("web_panel.popup_edit_url"))
 
                 // Pin Window
                 Button(action: {
@@ -649,7 +650,7 @@ public struct WebPanelView: View {
                         .foregroundColor(item.isPinned ? .accentColor : .primary)
                 }
                 .buttonStyle(.plain)
-                .help(item.isPinned ? "Fenster lösen" : "Fenster anheften (offen halten)")
+                .help(item.isPinned ? l10n("web_panel.popup_unpin") : l10n("web_panel.popup_pin"))
 
                 if !item.showsAddressBar && isToolbarTemporarilyVisible {
                     Button(action: {
@@ -662,7 +663,7 @@ public struct WebPanelView: View {
                             .foregroundColor(.secondary)
                     }
                     .buttonStyle(.plain)
-                    .help("Navigationsleiste schließen")
+                    .help(l10n("web_panel.popup_close_toolbar"))
                 } else {
                     // Open in External Browser
                     Button(action: {
@@ -674,7 +675,7 @@ public struct WebPanelView: View {
                             .font(.system(size: 11))
                     }
                     .buttonStyle(.plain)
-                    .help("Im Standard-Browser öffnen")
+                    .help(l10n("web_panel.popup_open_default_browser"))
                 }
             }
             .padding(.horizontal, 8)

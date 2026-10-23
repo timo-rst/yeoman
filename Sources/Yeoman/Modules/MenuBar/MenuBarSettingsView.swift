@@ -79,13 +79,13 @@ public struct MenuBarSpacingSectionView: View {
                 }
                 // Dedicated status item toggle
                 VStack(alignment: .leading, spacing: 14) {
-                    Text("Menüleisten-Integration")
+                    Text(l10n("menubar.integration_title"))
                         .font(.headline)
                     
                     HStack(spacing: 6) {
-                        Toggle("Eigenes Symbol in der Menüleiste anzeigen", isOn: $module.showsDedicatedStatusItem)
+                        Toggle(l10n("menubar.integration_toggle"), isOn: $module.showsDedicatedStatusItem)
                             .font(.subheadline)
-                        InfoTooltip(text: "Ermöglicht das schnelle Wechseln der Abstands-Presets direkt über ein Menüleisten-Symbol.")
+                        InfoTooltip(text: l10n("menubar.integration_tooltip"))
                     }
                 }
                 .padding()
@@ -94,14 +94,14 @@ public struct MenuBarSpacingSectionView: View {
                 // Spacing Presets
                 VStack(alignment: .leading, spacing: 12) {
                     HStack {
-                        Text("Abstand-Presets")
+                        Text(l10n("menubar.spacing_presets_title"))
                             .font(.headline)
                         Spacer()
                         if spacingManager.isApplying {
                             HStack(spacing: 4) {
                                 ProgressView()
                                     .scaleEffect(0.6)
-                                Text("Wird angewendet...")
+                                Text(l10n("menubar.applying"))
                                     .font(.caption)
                                     .foregroundColor(.secondary)
                             }
@@ -109,15 +109,15 @@ public struct MenuBarSpacingSectionView: View {
                     }
                     
                     HStack(spacing: 12) {
-                        PresetButton(title: "Ultra-Kompakt", subtitle: "4 pt", isSelected: spacingManager.currentSpacing == 4) {
+                        PresetButton(title: l10n("menubar.preset_ultra_compact"), subtitle: "4 pt", isSelected: spacingManager.currentSpacing == 4) {
                             spacingManager.applyPreset(.ultraCompact)
                         }
                         
-                        PresetButton(title: "Kompakt", subtitle: "8 pt", isSelected: spacingManager.currentSpacing == 8) {
+                        PresetButton(title: l10n("menubar.preset_compact"), subtitle: "8 pt", isSelected: spacingManager.currentSpacing == 8) {
                             spacingManager.applyPreset(.compact)
                         }
                         
-                        PresetButton(title: "Standard", subtitle: "16 pt", isSelected: spacingManager.currentSpacing == 16) {
+                        PresetButton(title: l10n("menubar.preset_standard"), subtitle: "16 pt", isSelected: spacingManager.currentSpacing == 16) {
                             spacingManager.applyPreset(.standard)
                         }
                     }
@@ -127,12 +127,12 @@ public struct MenuBarSpacingSectionView: View {
                 
                 // Manual Fine-Tuning Slider
                 VStack(alignment: .leading, spacing: 14) {
-                    Text("Feinabstimmung (Pixel-genau)")
+                    Text(l10n("menubar.fine_tuning"))
                         .font(.headline)
                     
                     VStack(alignment: .leading, spacing: 6) {
                         HStack {
-                            Text("Abstand zwischen Symbolen:")
+                            Text(l10n("menubar.item_spacing"))
                             Spacer()
                             Text("\(spacingManager.currentSpacing) pt")
                                 .monospacedDigit()
@@ -146,7 +146,7 @@ public struct MenuBarSpacingSectionView: View {
                     
                     VStack(alignment: .leading, spacing: 6) {
                         HStack {
-                            Text("Klickbereich um Symbole:")
+                            Text(l10n("menubar.click_area"))
                             Spacer()
                             Text("\(spacingManager.currentSelectionPadding) pt")
                                 .monospacedDigit()
@@ -161,23 +161,23 @@ public struct MenuBarSpacingSectionView: View {
                     Divider()
                     
                     HStack(spacing: 6) {
-                        Toggle("Änderungen automatisch anwenden", isOn: Binding(
+                        Toggle(l10n("menubar.auto_restart"), isOn: Binding(
                             get: { spacingManager.autoRestartControlCenter },
                             set: { spacingManager.setAutoRestart($0) }
                         ))
                         .font(.subheadline)
-                        InfoTooltip(text: "Startet das macOS ControlCenter bei Abstandsänderungen automatisch im Hintergrund neu.")
+                        InfoTooltip(text: l10n("menubar.auto_restart_tooltip"))
                     }
                     
                     HStack {
-                        Button("Menüleiste jetzt aktualisieren") {
+                        Button(l10n("menubar.apply_now")) {
                             spacingManager.restartControlCenter()
                         }
                         .buttonStyle(.bordered)
                         
                         Spacer()
                         
-                        Button("Auf Standard zurücksetzen") {
+                        Button(l10n("menubar.reset_defaults")) {
                             spacingManager.resetToDefaults()
                         }
                         .buttonStyle(.bordered)
