@@ -71,7 +71,6 @@ Per explicit user direction, Apple Developer ID signing and notarization are not
 - `swift run --sanitize thread YeomanTests`: **73/73 tests passed**, 0 ThreadSanitizer warnings.
 - `swift test`: unavailable with Command Line Tools; the repository's native executable test harness remains the supported entry point.
 - `Scripts/capture_real_screenshots.swift`: typechecks cleanly with `YeomanCore` using public API methods.
-- `Scripts/generate_yeoman_icon.py`: isolated secure temporary directory creation verified.
 - `./Scripts/build_app.sh release`: Successful; app bundle and nested `YeomanInstaller` signed with ad-hoc signatures.
 - `codesign --verify --deep --strict dist/Yeoman.app`: Valid.
 - `./Scripts/package_release.sh`: Successful for v0.2.2 using external `0600` release key; produced `dist/Yeoman.dmg`, `dist/Yeoman.zip`, and signed `dist/Yeoman.update.json`.
