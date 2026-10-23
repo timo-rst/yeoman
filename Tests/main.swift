@@ -10,6 +10,7 @@ runLocalizationTests()
 runModuleManagerTests()
 runSecurityTests()
 runPopoverFocusCoordinatorTests()
+runSingleInstanceGuardTests()
 removeTestDefaults()
 
 let exitCode = TestHarness.shared.printSummary()

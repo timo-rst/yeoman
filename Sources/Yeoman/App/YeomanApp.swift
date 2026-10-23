@@ -3,6 +3,26 @@ import AppKit
 import YeomanCore
 
 public final class AppDelegate: NSObject, NSApplicationDelegate {
+    public func applicationWillFinishLaunching(_ notification: Notification) {
+        guard SingleInstanceGuard.acquireOrActivateExisting() else {
+            NSApp.terminate(nil)
+            exit(0)
+        }
+        
+        DistributedNotificationCenter.default().addObserver(
+            self,
+            selector: #selector(handleReopenNotification),
+            name: SingleInstanceGuard.reopenNotificationName,
+            object: nil
+        )
+    }
+    
+    @objc private func handleReopenNotification() {
+        DispatchQueue.main.async {
+            StatusItemController.shared.openSettingsWindow()
+        }
+    }
+    
     public func applicationDidFinishLaunching(_ notification: Notification) {
         let showDockIcon = UserDefaults.standard.object(forKey: "showDockIcon") as? Bool ?? true
         NSApp.setActivationPolicy(showDockIcon ? .regular : .accessory)
@@ -28,6 +48,7 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
     }
     
     public func applicationWillTerminate(_ notification: Notification) {
+        DistributedNotificationCenter.default().removeObserver(self)
         ModuleManager.shared.stopAll()
     }
 }
