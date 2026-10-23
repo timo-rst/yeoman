@@ -1,5 +1,7 @@
 # Yeoman adversarial security review
 
+> **Historical report:** This document records the findings against the original security implementation at `c3c8e75`. Its production rejection no longer describes the current tree. Remediation and current verification are documented in [`SECURITY_REREVIEW.md`](SECURITY_REREVIEW.md).
+
 Review date: 22 October 2026. Baseline and current HEAD: `c3c8e7535c48bd93be6525052aea33ef177d6c72`. Scope: the modified working tree **and untracked security implementation files**, including the installer, signer, CArchive declarations, and tests. The implementation report was treated as a claim to verify, not evidence of correctness.
 
 Runtime verification used macOS 26.5, arm64, Apple Swift 6.3.3. macOS 14 compatibility was inspected but not exercised on a macOS 14 host. Production application code was not modified during this review.

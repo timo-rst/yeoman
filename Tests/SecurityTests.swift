@@ -271,7 +271,7 @@ func runSecurityTests() {
         }
     }
     h.runSuite("Security: secrets and persistence") {
-        h.test("Token migration removes defaults only after a successful keychain write") {
+        h.test("Token migration removes defaults only after a successful secret-store write") {
             let defaults = isolatedDefaults(), keys = MemorySecrets()
             defaults.set("synthetic-token", forKey: "update_github_token")
             keys.fails = true
@@ -295,6 +295,23 @@ func runSecurityTests() {
                 assertEqual(try store.read("test-key"), sampleKey)
                 try store.delete("test-key")
                 assertNil(try store.read("test-key"))
+            }
+        }
+        h.test("SecureFileSecretStore uses collision-free names and migrates known legacy files") {
+            try temporary { root in
+                let secretsDir = root.url.appendingPathComponent(".secrets")
+                let store = SecureFileSecretStore(directoryURL: secretsDir)
+                try store.write(Data("dot".utf8), account: "a.b")
+                try store.write(Data("underscore".utf8), account: "a_b")
+                assertEqual(try store.read("a.b"), Data("dot".utf8))
+                assertEqual(try store.read("a_b"), Data("underscore".utf8))
+
+                let directory = try SecureDirectory(secretsDir, create: false)
+                try directory.write(Data("legacy-token".utf8), name: "github-token.key")
+                assertEqual(try store.read("github-token"), Data("legacy-token".utf8))
+                assertFalse(try directory.exists("github-token.key"))
+                let names = try FileManager.default.contentsOfDirectory(atPath: secretsDir.path)
+                assertTrue(names.contains(where: { $0.hasPrefix("v2-") && $0.hasSuffix(".key") }))
             }
         }
         h.test("Authenticated encryption binds record identity and rejects tampering") {
@@ -381,7 +398,7 @@ func runSecurityTests() {
                 assertEqual(snapshot.items.first?.content, "legacy-fixture")
             }
         }
-        h.test("Failed keychain preserves legacy history") {
+        h.test("Failed secret store preserves legacy history") {
             try temporary { root in
                 let keys = MemorySecrets(); keys.fails = true
                 try root.write(JSONEncoder().encode([ClipboardItem(content: "legacy-fixture")]), name: "clipboard_history.json")
@@ -638,6 +655,48 @@ func runSecurityTests() {
                 assertEqual(try BundleVerifier.readVersion(target.url), "1.0.0")
             }
         }
+        h.test("InstallTransaction binds signed resource changes into bundle identity") {
+            try temporary { root in
+                func makeApp(_ name: String, version: String, resource: String) throws -> SecureDirectory {
+                    let app = try root.child(name)
+                    let contents = try app.child("Contents")
+                    let binaries = try contents.child("MacOS")
+                    let resources = try contents.child("Resources")
+                    let plist = ["CFBundleIdentifier": "de.trst.Yeoman", "CFBundleShortVersionString": version,
+                                 "CFBundleExecutable": "Yeoman", "CFBundlePackageType": "APPL"]
+                    try contents.write(PropertyListSerialization.data(fromPropertyList: plist, format: .xml, options: 0), name: "Info.plist")
+                    try binaries.write(Data(contentsOf: URL(fileURLWithPath: "/bin/echo")), name: "Yeoman")
+                    assertEqual(chmod(binaries.url.appendingPathComponent("Yeoman").path, 0o700), 0)
+                    try resources.write(Data(resource.utf8), name: "payload.txt")
+                    assertEqual(try BoundedProcess.run("/usr/bin/codesign", ["--force", "--sign", "-", app.url.path], timeout: 10).status, 0)
+                    return app
+                }
+
+                let target = try makeApp("target.app", version: "1.0.0", resource: "old")
+                let staged = try makeApp("staged.app", version: "2.0.0", resource: "authenticated")
+                let substitute = try makeApp("substitute.app", version: "2.0.0", resource: "different")
+                let stagedIdentity = try BundleVerifier.verify(staged.url, version: "2.0.0")
+                let substituteIdentity = try BundleVerifier.verify(substitute.url, version: "2.0.0")
+                // Re-signing embeds the resource envelope into the Mach-O signature, so both
+                // the executable digest and the required code-directory identity may change.
+                assertFalse(stagedIdentity.executableHash == substituteIdentity.executableHash)
+                assertFalse(stagedIdentity.cdhash == substituteIdentity.cdhash)
+
+                let backup = root.url.appendingPathComponent("backup.app")
+                rejects {
+                    try InstallTransaction.replace(staged: staged.url, target: target.url, backup: backup, verify: {
+                        try BundleVerifier.verify($0, version: "2.0.0")
+                    }, move: { from, to in
+                        if from == staged.url && to == target.url {
+                            try FileManager.default.moveItem(at: substitute.url, to: to)
+                        } else {
+                            try FileManager.default.moveItem(at: from, to: to)
+                        }
+                    })
+                }
+                assertEqual(try BundleVerifier.readVersion(target.url), "1.0.0")
+            }
+        }
         h.test("Clipboard persistence opt-out is preserved with legacy directory (AUD-02)") {
             try temporary { root in
                 let defaults = isolatedDefaults()
@@ -683,11 +742,37 @@ func runSecurityTests() {
             assertTrue(items[0].id.isValidWebKitIdentifier)
             assertFalse(items[0].id == UUID(uuidString: "00000000-0000-0000-0000-000000000000")!)
         }
+        h.test("WidgetStorage persists repaired UUID across encrypted reloads (RR-01)") {
+            try temporary { root in
+                let appDirectory = try root.child("Yeoman")
+                let defaults = isolatedDefaults()
+                let secrets = MemorySecrets()
+                let zero = UUID(uuidString: "00000000-0000-0000-0000-000000000000")!
+                let item = WebWidgetItem(id: zero, title: "Zero", url: "https://example.com")
+                let document = try EncryptedDocument(directory: appDirectory, name: "widgets-v1.enc", secrets: secrets, limit: 1_048_576)
+                try document.write(JSONEncoder().encode([item]))
+
+                var first: Result<[WebWidgetItem], Error>?
+                WidgetStorage(url: appDirectory.url, defaults: defaults, secrets: secrets).load { first = $0 }
+                pump { first != nil }
+                let firstID = try first!.get().first!.id
+                assertTrue(firstID.isValidWebKitIdentifier)
+
+                var second: Result<[WebWidgetItem], Error>?
+                WidgetStorage(url: appDirectory.url, defaults: defaults, secrets: secrets).load { second = $0 }
+                pump { second != nil }
+                assertEqual(try second!.get().first!.id, firstID)
+
+                let persisted = try WidgetStorage.decode(try document.read()!)
+                assertEqual(persisted.first!.id, firstID)
+            }
+        }
         h.test("WebPanelController dispose cancels delayed cache purge safely (AUD-06)") {
             let controller = WebPanelController(initialURL: "https://example.com", preload: false)
             controller.onPopoverClosed()
             controller.dispose()
             controller.purgeMemoryCache()
+            RunLoop.current.run(until: Date().addingTimeInterval(3.2))
         }
         h.test("Image decoder accepts multi-frame ICO favicons (AUD-09)") {
             let data = NSMutableData()

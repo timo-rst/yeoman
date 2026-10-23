@@ -78,7 +78,7 @@ public final class UpdateManager: ObservableObject {
     private var busy = false
     private var periodicCheckTimer: AnyCancellable?
     public var currentVersion: String {
-        Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "0.2.0"
+        Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "0.2.1"
     }
     public init(defaults: UserDefaults = .standard, secrets: SecretStore = SecureFileSecretStore()) {
         self.defaults = defaults; self.secrets = secrets

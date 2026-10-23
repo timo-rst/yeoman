@@ -59,6 +59,9 @@ public struct KeychainSecretStore: SecretStore {
 /// source ad-hoc builds while keeping stored documents AES-GCM encrypted.
 public struct SecureFileSecretStore: SecretStore {
     public let directoryURL: URL
+    private static let legacyAccounts: Set<String> = [
+        "github-token", "clipboard-v1.enc-key", "widgets-v1.enc-key"
+    ]
 
     public init(directoryURL: URL? = nil) {
         if let directoryURL {
@@ -69,10 +72,22 @@ public struct SecureFileSecretStore: SecretStore {
         }
     }
 
-    private func sanitize(_ account: String) throws -> String {
+    private func validate(_ account: String) throws {
         guard !account.isEmpty, account.utf8.count <= 128 else {
             throw SecurityFailure.rejected("Ungültige Kontobezeichnung.")
         }
+    }
+
+    private func name(_ account: String) throws -> String {
+        try validate(account)
+        let digest = SHA256.hash(data: Data(account.utf8))
+        return "v2-" + digest.map { String(format: "%02x", $0) }.joined() + ".key"
+    }
+
+    // Compatibility with the first file-store release. Production account names are fixed
+    // and collision-free; all new writes use the collision-resistant digest mapping above.
+    private func legacyName(_ account: String) throws -> String {
+        try validate(account)
         let safeScalars = account.unicodeScalars.map { scalar -> Character in
             if CharacterSet.alphanumerics.contains(scalar) || scalar == "-" || scalar == "_" {
                 return Character(scalar)
@@ -89,23 +104,30 @@ public struct SecureFileSecretStore: SecretStore {
     public func read(_ account: String) throws -> Data? {
         guard FileManager.default.fileExists(atPath: directoryURL.path) else { return nil }
         let dir = try SecureDirectory(directoryURL, create: false)
-        let name = try sanitize(account)
-        guard try dir.exists(name) else { return nil }
-        return try dir.read(name, limit: 4096)
+        let current = try name(account)
+        if try dir.exists(current) { return try dir.read(current, limit: 4096) }
+        guard Self.legacyAccounts.contains(account) else { return nil }
+        let legacy = try legacyName(account)
+        guard try dir.exists(legacy) else { return nil }
+        let data = try dir.read(legacy, limit: 4096)
+        try dir.write(data, name: current)
+        try dir.remove(legacy)
+        return data
     }
 
     public func write(_ data: Data, account: String) throws {
         guard data.count <= 4096 else { throw SecurityFailure.rejected("Schlüsseldaten zu groß.") }
         let dir = try SecureDirectory(directoryURL, create: true)
-        let name = try sanitize(account)
-        try dir.write(data, name: name)
+        try dir.write(data, name: name(account))
     }
 
     public func delete(_ account: String) throws {
         guard FileManager.default.fileExists(atPath: directoryURL.path) else { return }
         let dir = try SecureDirectory(directoryURL, create: false)
-        let name = try sanitize(account)
-        try dir.remove(name)
+        try dir.remove(name(account))
+        if Self.legacyAccounts.contains(account) {
+            try dir.remove(legacyName(account))
+        }
     }
 }
 
@@ -120,7 +142,7 @@ public enum SecretMigration {
     }
     public static func token(defaults: UserDefaults, secrets: SecretStore) throws -> String {
         if let current = try secrets.read("github-token") {
-            guard let raw = String(data: current, encoding: .utf8) else { throw SecurityFailure.rejected("Ungültiges Token im Schlüsselbund.") }
+            guard let raw = String(data: current, encoding: .utf8) else { throw SecurityFailure.rejected("Ungültiges Token im geschützten Speicher.") }
             let token = try validatedToken(raw)
             defaults.removeObject(forKey: "update_github_token")
             return token

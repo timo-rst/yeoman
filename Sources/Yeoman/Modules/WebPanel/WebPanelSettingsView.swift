@@ -196,15 +196,17 @@ public struct WebPanelSettingsView: View {
     
     private func clearAllWebsiteData() {
         let types = WKWebsiteDataStore.allWebsiteDataTypes()
-        for widget in module.widgets {
-            if widget.id.isValidWebKitIdentifier {
-                WKWebsiteDataStore(forIdentifier: widget.id)
-                    .removeData(ofTypes: types, modifiedSince: Date(timeIntervalSince1970: 0)) {}
+        // Include orphaned profiles left by deleted/corrupt legacy widget records, not only
+        // identifiers that are still present in the current configuration.
+        WKWebsiteDataStore.fetchAllDataStoreIdentifiers { identifiers in
+            for identifier in identifiers where identifier.isValidWebKitIdentifier {
+                WKWebsiteDataStore(forIdentifier: identifier)
+                    .removeData(ofTypes: types, modifiedSince: .distantPast) {}
             }
         }
         // Also clear legacy default store from before profiles were introduced (AUD-08)
         WKWebsiteDataStore.default()
-            .removeData(ofTypes: types, modifiedSince: Date(timeIntervalSince1970: 0)) {}
+            .removeData(ofTypes: types, modifiedSince: .distantPast) {}
     }
 }
 

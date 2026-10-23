@@ -120,9 +120,9 @@ public struct BundleIdentity: Equatable {
     public let bundleID: String
     public let version: String
     public let executableHash: String
-    public let cdhash: Data?
+    public let cdhash: Data
 
-    public init(bundleID: String, version: String, executableHash: String, cdhash: Data?) {
+    public init(bundleID: String, version: String, executableHash: String, cdhash: Data) {
         self.bundleID = bundleID
         self.version = version
         self.executableHash = executableHash
@@ -182,10 +182,11 @@ public enum BundleVerifier {
         }
 
         var signingInfo: CFDictionary?
-        var cdhash: Data?
-        if SecCodeCopySigningInformation(code, SecCSFlags(), &signingInfo) == errSecSuccess,
-           let dict = signingInfo as? [String: Any] {
-            cdhash = dict[kSecCodeInfoUnique as String] as? Data
+        guard SecCodeCopySigningInformation(code, SecCSFlags(), &signingInfo) == errSecSuccess,
+              let dict = signingInfo as? [String: Any],
+              let cdhash = dict[kSecCodeInfoUnique as String] as? Data,
+              !cdhash.isEmpty else {
+            throw SecurityFailure.rejected("Code-Identität des App-Bundles konnte nicht bestimmt werden.")
         }
 
         return BundleIdentity(bundleID: bundleID, version: bundleVersion, executableHash: execHash, cdhash: cdhash)
