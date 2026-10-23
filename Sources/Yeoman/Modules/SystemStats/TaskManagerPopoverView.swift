@@ -316,18 +316,14 @@ struct TaskRowView: View {
             // Name + PID
             VStack(alignment: .leading, spacing: 1) {
                 if let widgetTitle = item.widgetTitle {
-                    HStack(spacing: 4) {
-                        Text("Web Widget")
-                            .font(.system(size: 12, weight: .medium))
-                            .lineLimit(1)
-                        Text("(\(widgetTitle))")
-                            .font(.system(size: 11, weight: .semibold))
-                            .foregroundColor(.accentColor)
-                            .lineLimit(1)
-                    }
+                    Text("Web Widget (\(widgetTitle))")
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundColor(.primary)
+                        .lineLimit(1)
                 } else {
                     Text(item.name)
                         .font(.system(size: 12, weight: .medium))
+                        .foregroundColor(.primary)
                         .lineLimit(1)
                 }
                 Text("PID \(item.pid)")
