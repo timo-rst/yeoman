@@ -72,8 +72,12 @@ Records copied text and images locally.
 
 ### 3. Menu Bar Spacing & Items
 Adjusts layout and spacing of macOS menu bar items.
-- **Item Spacing:** Adjust icon spacing from 0 to 32 pt (presets: 4 pt, 8 pt, 16 pt).
+- **Item Spacing:** Adjust icon spacing from 0 to 32 pt (presets: 4 pt, 8 pt, 16 pt). Reclaim over 120 pt of status bar space to prevent icons from getting hidden behind the MacBook camera notch.
 - **Item Scanner:** Lists detected system and third-party status bar items across connected displays.
+
+<p align="center">
+  <img src="Resources/Mockups/yeoman_menubar_comparison.png" alt="macOS Menu Bar Real-World Comparison" width="100%" />
+</p>
 
 <p align="center">
   <img src="Resources/Mockups/yeoman_menubar_spacing.png" alt="Yeoman Menu Bar Spacing" width="92%" />
@@ -120,6 +124,17 @@ The project includes unit tests covering version parsing, update host validation
 ```bash
 swift run YeomanTests
 ```
+
+---
+
+## Security & Audits
+
+Yeoman follows strict defensive engineering and POSIX descriptor-relative isolation standards:
+- **Encrypted Local Storage:** AES-GCM encryption with unique nonces and record-specific AAD.
+- **Path Sandboxing:** Application paths are strictly restricted to `0700` directories and `0600` files.
+- **Automated Regression Suite:** All historical audit findings are permanently guarded by automated regression tests in [`Tests/SecurityTests.swift`](Tests/SecurityTests.swift).
+
+For our security policy, vulnerability reporting guidelines, and historical audit reports, see [SECURITY.md](SECURITY.md).
 
 ---
 
