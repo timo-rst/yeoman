@@ -219,7 +219,7 @@ func runSecurityTests() {
             try temporary { root in
                 let archive = try zipFixture(root, entries: [("Yeoman.app/Contents/test.txt", "fixture", 0o100600)])
                 let extract = try root.child("extract")
-                try SafeArchive.extract(archiveURL: archive, to: extract)
+                try SafeArchive.extract(archiveData: Data(contentsOf: archive), to: extract)
                 let contents = try extract.child("Yeoman.app", create: false).child("Contents", create: false)
                 assertEqual(try contents.read("test.txt", limit: 16), Data("fixture".utf8))
             }
@@ -314,6 +314,16 @@ func runSecurityTests() {
                 assertTrue(names.contains(where: { $0.hasPrefix("v2-") && $0.hasSuffix(".key") }))
             }
         }
+        h.test("SecureFileSecretStore rejects a symlinked Yeoman ancestor") {
+            try temporary { root in
+                let redirected = try root.child("redirected")
+                let alias = root.url.appendingPathComponent("Yeoman")
+                try FileManager.default.createSymbolicLink(at: alias, withDestinationURL: redirected.url)
+                let store = SecureFileSecretStore(directoryURL: alias.appendingPathComponent(".secrets"))
+                rejects { try store.write(Data("secret".utf8), account: "github-token") }
+                assertFalse(FileManager.default.fileExists(atPath: redirected.url.appendingPathComponent(".secrets").path))
+            }
+        }
         h.test("Authenticated encryption binds record identity and rejects tampering") {
             let cipher = try RecordCipher(key: Data(repeating: 7, count: 32))
             var encrypted = try cipher.seal(Data("synthetic-secret".utf8), record: "id1")
@@ -396,6 +406,19 @@ func runSecurityTests() {
                 let doc = try EncryptedDocument(directory: root, name: "clipboard-v1.enc", secrets: keys, limit: SecurityPolicy.historyBytes)
                 let snapshot = try JSONDecoder().decode(ClipboardSnapshot.self, from: doc.read()!)
                 assertEqual(snapshot.items.first?.content, "legacy-fixture")
+            }
+        }
+        h.test("Clipboard migration preserves unreferenced UUID-shaped image files") {
+            try temporary { root in
+                let keys = MemorySecrets(), defaults = isolatedDefaults()
+                try root.write(JSONEncoder().encode([ClipboardItem(content: "legacy-fixture")]), name: "clipboard_history.json")
+                let images = try root.child("clipboard_images")
+                let orphan = UUID().uuidString + ".png"
+                try images.write(Data("unrelated".utf8), name: orphan)
+                let store = ClipboardHistoryStore(directory: root.url, secrets: keys, defaults: defaults)
+                store.flushForTesting()
+                assertFalse(try root.exists("clipboard_history.json"))
+                assertEqual(try images.read(orphan, limit: 64), Data("unrelated".utf8))
             }
         }
         h.test("Failed secret store preserves legacy history") {
@@ -496,7 +519,12 @@ func runSecurityTests() {
             var removalFinished = false, removalError: Error?
             IsolatedWebsiteDataStore.remove(identifier: firstID) { removalError = $0; removalFinished = true }
             pump { removalFinished }
-            if let removalError { throw removalError }
+            // The process may still retain the now-empty container. That removal error must
+            // be observable rather than converted to success (YEA-06).
+            if let removalError = removalError as NSError? {
+                assertEqual(removalError.domain, "WKWebSiteDataStore")
+                assertEqual(removalError.code, 1)
+            }
             var firstCookies: [HTTPCookie]?, secondCookies: [HTTPCookie]?
             WKWebsiteDataStore(forIdentifier: firstID).httpCookieStore.getAllCookies { firstCookies = $0 }
             WKWebsiteDataStore(forIdentifier: secondID).httpCookieStore.getAllCookies { secondCookies = $0 }
@@ -697,6 +725,24 @@ func runSecurityTests() {
                 assertEqual(try BundleVerifier.readVersion(target.url), "1.0.0")
             }
         }
+        h.test("InstallTransaction rejects staging changed after authenticated identity capture") {
+            try temporary { root in
+                try root.write(Data("old".utf8), name: "target")
+                try root.write(Data("authenticated".utf8), name: "staged")
+                let target = root.url.appendingPathComponent("target")
+                let staged = root.url.appendingPathComponent("staged")
+                let backup = root.url.appendingPathComponent("backup")
+                let expected = try root.read("staged", limit: 64)
+                try root.write(Data("substitute".utf8), name: "staged")
+                rejects {
+                    try InstallTransaction.replace(staged: staged, target: target, backup: backup,
+                                                   expectedIdentity: expected,
+                                                   verify: { try Data(contentsOf: $0) })
+                }
+                assertEqual(try root.read("target", limit: 64), Data("old".utf8))
+                assertFalse(try root.exists("backup"))
+            }
+        }
         h.test("Clipboard persistence opt-out is preserved with legacy directory (AUD-02)") {
             try temporary { root in
                 let defaults = isolatedDefaults()
@@ -734,13 +780,16 @@ func runSecurityTests() {
                 assertFalse(try legacyDir.exists("clipboard_history.json"))
             }
         }
-        h.test("WidgetStorage repairs all-zero UUID avoiding WebKit crash (AUD-05)") {
-            let zeroItem = WebWidgetItem(id: UUID(uuidString: "00000000-0000-0000-0000-000000000000")!, title: "Zero", url: "https://example.com")
-            let encoded = try JSONEncoder().encode([zeroItem])
-            let items = try WidgetStorage.decode(encoded)
-            assertEqual(items.count, 1)
-            assertTrue(items[0].id.isValidWebKitIdentifier)
-            assertFalse(items[0].id == UUID(uuidString: "00000000-0000-0000-0000-000000000000")!)
+        h.test("WidgetStorage repairs both WebKit UUID sentinels") {
+            for raw in ["00000000-0000-0000-0000-000000000000", "00000000-0000-0000-0000-000000000001"] {
+                let reserved = UUID(uuidString: raw)!
+                assertFalse(reserved.isValidWebKitIdentifier)
+                let item = WebWidgetItem(id: reserved, title: "Reserved", url: "https://example.com")
+                let items = try WidgetStorage.decode(JSONEncoder().encode([item]))
+                assertEqual(items.count, 1)
+                assertTrue(items[0].id.isValidWebKitIdentifier)
+                assertFalse(items[0].id == reserved)
+            }
         }
         h.test("WidgetStorage persists repaired UUID across encrypted reloads (RR-01)") {
             try temporary { root in

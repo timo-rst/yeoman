@@ -41,7 +41,10 @@ public enum SecurityPolicy {
 public extension UUID {
     var isValidWebKitIdentifier: Bool {
         withUnsafeBytes(of: uuid) { buffer in
-            buffer.contains(where: { $0 != 0 })
+            // WebKit's WTF::UUID reserves integer values 0 and 1. NSUUID's canonical
+            // representation of the second sentinel ends in ...0001.
+            guard buffer.contains(where: { $0 != 0 }) else { return false }
+            return !(buffer.dropLast().allSatisfy { $0 == 0 } && buffer.last == 1)
         }
     }
 }

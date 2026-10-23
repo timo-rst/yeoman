@@ -322,10 +322,7 @@ public enum IsolatedWebsiteDataStore {
         let store = WKWebsiteDataStore(forIdentifier: identifier)
         store.removeData(ofTypes: WKWebsiteDataStore.allWebsiteDataTypes(), modifiedSince: .distantPast) {
             removeContainer(identifier: identifier, retries: retries) { error in
-                // WebKit may retain an empty persistent store for this process and
-                // report "in use". The sensitive data deletion above has completed.
-                let nsError = error as NSError?
-                completion(nsError?.domain == "WKWebSiteDataStore" && nsError?.code == 1 ? nil : error)
+                completion(error)
             }
         }
     }

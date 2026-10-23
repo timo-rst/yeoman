@@ -37,7 +37,10 @@ struct CaptureRealScreenshots {
         // ----------------------------------------------------
         let webModule = moduleManager.webPanelModule
         webModule.isEnabled = true
-        webModule.widgets = [
+        for widget in webModule.widgets {
+            webModule.deleteWidget(id: widget.id)
+        }
+        let sampleWidgets = [
             WebWidgetItem(
                 title: "Google Gemini",
                 url: "https://gemini.google.com",
@@ -83,6 +86,9 @@ struct CaptureRealScreenshots {
                 isEnabled: true
             )
         ]
+        for w in sampleWidgets {
+            webModule.addWidget(w)
+        }
         
         let webWidth: CGFloat = 880
         let webHeight: CGFloat = 560
@@ -102,7 +108,7 @@ struct CaptureRealScreenshots {
         // 3. Native Privacy Clipboard Popover (ClipboardView)
         // ----------------------------------------------------
         let store = ClipboardHistoryStore.shared
-        store.items.removeAll()
+        store.clearAll()
         store.addItem(content: "Meeting notes: Review menu bar spacing & widget performance", type: .text, sourceApp: "Notes")
         store.addItem(content: "let package = Package(name: \"Yeoman\", platforms: [.macOS(.v14)])", type: .code, sourceApp: "Xcode")
         store.addItem(content: "https://github.com/timo-rst/mac_customizer", type: .url, sourceApp: "Safari")
@@ -132,7 +138,7 @@ struct CaptureRealScreenshots {
         let menuBarModule = moduleManager.menuBarModule
         menuBarModule.isEnabled = true
         menuBarModule.activeSubTab = .spacing
-        MenuBarSpacingManager.shared.currentSpacing = 8
+        MenuBarSpacingManager.shared.commitSpacing(spacing: 8, selectionPadding: 8, restartNow: false)
         
         let menuWidth: CGFloat = 880
         let menuHeight: CGFloat = 560

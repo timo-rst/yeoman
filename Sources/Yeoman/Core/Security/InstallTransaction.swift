@@ -15,12 +15,25 @@ public enum InstallTransaction {
                                             verify: (URL) throws -> V,
                                             move: (URL, URL) throws -> Void = { try FileManager.default.moveItem(at: $0, to: $1) }) throws {
         let stagedIdentity = try verify(staged)
+        try replace(staged: staged, target: target, backup: backup, expectedIdentity: stagedIdentity,
+                    verify: verify, move: move)
+    }
+
+    public static func replace<V: Equatable>(staged: URL, target: URL, backup: URL,
+                                            expectedIdentity: V,
+                                            verify: (URL) throws -> V,
+                                            move: (URL, URL) throws -> Void = { try FileManager.default.moveItem(at: $0, to: $1) }) throws {
+        // Re-check staging against the identity derived from the authenticated archive. Never
+        // adopt a newly substituted staging bundle as the expected installation identity.
+        guard try verify(staged) == expectedIdentity else {
+            throw SecurityFailure.rejected("Staging-Bundle wurde nach der authentifizierten Prüfung verändert.")
+        }
         guard !FileManager.default.fileExists(atPath: backup.path) else { throw SecurityFailure.rejected("Wiederherstellung erforderlich; Sicherung bleibt erhalten.") }
         try move(target, backup)
         do {
             try move(staged, target)
             let targetIdentity = try verify(target)
-            guard targetIdentity == stagedIdentity else {
+            guard targetIdentity == expectedIdentity else {
                 throw SecurityFailure.rejected("Installierte Bundle-Identität stimmt nicht mit dem geprüften Staging-Bundle überein.")
             }
         } catch {
@@ -52,6 +65,10 @@ public enum InstallTransaction {
 }
 
 public enum UpdateInstaller {
+    private struct InstallReceipt: Codable {
+        let version: String
+        let identity: BundleIdentity
+    }
     private static func withRecoveryLock<T>(_ recovery: SecureDirectory, create: Bool, _ body: () throws -> T) throws -> T {
         let flags = O_RDWR | O_NOFOLLOW | O_CLOEXEC | (create ? O_CREAT : 0)
         let lockFD = openat(recovery.descriptor, "lock", flags, 0o600)
@@ -83,11 +100,10 @@ public enum UpdateInstaller {
             let workName = "stage-" + UUID().uuidString
             let work = try recovery.child(workName)
             defer { try? FileManager.default.removeItem(at: work.url) }
-            try work.write(archive, name: "archive.zip")
             let extract = try work.child("extracted")
-            try SafeArchive.extract(archiveURL: work.url.appendingPathComponent("archive.zip"), to: extract)
+            try SafeArchive.extract(archiveData: archive, to: extract)
             let newApp = extract.url.appendingPathComponent("Yeoman.app")
-            try BundleVerifier.verify(newApp, version: metadata.version)
+            let authenticatedIdentity = try BundleVerifier.verify(newApp, version: metadata.version)
             // Tell the still-running app only after signature, archive and bundle checks succeeded.
             try ready()
             let start = ProcessInfo.processInfo.systemUptime
@@ -97,8 +113,10 @@ public enum UpdateInstaller {
             }
             // Journal before the first rename; after a crash the new app can acknowledge
             // the commit, or the helper in previous.app can restore a missing target.
-            try recovery.write(Data(metadata.version.utf8), name: "installed-version")
-            try InstallTransaction.replace(staged: newApp, target: target, backup: backup) {
+            let receipt = InstallReceipt(version: metadata.version, identity: authenticatedIdentity)
+            try recovery.write(try JSONEncoder().encode(receipt), name: "installed-version")
+            try InstallTransaction.replace(staged: newApp, target: target, backup: backup,
+                                           expectedIdentity: authenticatedIdentity) {
                 try BundleVerifier.verify($0, version: metadata.version)
             }
         }
@@ -122,8 +140,11 @@ public enum UpdateInstaller {
         let recovery = try SecureDirectory(recoveryURL, create: false)
         try withRecoveryLock(recovery, create: false) {
             guard try recovery.exists("installed-version") else { return }
-            let version = String(decoding: try recovery.read("installed-version", limit: 64), as: UTF8.self)
-            try BundleVerifier.verify(target, version: version)
+            let receipt = try JSONDecoder().decode(InstallReceipt.self,
+                from: recovery.read("installed-version", limit: 4096))
+            guard try BundleVerifier.verify(target, version: receipt.version) == receipt.identity else {
+                throw SecurityFailure.rejected("Installierte Anwendung stimmt nicht mit dem authentifizierten Update überein.")
+            }
             if try recovery.exists("previous.app") {
                 _ = try recovery.child("previous.app", create: false)
                 try FileManager.default.removeItem(at: recoveryURL.appendingPathComponent("previous.app"))

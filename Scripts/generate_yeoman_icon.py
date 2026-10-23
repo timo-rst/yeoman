@@ -78,34 +78,34 @@ def generate():
     print(f"Generated: {preview_path}")
 
     # 4. Generate multi-resolution .iconset and compile .icns
-    iconset_dir = "/tmp/Yeoman.iconset"
-    if os.path.exists(iconset_dir):
-        shutil.rmtree(iconset_dir)
-    os.makedirs(iconset_dir)
+    import tempfile
+    with tempfile.TemporaryDirectory() as tmpdir:
+        iconset_dir = os.path.join(tmpdir, "Yeoman.iconset")
+        os.makedirs(iconset_dir, exist_ok=True)
 
-    specs = [
-        ("icon_16x16.png", 16),
-        ("icon_16x16@2x.png", 32),
-        ("icon_32x32.png", 32),
-        ("icon_32x32@2x.png", 64),
-        ("icon_128x128.png", 128),
-        ("icon_128x128@2x.png", 256),
-        ("icon_256x256.png", 256),
-        ("icon_256x256@2x.png", 512),
-        ("icon_512x512.png", 512),
-        ("icon_512x512@2x.png", 1024),
-    ]
+        specs = [
+            ("icon_16x16.png", 16),
+            ("icon_16x16@2x.png", 32),
+            ("icon_32x32.png", 32),
+            ("icon_32x32@2x.png", 64),
+            ("icon_128x128.png", 128),
+            ("icon_128x128@2x.png", 256),
+            ("icon_256x256.png", 256),
+            ("icon_256x256@2x.png", 512),
+            ("icon_512x512.png", 512),
+            ("icon_512x512@2x.png", 1024),
+        ]
 
-    for filename, size in specs:
-        resized = base.resize((size, size), Image.Resampling.LANCZOS)
-        resized.save(os.path.join(iconset_dir, filename), "PNG")
+        for filename, size in specs:
+            resized = base.resize((size, size), Image.Resampling.LANCZOS)
+            resized.save(os.path.join(iconset_dir, filename), "PNG")
 
-    icns_path = os.path.join(res_dir, "AppIcon.icns")
-    ret = subprocess.run(["iconutil", "-c", "icns", iconset_dir, "-o", icns_path])
-    if ret.returncode == 0:
-        print(f"Generated: {icns_path}")
-    else:
-        print(f"iconutil failed with code {ret.returncode}")
+        icns_path = os.path.join(res_dir, "AppIcon.icns")
+        ret = subprocess.run(["iconutil", "-c", "icns", iconset_dir, "-o", icns_path])
+        if ret.returncode == 0:
+            print(f"Generated: {icns_path}")
+        else:
+            print(f"iconutil failed with code {ret.returncode}")
 
 if __name__ == "__main__":
     generate()

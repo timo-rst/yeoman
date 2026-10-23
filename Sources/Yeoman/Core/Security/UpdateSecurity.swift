@@ -116,7 +116,7 @@ public struct SignedUpdate: Codable {
     }
 }
 
-public struct BundleIdentity: Equatable {
+public struct BundleIdentity: Codable, Equatable {
     public let bundleID: String
     public let version: String
     public let executableHash: String

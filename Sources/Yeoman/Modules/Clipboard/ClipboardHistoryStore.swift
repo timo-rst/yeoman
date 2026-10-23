@@ -27,6 +27,10 @@ public struct ClipboardSnapshot: Codable {
 }
 
 public final class ClipboardHistoryStore: ObservableObject {
+    private struct LegacyMigration {
+        let directory: SecureDirectory
+        let imageNames: Set<String>
+    }
     public static let shared = ClipboardHistoryStore()
     @Published public private(set) var items: [ClipboardItem] = []
     @Published public private(set) var storageError: String?
@@ -208,16 +212,16 @@ public final class ClipboardHistoryStore: ObservableObject {
                 }
 
                 // If legacy files exist, always migrate/merge them instead of deleting without import (AUD-03)
-                var migratedSources = [SecureDirectory]()
+                var migratedSources = [LegacyMigration]()
                 if legacy {
-                    if try migrate(directory) {
-                        migratedSources.append(directory)
+                    if let migration = try migrate(directory) {
+                        migratedSources.append(migration)
                     }
                 }
                 if oldExists {
                     let oldDir = try SecureDirectory(oldURL, create: false)
-                    if try migrate(oldDir) {
-                        migratedSources.append(oldDir)
+                    if let migration = try migrate(oldDir) {
+                        migratedSources.append(migration)
                     }
                 }
 
@@ -229,8 +233,8 @@ public final class ClipboardHistoryStore: ObservableObject {
 
                 // Clean only migrated sources after successful encrypted commit
                 if persistent && (existing || !migratedSources.isEmpty || migrationDone) {
-                    for dir in migratedSources {
-                        try cleanLegacy(dir)
+                    for migration in migratedSources {
+                        try cleanLegacy(migration)
                     }
                     defaults.set(true, forKey: "clipboard_legacy_migration_done")
                 }
@@ -239,9 +243,8 @@ public final class ClipboardHistoryStore: ObservableObject {
             committed = state; publish()
         } catch { blocked = true; report(error) }
     }
-    @discardableResult
-    private func migrate(_ directory: SecureDirectory) throws -> Bool {
-        guard try directory.exists("clipboard_history.json") else { return false }
+    private func migrate(_ directory: SecureDirectory) throws -> LegacyMigration? {
+        guard try directory.exists("clipboard_history.json") else { return nil }
         let data = try directory.read("clipboard_history.json", limit: SecurityPolicy.historyBytes)
         let old = try JSONDecoder().decode([ClipboardItem].self, from: data)
         guard old.count <= 500 else { throw SecurityFailure.rejected("Alter Verlauf zu groß.") }
@@ -253,31 +256,43 @@ public final class ClipboardHistoryStore: ObservableObject {
                 next.items.append(item)
             }
         }
+        var importedImageNames = Set<String>()
         if old.contains(where: { $0.type == .image }) {
             if try directory.exists("clipboard_images") {
                 let images = try directory.child("clipboard_images", create: false)
                 for item in old where item.type == .image {
                     guard item.imageFileName == "\(item.id.uuidString).png" else { throw SecurityFailure.rejected("Unsicherer Legacy-Bildpfad.") }
-                    if next.images[item.id.uuidString] == nil, try images.exists(item.imageFileName!) {
-                        let bytes = try images.read(item.imageFileName!, limit: SecurityPolicy.imageBytes)
+                    let imageName = item.imageFileName!
+                    if try images.exists(imageName) {
+                        let bytes = try images.read(imageName, limit: SecurityPolicy.imageBytes)
                         _ = try BoundedImage.decode(bytes)
-                        next.images[item.id.uuidString] = bytes
+                        if let existing = next.images[item.id.uuidString] {
+                            guard existing == bytes else {
+                                throw SecurityFailure.rejected("Widersprüchliche Legacy-Bilddaten; Quelldaten bleiben erhalten.")
+                            }
+                        } else {
+                            next.images[item.id.uuidString] = bytes
+                        }
+                        importedImageNames.insert(imageName)
+                        for size in [120, 200, 300] {
+                            let thumbnail = imageName + "_thumb_\(size).jpg"
+                            if try images.exists(thumbnail) { importedImageNames.insert(thumbnail) }
+                        }
                     }
                 }
             }
         }
         try next.validate()
         state = next
-        return true
+        return LegacyMigration(directory: directory, imageNames: importedImageNames)
     }
-    private func cleanLegacy(_ directory: SecureDirectory) throws {
+    private func cleanLegacy(_ migration: LegacyMigration) throws {
+        let directory = migration.directory
         if try directory.exists("clipboard_images") {
             let images = try directory.child("clipboard_images", create: false)
-            for name in try FileManager.default.contentsOfDirectory(atPath: images.url.path) {
-                // Only generated UUID image/thumbnail names, never paths from JSON.
-                let id = String(name.prefix(36))
-                guard UUID(uuidString: id) != nil,
-                      name == id + ".png" || [120, 200, 300].contains(where: { name == id + ".png_thumb_\($0).jpg" }) else { continue }
+            // Delete only files proven to belong to records committed to the encrypted
+            // snapshot. UUID-shaped but unreferenced files may belong to another writer.
+            for name in migration.imageNames {
                 try images.remove(name)
             }
             if (try? FileManager.default.contentsOfDirectory(atPath: images.url.path).isEmpty) == true {

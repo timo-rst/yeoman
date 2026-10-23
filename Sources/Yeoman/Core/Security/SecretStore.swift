@@ -59,17 +59,42 @@ public struct KeychainSecretStore: SecretStore {
 /// source ad-hoc builds while keeping stored documents AES-GCM encrypted.
 public struct SecureFileSecretStore: SecretStore {
     public let directoryURL: URL
+    private let trustedRootURL: URL
+    private let relativeComponents: [String]
     private static let legacyAccounts: Set<String> = [
         "github-token", "clipboard-v1.enc-key", "widgets-v1.enc-key"
     ]
 
     public init(directoryURL: URL? = nil) {
+        let resolvedDirectory: URL
         if let directoryURL {
-            self.directoryURL = directoryURL
+            resolvedDirectory = directoryURL.standardizedFileURL
         } else {
             let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
-            self.directoryURL = appSupport.appendingPathComponent("Yeoman/.secrets", isDirectory: true)
+            resolvedDirectory = appSupport.appendingPathComponent("Yeoman/.secrets", isDirectory: true)
         }
+        self.directoryURL = resolvedDirectory
+        let parent = resolvedDirectory.deletingLastPathComponent()
+        if resolvedDirectory.lastPathComponent == ".secrets", parent.lastPathComponent == "Yeoman" {
+            trustedRootURL = parent.deletingLastPathComponent()
+            relativeComponents = ["Yeoman", ".secrets"]
+        } else {
+            trustedRootURL = parent
+            relativeComponents = [resolvedDirectory.lastPathComponent]
+        }
+    }
+
+    /// Opens every application-owned component relative to a retained descriptor. The platform's
+    /// Application Support directory (or an injected test root) is the trust boundary.
+    private func openDirectory(create: Bool) throws -> SecureDirectory? {
+        var directory = try SecureDirectory(trustedRootURL, create: false)
+        for component in relativeComponents {
+            if !create {
+                guard try directory.exists(component) else { return nil }
+            }
+            directory = try directory.child(component, create: create)
+        }
+        return directory
     }
 
     private func validate(_ account: String) throws {
@@ -102,8 +127,7 @@ public struct SecureFileSecretStore: SecretStore {
     }
 
     public func read(_ account: String) throws -> Data? {
-        guard FileManager.default.fileExists(atPath: directoryURL.path) else { return nil }
-        let dir = try SecureDirectory(directoryURL, create: false)
+        guard let dir = try openDirectory(create: false) else { return nil }
         let current = try name(account)
         if try dir.exists(current) { return try dir.read(current, limit: 4096) }
         guard Self.legacyAccounts.contains(account) else { return nil }
@@ -117,13 +141,12 @@ public struct SecureFileSecretStore: SecretStore {
 
     public func write(_ data: Data, account: String) throws {
         guard data.count <= 4096 else { throw SecurityFailure.rejected("Schlüsseldaten zu groß.") }
-        let dir = try SecureDirectory(directoryURL, create: true)
+        guard let dir = try openDirectory(create: true) else { throw SecurityFailure.rejected("Geheimer Speicher nicht verfügbar.") }
         try dir.write(data, name: name(account))
     }
 
     public func delete(_ account: String) throws {
-        guard FileManager.default.fileExists(atPath: directoryURL.path) else { return }
-        let dir = try SecureDirectory(directoryURL, create: false)
+        guard let dir = try openDirectory(create: false) else { return }
         try dir.remove(name(account))
         if Self.legacyAccounts.contains(account) {
             try dir.remove(legacyName(account))

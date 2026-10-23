@@ -1,4 +1,6 @@
-# Yeoman security remediation re-review
+# Yeoman security remediation re-review (historical)
+
+> Superseded by `SECURITY_AUDIT_V0.2.1.md`. Its YEA-01 through YEA-06 findings identified gaps in the v0.2.1 approval below; the v0.2.2 implementation report tracks their remediation. Preserve this document as review history, not as the current release verdict.
 
 Review date: 23 October 2026. Baseline: `c3c8e7535c48bd93be6525052aea33ef177d6c72`. Reviewed release: `v0.2.0` plus the v0.2.1 remediation in the commit containing this report. The implementation report was checked against code, probes, tests, built application bundles, and release tooling.
 

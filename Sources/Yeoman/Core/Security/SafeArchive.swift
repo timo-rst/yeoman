@@ -37,79 +37,87 @@ public enum SafeArchive {
             guard chunk.count <= 128 * 1_048_576 - raw.count else { throw SecurityFailure.rejected("ZIP zu groß.") }
             raw.append(chunk)
         }
-        try ZIPHeaderPolicy.validate(raw, limits: limits)
-        guard lseek(fd, 0, SEEK_SET) == 0 else { throw SecurityFailure.rejected("ZIP nicht seekbar.") }
-        raw = Data()
-        guard let reader = archive_read_new() else { throw SecurityFailure.rejected("Archivleser fehlt.") }
-        defer { archive_read_free(reader) }
-        guard archive_read_support_format_zip(reader) == 0,
-              archive_read_open_fd(reader, fd, 65536) == 0 else { throw SecurityFailure.rejected("Ungültiges ZIP.") }
-        let start = ProcessInfo.processInfo.systemUptime
-        var seen = Set<String>(), directoryPrefixes = [String: String](), total = 0, count = 0
-        var entry: OpaquePointer?
-        var buffer = [UInt8](repeating: 0, count: 65536)
-        while true {
-            guard ProcessInfo.processInfo.systemUptime - start < limits.seconds else { throw SecurityFailure.rejected("Entpackzeit überschritten.") }
-            let status = archive_read_next_header(reader, &entry)
-            if status == 1 { break }
-            guard status == 0, let entry, let rawPath = archive_entry_pathname(entry),
-                  let path = String(validatingUTF8: rawPath), archive_entry_symlink(entry) == nil,
-                  archive_entry_hardlink(entry) == nil, archive_entry_is_encrypted(entry) == 0 else {
-                throw SecurityFailure.rejected("Ungültiger oder verlinkter Archiveintrag.")
+        try extract(archiveData: raw, to: root, limits: limits)
+    }
+
+    /// Extracts directly from the authenticated byte buffer. The updater uses this entry point so
+    /// a same-UID process cannot replace a temporary archive pathname after digest verification.
+    public static func extract(archiveData: Data, to root: SecureDirectory, limits: Limits = Limits()) throws {
+        guard archiveData.count <= 128 * 1_048_576 else { throw SecurityFailure.rejected("ZIP zu groß.") }
+        try ZIPHeaderPolicy.validate(archiveData, limits: limits)
+        try archiveData.withUnsafeBytes { archiveBytes in
+            guard let base = archiveBytes.baseAddress,
+                  let reader = archive_read_new() else { throw SecurityFailure.rejected("Archivleser fehlt.") }
+            defer { archive_read_free(reader) }
+            guard archive_read_support_format_zip(reader) == 0,
+                  archive_read_open_memory(reader, base, archiveBytes.count) == 0 else {
+                throw SecurityFailure.rejected("Ungültiges ZIP.")
             }
-            let parts = try components(path)
-            let canonical = parts.joined(separator: "/").precomposedStringWithCanonicalMapping.lowercased()
-            count += 1
-            guard count <= limits.entries, seen.insert(canonical).inserted else { throw SecurityFailure.rejected("Doppelter Archivpfad oder zu viele Dateien.") }
-            let mode = archive_entry_mode(entry), kind = mode & S_IFMT
-            guard kind == S_IFREG || kind == S_IFDIR else { throw SecurityFailure.rejected("Sonderdatei im Archiv.") }
-            // Verify consistent casing across all directory components (AUD-10)
-            for i in 1..<parts.count {
-                let prefixExact = parts.prefix(i).joined(separator: "/")
-                let prefixCanonical = prefixExact.precomposedStringWithCanonicalMapping.lowercased()
-                if let existing = directoryPrefixes[prefixCanonical] {
-                    guard existing == prefixExact else { throw SecurityFailure.rejected("Mehrdeutige Groß-/Kleinschreibung im Verzeichnispfad.") }
-                } else {
-                    directoryPrefixes[prefixCanonical] = prefixExact
-                }
-            }
-            if kind == S_IFDIR {
-                let dirExact = parts.joined(separator: "/")
-                let dirCanonical = dirExact.precomposedStringWithCanonicalMapping.lowercased()
-                if let existing = directoryPrefixes[dirCanonical] {
-                    guard existing == dirExact else { throw SecurityFailure.rejected("Mehrdeutige Groß-/Kleinschreibung im Verzeichnispfad.") }
-                } else {
-                    directoryPrefixes[dirCanonical] = dirExact
-                }
-            }
-            var parent = root
-            for part in parts.dropLast() { parent = try parent.child(part) }
-            let name = parts.last!
-            if kind == S_IFDIR { _ = try parent.child(name); continue }
-            let expected = archive_entry_size(entry)
-            guard expected >= 0, expected <= limits.fileBytes else { throw SecurityFailure.rejected("Archivdatei zu groß.") }
-            // Bounded per-entry buffering also lets us reject malformed data before committing it.
-            var data = Data()
+            let start = ProcessInfo.processInfo.systemUptime
+            var seen = Set<String>(), directoryPrefixes = [String: String](), total = 0, count = 0
+            var entry: OpaquePointer?
+            var buffer = [UInt8](repeating: 0, count: 65536)
             while true {
                 guard ProcessInfo.processInfo.systemUptime - start < limits.seconds else { throw SecurityFailure.rejected("Entpackzeit überschritten.") }
-                let n = archive_read_data(reader, &buffer, buffer.count)
-                if n == 0 { break }
-                guard n > 0, n <= limits.fileBytes - data.count, n <= limits.totalBytes - total else {
-                    throw SecurityFailure.rejected("Archiv beschädigt oder Entpackgrenze überschritten.")
+                let status = archive_read_next_header(reader, &entry)
+                if status == 1 { break }
+                guard status == 0, let entry, let rawPath = archive_entry_pathname(entry),
+                      let path = String(validatingUTF8: rawPath), archive_entry_symlink(entry) == nil,
+                      archive_entry_hardlink(entry) == nil, archive_entry_is_encrypted(entry) == 0 else {
+                    throw SecurityFailure.rejected("Ungültiger oder verlinkter Archiveintrag.")
                 }
-                data.append(buffer, count: n); total += n
+                let parts = try components(path)
+                let canonical = parts.joined(separator: "/").precomposedStringWithCanonicalMapping.lowercased()
+                count += 1
+                guard count <= limits.entries, seen.insert(canonical).inserted else { throw SecurityFailure.rejected("Doppelter Archivpfad oder zu viele Dateien.") }
+                let mode = archive_entry_mode(entry), kind = mode & S_IFMT
+                guard kind == S_IFREG || kind == S_IFDIR else { throw SecurityFailure.rejected("Sonderdatei im Archiv.") }
+                for i in 1..<parts.count {
+                    let prefixExact = parts.prefix(i).joined(separator: "/")
+                    let prefixCanonical = prefixExact.precomposedStringWithCanonicalMapping.lowercased()
+                    if let existing = directoryPrefixes[prefixCanonical] {
+                        guard existing == prefixExact else { throw SecurityFailure.rejected("Mehrdeutige Groß-/Kleinschreibung im Verzeichnispfad.") }
+                    } else {
+                        directoryPrefixes[prefixCanonical] = prefixExact
+                    }
+                }
+                if kind == S_IFDIR {
+                    let dirExact = parts.joined(separator: "/")
+                    let dirCanonical = dirExact.precomposedStringWithCanonicalMapping.lowercased()
+                    if let existing = directoryPrefixes[dirCanonical] {
+                        guard existing == dirExact else { throw SecurityFailure.rejected("Mehrdeutige Groß-/Kleinschreibung im Verzeichnispfad.") }
+                    } else {
+                        directoryPrefixes[dirCanonical] = dirExact
+                    }
+                }
+                var parent = root
+                for part in parts.dropLast() { parent = try parent.child(part) }
+                let name = parts.last!
+                if kind == S_IFDIR { _ = try parent.child(name); continue }
+                let expected = archive_entry_size(entry)
+                guard expected >= 0, expected <= limits.fileBytes else { throw SecurityFailure.rejected("Archivdatei zu groß.") }
+                var data = Data()
+                while true {
+                    guard ProcessInfo.processInfo.systemUptime - start < limits.seconds else { throw SecurityFailure.rejected("Entpackzeit überschritten.") }
+                    let n = archive_read_data(reader, &buffer, buffer.count)
+                    if n == 0 { break }
+                    guard n > 0, n <= limits.fileBytes - data.count, n <= limits.totalBytes - total else {
+                        throw SecurityFailure.rejected("Archiv beschädigt oder Entpackgrenze überschritten.")
+                    }
+                    data.append(buffer, count: n); total += n
+                }
+                guard data.count == expected, !(try parent.exists(name)) else { throw SecurityFailure.rejected("Mehrdeutiger Archiveintrag.") }
+                try parent.write(data, name: name)
+                if mode & 0o111 != 0 {
+                    let output = openat(parent.descriptor, name, O_RDONLY | O_NOFOLLOW | O_CLOEXEC)
+                    guard output >= 0 else { throw SecurityFailure.rejected("Dateirechte nicht setzbar.") }
+                    defer { close(output) }
+                    try SecureDirectory.validate(output, directory: false)
+                    guard fchmod(output, 0o700) == 0 else { throw SecurityFailure.rejected("Dateirechte nicht setzbar.") }
+                }
             }
-            guard data.count == expected, !(try parent.exists(name)) else { throw SecurityFailure.rejected("Mehrdeutiger Archiveintrag.") }
-            try parent.write(data, name: name)
-            if mode & 0o111 != 0 {
-                let output = openat(parent.descriptor, name, O_RDONLY | O_NOFOLLOW | O_CLOEXEC)
-                guard output >= 0 else { throw SecurityFailure.rejected("Dateirechte nicht setzbar.") }
-                defer { close(output) }
-                try SecureDirectory.validate(output, directory: false)
-                guard fchmod(output, 0o700) == 0 else { throw SecurityFailure.rejected("Dateirechte nicht setzbar.") }
-            }
+            guard count > 0 else { throw SecurityFailure.rejected("Leeres Archiv.") }
         }
-        guard count > 0 else { throw SecurityFailure.rejected("Leeres Archiv.") }
     }
 }
 

@@ -28,9 +28,9 @@ Yeoman is an open-source macOS menu bar tool that bundles several customization 
 
 ### Specifications & Resource Usage
 
-- **Target OS:** macOS 14.0 (Sonoma) or newer (Apple Silicon & Intel)
+- **Target OS:** macOS 14.0 (Sonoma) or newer. Pre-built releases currently target Apple Silicon (`arm64`); Intel source compatibility has not been release-tested.
 - **Frameworks:** Apple AppKit & SwiftUI (0 external libraries or third-party dependencies)
-- **Networking:** Local only. No telemetry, analytics, or background tracking requests
+- **Networking:** No telemetry or analytics. Web widgets access their configured sites, and the updater checks the Yeoman GitHub release endpoints when automatic checks are enabled.
 - **Disk Storage:** Standard macOS Application Support directory (`~/Library/Application Support/Yeoman`) with POSIX `0700` permissions
 - **Idle Memory:** ~60 MB RAM (with WebKit views unloaded)
 - **Idle CPU:** < 1%
@@ -54,7 +54,7 @@ Displays websites inside floating panels accessible directly from menu bar icons
 - **Configurable Dimensions:** Freeform width and height sliders or presets (320×400, 375×667, 500×700).
 - **User Agent Modes:** Auto, forced mobile (iPhone), or forced desktop.
 - **Window Pinning:** Optional pin mode to keep windows open when clicking outside.
-- **Lifecycle:** WebKit timers and cached pages are halted when panels are closed.
+- **Lifecycle:** Closed panels are hidden and throttled; media is suspended and caches are purged. WebKit may retain process state until the widget or app is closed.
 
 <p align="center">
   <img src="Resources/Mockups/yeoman_web_widgets.png" alt="Yeoman Web Widgets" width="92%" />
@@ -62,9 +62,9 @@ Displays websites inside floating panels accessible directly from menu bar icons
 
 ### 2. Clipboard History
 Records copied text and images locally.
-- **Privacy Filtering:** Automatically ignores pasteboard items flagged by password managers (1Password, Bitwarden, KeePass, Proton Pass, Apple Keychain) via `org.nspasteboard.TransientType` and `.ConcealedType`.
+- **Privacy Filtering:** Best-effort filtering ignores standard transient/concealed markers and known password-manager patterns. Applications that omit these signals cannot be identified reliably.
 - **Search & Filter:** Search by text content or filter by category (text, images, pinned favorites).
-- **Storage:** Persisted locally as JSON and PNG files in `~/Library/Application Support/Yeoman/`.
+- **Storage:** Optional persistence uses AES-GCM authenticated encryption in `~/Library/Application Support/Yeoman/`. Keys are permission-restricted files under `.secrets`; this protects against other user accounts and accidental disclosure, but a malicious process running as the same macOS user can read both key and ciphertext.
 
 <p align="center">
   <img src="Resources/Mockups/yeoman_clipboard_popover.png" alt="Yeoman Clipboard Popover" width="55%" />
@@ -95,7 +95,7 @@ Shows hardware usage in the menu bar.
 ### Pre-built Binary
 Download `Yeoman.dmg` from [GitHub Releases](https://github.com/timo-rst/mac_customizer/releases). Open the disk image and move `Yeoman.app` to `/Applications`.
 
-> If running without an Apple Developer ID signature, open via right-click → **Open**, or clear the quarantine flag:
+Releases are ad-hoc signed, not notarized with an Apple Developer ID. Verify that the download came from the official GitHub release and compare its published checksum before bypassing Gatekeeper. Then open it via right-click → **Open**. If macOS still blocks the verified copy, you can clear its quarantine attribute:
 > ```bash
 > xattr -cr /Applications/Yeoman.app
 > ```
