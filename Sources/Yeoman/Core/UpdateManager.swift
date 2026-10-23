@@ -128,6 +128,15 @@ public final class UpdateManager: ObservableObject {
                 let page = URL(string: release.htmlUrl).flatMap { UpdateURLPolicy.releasePage($0) ? $0 : nil }
                     ?? URL(string: "https://github.com/timo-rst/yeoman/releases")!
                 status = .updateAvailable(version: release.tagName, notes: String((release.body ?? "").prefix(32768)), downloadUrl: url, htmlUrl: page)
+                let ignored = defaults.string(forKey: "update_ignored_version")
+                if !silent || ignored != release.tagName {
+                    UpdatePromptController.shared.show(
+                        version: release.tagName,
+                        notes: String((release.body ?? "").prefix(32768)),
+                        downloadUrl: url,
+                        htmlUrl: page
+                    )
+                }
             } catch { if !silent { status = .failed(message: error.localizedDescription) } }
         }
     }

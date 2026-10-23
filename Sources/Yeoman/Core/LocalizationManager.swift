@@ -586,6 +586,30 @@ public final class LocalizationManager: ObservableObject {
             .spanish: "Instalar ahora y reiniciar",
             .french: "Installer maintenant et redémarrer"
         ],
+        "updates.popup_title": [
+            .german: "Neues Update verfügbar",
+            .english: "New Update Available",
+            .spanish: "Nueva actualización disponible",
+            .french: "Nouvelle mise à jour disponible"
+        ],
+        "updates.popup_subtitle": [
+            .german: "Ein neues Update für Yeoman steht bereit.",
+            .english: "A new update for Yeoman is available.",
+            .spanish: "Una nueva actualización para Yeoman está disponible.",
+            .french: "Une nouvelle mise à jour pour Yeoman est disponible."
+        ],
+        "updates.ignore_button": [
+            .german: "Ignorieren",
+            .english: "Ignore",
+            .spanish: "Ignorar",
+            .french: "Ignorer"
+        ],
+        "updates.remind_later": [
+            .german: "Später",
+            .english: "Later",
+            .spanish: "Más tarde",
+            .french: "Plus tard"
+        ],
         "updates.up_to_date": [
             .german: "Yeoman ist auf dem neuesten Stand",
             .english: "Yeoman is up to date",
