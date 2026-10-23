@@ -384,9 +384,18 @@ struct ClipboardRowView: View {
                     
                     HStack(spacing: 6) {
                         if let app = item.sourceApp {
-                            Text(app)
+                            if app.contains("iPhone") || app.contains("iPad") || app.contains("Universal Clipboard") {
+                                HStack(spacing: 3) {
+                                    Image(systemName: "iphone")
+                                    Text(app)
+                                }
                                 .font(.caption2)
                                 .foregroundColor(.secondary)
+                            } else {
+                                Text(app)
+                                    .font(.caption2)
+                                    .foregroundColor(.secondary)
+                            }
                         }
                         Text(formatTime(item.createdAt))
                             .font(.caption2)

@@ -1,4 +1,5 @@
 import Foundation
+import AppKit
 import YeomanCore
 
 func runClipboardTests() {
@@ -55,6 +56,13 @@ func runClipboardTests() {
             
             let nonMatchingQuery = "swiftui"
             assertFalse(item.content.lowercased().contains(nonMatchingQuery.lowercased()))
+        }
+        
+        harness.test("isRemotePasteboard detects Apple Universal Clipboard items") {
+            let customPb = NSPasteboard.withUniqueName()
+            assertFalse(ClipboardMonitor.isRemotePasteboard(customPb))
+            customPb.declareTypes([NSPasteboard.PasteboardType(ClipboardMonitor.remoteClipboardType), .string], owner: nil)
+            assertTrue(ClipboardMonitor.isRemotePasteboard(customPb))
         }
     }
 }

@@ -160,8 +160,9 @@ public final class ClipboardMonitor: ObservableObject {
         let generation = pasteboard.changeCount
         guard generation != lastChangeCount else { return }
         let frontmost = NSWorkspace.shared.frontmostApplication
+        let isRemote = Self.isRemotePasteboard(pasteboard)
         let excluded = Set(excludedBundleIDs.split(whereSeparator: { $0 == "," || $0.isNewline }).map { $0.trimmingCharacters(in: .whitespaces) })
-        guard !excluded.contains(frontmost?.bundleIdentifier ?? ""),
+        guard (isRemote || !excluded.contains(frontmost?.bundleIdentifier ?? "")),
               !isPasswordManagerPasteboard(pasteboard: pasteboard, frontmostApp: frontmost),
               let items = pasteboard.pasteboardItems, items.count <= 16,
               !items.contains(where: { $0.types.count > 64 || $0.types.contains { Self.isTransientPasteboardType($0.rawValue) } }) else {
@@ -176,7 +177,7 @@ public final class ClipboardMonitor: ObservableObject {
         guard Self.acceptsSnapshot(before: generation, after: pasteboard.changeCount,
                                    sensitive: isPasswordManagerPasteboard(pasteboard: pasteboard, frontmostApp: frontmost)) else { return }
         lastChangeCount = generation
-        let app = frontmost?.localizedName
+        let app = isRemote ? "iPhone / iPad" : frontmost?.localizedName
         if let image {
             ClipboardHistoryStore.shared.addImageData(image, sourceApp: app)
         } else if let file, file.isFileURL, ["png", "jpg", "jpeg", "heic", "webp", "tiff", "bmp", "ico"].contains(file.pathExtension.lowercased()) {
@@ -190,6 +191,23 @@ public final class ClipboardMonitor: ObservableObject {
 
     public static func acceptsSnapshot(before: Int, after: Int, sensitive: Bool) -> Bool {
         before == after && !sensitive
+    }
+
+    // MARK: - Remote Clipboard (Universal Clipboard / Apple Continuity)
+    public static let remoteClipboardType = "com.apple.is-remote-clipboard"
+
+    public static func isRemotePasteboard(_ pasteboard: NSPasteboard) -> Bool {
+        if pasteboard.types?.contains(where: { $0.rawValue == remoteClipboardType }) == true {
+            return true
+        }
+        if let items = pasteboard.pasteboardItems {
+            for item in items {
+                if item.types.contains(where: { $0.rawValue == remoteClipboardType }) {
+                    return true
+                }
+            }
+        }
+        return false
     }
 
     // MARK: - Privacy & Password Manager Inspection
