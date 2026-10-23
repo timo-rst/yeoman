@@ -673,7 +673,7 @@ struct WebWidgetEditorSheet: View {
     @State private var isEnabled: Bool
     @State private var isPinned: Bool
     @State private var showsAddressBar: Bool
-    @State private var hidesTopBar: Bool
+    @State private var showsTopBar: Bool
 
     @StateObject private var previewController: WebPanelController
     @ObservedObject private var faviconManager = WebFaviconManager.shared
@@ -709,7 +709,7 @@ struct WebWidgetEditorSheet: View {
         let initialEnabled = initialWidget?.isEnabled ?? true
         let initialPinned = initialWidget?.isPinned ?? false
         let initialBar = initialWidget?.showsAddressBar ?? false
-        let initialHidesTopBar = initialWidget?.hidesTopBar ?? false
+        let initialShowsTopBar = initialWidget?.showsTopBar ?? true
 
         _title = State(initialValue: initialTitle)
         _url = State(initialValue: initialURL)
@@ -728,7 +728,7 @@ struct WebWidgetEditorSheet: View {
         _isEnabled = State(initialValue: initialEnabled)
         _isPinned = State(initialValue: initialPinned)
         _showsAddressBar = State(initialValue: initialBar)
-        _hidesTopBar = State(initialValue: initialHidesTopBar)
+        _showsTopBar = State(initialValue: initialShowsTopBar)
 
         let targetW = initialPreset == .custom ? initialW : initialPreset.dimensions.width
         let preview = WebPanelController(
@@ -1268,8 +1268,8 @@ struct WebWidgetEditorSheet: View {
                                 }
 
                                 HStack(spacing: 6) {
-                                    Toggle("Obere Adressleiste ausblenden", isOn: $hidesTopBar)
-                                    InfoTooltip(text: "Blendet die Web-Adresse (URL) am oberen Rand aus für eine komplett rahmenlose Widget-Ansicht.")
+                                    Toggle("Obere Adressleiste", isOn: $showsTopBar)
+                                    InfoTooltip(text: "Zeigt die Web-Adresse (URL) am oberen Rand des Widgets an. Deaktivieren für eine komplett rahmenlose Ansicht.")
                                 }
                             }
                         } label: {
@@ -1334,12 +1334,12 @@ struct WebWidgetEditorSheet: View {
                     GeometryReader { geo in
                         let scale = previewScale(containerWidth: geo.size.width, containerHeight: geo.size.height)
                         let deviceW = max(1, effectiveWidth)
-                        let deviceH = max(1, effectiveHeight + (hidesTopBar ? 0 : 28))
+                        let deviceH = max(1, effectiveHeight + (showsTopBar ? 28 : 0))
 
                         ZStack {
                             // Device Frame Outline
                             VStack(spacing: 0) {
-                                if !hidesTopBar {
+                                if showsTopBar {
                                     // Fake Titlebar
                                     HStack(spacing: 6) {
                                         Circle().fill(Color.red.opacity(0.8)).frame(width: 8, height: 8)
@@ -1441,7 +1441,7 @@ struct WebWidgetEditorSheet: View {
                         isEnabled: isEnabled,
                         isPinned: isPinned,
                         showsAddressBar: showsAddressBar,
-                        hidesTopBar: hidesTopBar
+                        showsTopBar: showsTopBar
                     )
                     onSave(item)
                 }

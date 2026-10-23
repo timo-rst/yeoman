@@ -6,7 +6,7 @@ public enum WebUserAgentMode: String, CaseIterable, Identifiable, Codable {
     case auto = "Automatisch (nach Größe)"
     case mobile = "Immer Mobil (iPhone)"
     case desktop = "Immer Desktop"
-    
+
     public var id: String { rawValue }
 }
 
@@ -15,9 +15,9 @@ public enum WebSizePreset: String, CaseIterable, Identifiable, Codable {
     case widget = "320 × 400 (Widget)"
     case smartphone = "375 × 667 (Smartphone)"
     case large = "500 × 700 (Großes Fenster)"
-    
+
     public var id: String { rawValue }
-    
+
     public var dimensions: (width: CGFloat, height: CGFloat) {
         switch self {
         case .custom: return (320, 400)
@@ -26,7 +26,7 @@ public enum WebSizePreset: String, CaseIterable, Identifiable, Codable {
         case .large: return (500, 700)
         }
     }
-    
+
     public init(from decoder: Decoder) throws {
         let container = try decoder.singleValueContainer()
         let raw = try container.decode(String.self)
@@ -60,12 +60,17 @@ public struct WebWidgetItem: Identifiable, Codable, Equatable {
     public var isEnabled: Bool
     public var isPinned: Bool
     public var showsAddressBar: Bool
-    public var hidesTopBar: Bool
-    
-    enum CodingKeys: String, CodingKey {
-        case id, title, url, iconName, useFavicon, selectedFaviconURL, removeWhiteBackground, sizePreset, customWidth, customHeight, userAgentMode, zoomScale, isEnabled, isPinned, showsAddressBar, hidesTopBar
+    public var showsTopBar: Bool
+
+    public var hidesTopBar: Bool {
+        get { !showsTopBar }
+        set { showsTopBar = !newValue }
     }
-    
+
+    enum CodingKeys: String, CodingKey {
+        case id, title, url, iconName, useFavicon, selectedFaviconURL, removeWhiteBackground, sizePreset, customWidth, customHeight, userAgentMode, zoomScale, isEnabled, isPinned, showsAddressBar, showsTopBar, hidesTopBar
+    }
+
     public init(
         id: UUID = UUID(),
         title: String,
@@ -82,7 +87,8 @@ public struct WebWidgetItem: Identifiable, Codable, Equatable {
         isEnabled: Bool = true,
         isPinned: Bool = false,
         showsAddressBar: Bool = false,
-        hidesTopBar: Bool = false
+        showsTopBar: Bool = true,
+        hidesTopBar: Bool? = nil
     ) {
         self.id = id
         self.title = title
@@ -99,10 +105,10 @@ public struct WebWidgetItem: Identifiable, Codable, Equatable {
         self.isEnabled = isEnabled
         self.isPinned = isPinned
         self.showsAddressBar = showsAddressBar
-        self.hidesTopBar = hidesTopBar
+        self.showsTopBar = hidesTopBar.map { !$0 } ?? showsTopBar
         normalize()
     }
-    
+
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         self.id = try container.decode(UUID.self, forKey: .id)
@@ -120,11 +126,37 @@ public struct WebWidgetItem: Identifiable, Codable, Equatable {
         self.isEnabled = try container.decodeIfPresent(Bool.self, forKey: .isEnabled) ?? true
         self.isPinned = try container.decodeIfPresent(Bool.self, forKey: .isPinned) ?? false
         self.showsAddressBar = try container.decodeIfPresent(Bool.self, forKey: .showsAddressBar) ?? false
-        self.hidesTopBar = try container.decodeIfPresent(Bool.self, forKey: .hidesTopBar) ?? false
+        if let topBar = try container.decodeIfPresent(Bool.self, forKey: .showsTopBar) {
+            self.showsTopBar = topBar
+        } else if let hides = try container.decodeIfPresent(Bool.self, forKey: .hidesTopBar) {
+            self.showsTopBar = !hides
+        } else {
+            self.showsTopBar = true
+        }
         guard SecurityPolicy.webURL(url) != nil else { throw SecurityFailure.rejected("Ungültige Widget-URL.") }
         normalize()
     }
-    
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(id, forKey: .id)
+        try container.encode(title, forKey: .title)
+        try container.encode(url, forKey: .url)
+        try container.encode(iconName, forKey: .iconName)
+        try container.encode(useFavicon, forKey: .useFavicon)
+        try container.encodeIfPresent(selectedFaviconURL, forKey: .selectedFaviconURL)
+        try container.encode(removeWhiteBackground, forKey: .removeWhiteBackground)
+        try container.encode(sizePreset, forKey: .sizePreset)
+        try container.encode(customWidth, forKey: .customWidth)
+        try container.encode(customHeight, forKey: .customHeight)
+        try container.encode(userAgentMode, forKey: .userAgentMode)
+        try container.encode(zoomScale, forKey: .zoomScale)
+        try container.encode(isEnabled, forKey: .isEnabled)
+        try container.encode(isPinned, forKey: .isPinned)
+        try container.encode(showsAddressBar, forKey: .showsAddressBar)
+        try container.encode(showsTopBar, forKey: .showsTopBar)
+    }
+
     public mutating func normalize() {
         title = String(title.prefix(256)); iconName = String(iconName.prefix(128))
         customWidth = CGFloat(SecurityPolicy.bounded(Double(customWidth), 280...1200, fallback: 320))
@@ -139,7 +171,7 @@ public struct WebWidgetItem: Identifiable, Codable, Equatable {
         if sizePreset == .custom { return CGFloat(SecurityPolicy.bounded(Double(customWidth), 280...1200, fallback: 320)) }
         return sizePreset.dimensions.width
     }
-    
+
     public var effectiveHeight: CGFloat {
         if sizePreset == .custom { return CGFloat(SecurityPolicy.bounded(Double(customHeight), 300...1000, fallback: 400)) }
         return sizePreset.dimensions.height
@@ -152,7 +184,7 @@ public final class WebPanelModule: NSObject, CustomizerModule, ObservableObject 
     public let moduleDescription = "Websites direkt in der Menüleiste öffnen. Erstelle und verwalte Widgets mit flexiblen Fenstergrößen."
     public let iconName = "globe"
     public let category = ModuleCategory.productivity
-    
+
     @Published public var isEnabled: Bool {
         didSet {
             UserDefaults.standard.set(isEnabled, forKey: "web_panel_is_enabled")
@@ -165,54 +197,54 @@ public final class WebPanelModule: NSObject, CustomizerModule, ObservableObject 
             ModuleManager.shared.recreateAllStatusItems()
         }
     }
-    
+
     @Published public var showsDedicatedStatusItem: Bool {
         didSet {
             UserDefaults.standard.set(showsDedicatedStatusItem, forKey: "web_panel_shows_status_item")
             ModuleManager.shared.recreateAllStatusItems()
         }
     }
-    
+
     @Published public private(set) var widgets: [WebWidgetItem] = [] {
         didSet {
             saveWidgets()
             syncAllInstances()
         }
     }
-    
+
     private var instanceControllers: [UUID: WebWidgetInstanceController] = [:]
     @Published public private(set) var storageError: String?
     private let storage = WidgetStorage()
     private var didLoadWidgets = false
     private let widgetsStorageKey = "web_panel_widgets_list_json"
-    
+
     public override init() {
         self.isEnabled = UserDefaults.standard.object(forKey: "web_panel_is_enabled") as? Bool ?? true
         self.showsDedicatedStatusItem = true
         UserDefaults.standard.set(true, forKey: "web_panel_shows_status_item")
         super.init()
-        
+
         loadWidgets()
     }
-    
+
     public func start() {
         guard isEnabled else { return }
         syncAllInstances()
     }
-    
+
     public func stop() {
         for controller in instanceControllers.values {
             controller.cleanup()
         }
         instanceControllers.removeAll()
     }
-    
+
     public func updateStatusItemVisibility() {
         syncAllInstances()
     }
-    
+
     // MARK: - CRUD Operations
-    
+
     public func addWidget(_ item: WebWidgetItem) {
         guard didLoadWidgets, storageError == nil, widgets.count < SecurityPolicy.widgetCount,
               !widgets.contains(where: { $0.id == item.id }) else { return }
@@ -221,7 +253,7 @@ public final class WebPanelModule: NSObject, CustomizerModule, ObservableObject 
         widgets.append(item)
         ModuleManager.shared.recreateAllStatusItems()
     }
-    
+
     public func updateWidget(_ item: WebWidgetItem) {
         guard didLoadWidgets, storageError == nil else { return }
         var item = item; item.normalize()
@@ -233,7 +265,7 @@ public final class WebPanelModule: NSObject, CustomizerModule, ObservableObject 
             }
         }
     }
-    
+
     public func deleteWidget(id: UUID) {
         guard didLoadWidgets, storageError == nil else { return }
         if let item = widgets.first(where: { $0.id == id }) { WebFaviconManager.shared.removeWidget(item) }
@@ -252,7 +284,7 @@ public final class WebPanelModule: NSObject, CustomizerModule, ObservableObject 
         }
         ModuleManager.shared.recreateAllStatusItems()
     }
-    
+
     public func toggleWidget(id: UUID, isEnabled: Bool) {
         if let idx = widgets.firstIndex(where: { $0.id == id }) {
             widgets[idx].isEnabled = isEnabled
@@ -260,21 +292,21 @@ public final class WebPanelModule: NSObject, CustomizerModule, ObservableObject 
             ModuleManager.shared.recreateAllStatusItems()
         }
     }
-    
+
     // MARK: - Instance Synchronization
-    
+
     private func syncAllInstances() {
         DispatchQueue.main.async { [weak self] in
             guard let self = self else { return }
-            
+
             let activeIds = Set(self.widgets.map { $0.id })
-            
+
             // Remove controllers for deleted widgets
             for (id, controller) in self.instanceControllers where !activeIds.contains(id) {
                 controller.cleanup()
                 self.instanceControllers.removeValue(forKey: id)
             }
-            
+
             // Setup or update controllers
             for widget in self.widgets {
                 if self.isEnabled && self.showsDedicatedStatusItem && widget.isEnabled {
@@ -294,9 +326,9 @@ public final class WebPanelModule: NSObject, CustomizerModule, ObservableObject 
             }
         }
     }
-    
+
     // MARK: - Persistence
-    
+
     private func saveWidgets() {
         guard didLoadWidgets, storageError == nil else { return }
         storage.save(widgets) { [weak self] error in self?.storageError = error?.localizedDescription }
@@ -314,17 +346,17 @@ public final class WebPanelModule: NSObject, CustomizerModule, ObservableObject 
     public func openWidgetPopover(id: UUID) {
         instanceControllers[id]?.openPopover()
     }
-    
+
     public func removeAllStatusItems() {
         for controller in instanceControllers.values {
             controller.removeStatusItem()
         }
     }
-    
+
     public func recreateStatusItems() {
         // First remove all status items
         removeAllStatusItems()
-        
+
         // Recreate in reverse order so the first widget appears on the left
         for widget in widgets.reversed() {
             if isEnabled && showsDedicatedStatusItem && widget.isEnabled {
@@ -338,7 +370,7 @@ public final class WebPanelModule: NSObject, CustomizerModule, ObservableObject 
             }
         }
     }
-    
+
     public func getTaskIcon(for item: WebWidgetItem) -> NSImage? {
         if item.useFavicon {
             if let fav = WebFaviconManager.shared.previewIcon(
@@ -354,7 +386,7 @@ public final class WebPanelModule: NSObject, CustomizerModule, ObservableObject 
         }
         return NSImage(systemSymbolName: item.iconName, accessibilityDescription: item.title)
     }
-    
+
     public func getCurrentWidgetProcessMap() -> [pid_t: (title: String, icon: NSImage?, identity: ProcessIdentity)] {
         var map: [pid_t: (title: String, icon: NSImage?, identity: ProcessIdentity)] = [:]
         for controller in instanceControllers.values {
@@ -363,7 +395,7 @@ public final class WebPanelModule: NSObject, CustomizerModule, ObservableObject 
         }
         return map
     }
-    
+
     public func settingsView() -> AnyView {
         AnyView(WebPanelSettingsView(module: self))
     }
@@ -377,7 +409,7 @@ public final class WebWidgetInstanceController: NSObject, ObservableObject, NSPo
     @Published public var autoFitScale: Double = 1.0
     public let webController: WebPanelController
     weak var module: WebPanelModule?
-    
+
     public var webProcessIdentifier: pid_t? {
         if let wv = webController.webView,
            let num = wv.value(forKey: "_webProcessIdentifier") as? NSNumber {
@@ -388,7 +420,7 @@ public final class WebWidgetInstanceController: NSObject, ObservableObject, NSPo
         }
         return nil
     }
-    
+
     public var taskIcon: NSImage? {
         if item.useFavicon {
             if let fav = WebFaviconManager.shared.previewIcon(
@@ -404,15 +436,15 @@ public final class WebWidgetInstanceController: NSObject, ObservableObject, NSPo
         }
         return NSImage(systemSymbolName: item.iconName, accessibilityDescription: item.title)
     }
-    
+
     private var statusItem: NSStatusItem?
     private var popover: NSPopover?
-    
+
     public struct FittedDimensions {
         public let size: NSSize
         public let autoFitScale: Double
     }
-    
+
     public init(item: WebWidgetItem, module: WebPanelModule) {
         self.item = item
         self.module = module
@@ -428,7 +460,7 @@ public final class WebWidgetInstanceController: NSObject, ObservableObject, NSPo
         super.init()
         self.webController.associatedItem = item
         updateFittedDimensions()
-        
+
         NotificationCenter.default.addObserver(
             self,
             selector: #selector(handleFaviconUpdate(_:)),
@@ -442,11 +474,11 @@ public final class WebWidgetInstanceController: NSObject, ObservableObject, NSPo
             object: nil
         )
     }
-    
+
     deinit {
         NotificationCenter.default.removeObserver(self)
     }
-    
+
     @discardableResult
     public func updateFittedDimensions(for targetScreen: NSScreen? = nil) -> FittedDimensions {
         let currentScreen = targetScreen
@@ -454,19 +486,19 @@ public final class WebWidgetInstanceController: NSObject, ObservableObject, NSPo
             ?? popover?.contentViewController?.view.window?.screen
             ?? NSScreen.main
             ?? NSScreen.screens.first
-        
+
         let desiredWidth = item.effectiveWidth
         let desiredHeight = item.effectiveHeight
-        
+
         guard let screen = currentScreen else {
             let fallback = FittedDimensions(size: NSSize(width: desiredWidth, height: desiredHeight), autoFitScale: 1.0)
             self.fittedSize = fallback.size
             self.autoFitScale = 1.0
             return fallback
         }
-        
+
         let visibleFrame = screen.visibleFrame
-        
+
         // Calculate vertical space from status bar down to bottom of visible area (above Dock)
         let topAnchorY: CGFloat = {
             if let btn = statusItem?.button, let win = btn.window, win.frame.minY > visibleFrame.minY {
@@ -474,34 +506,34 @@ public final class WebWidgetInstanceController: NSObject, ObservableObject, NSPo
             }
             return visibleFrame.maxY
         }()
-        
+
         let bottomBoundaryY = visibleFrame.minY
         let availableVerticalSpace = max(250, topAnchorY - bottomBoundaryY)
-        
+
         // Reserve 24 pt for popover arrow (12 pt), borders, and bottom breathing margin above Dock
         let maxAllowedHeight = max(250, availableVerticalSpace - 24)
-        
+
         // Reserve 32 pt for horizontal margins from display edge
         let maxAllowedWidth = max(280, visibleFrame.width - 32)
-        
+
         let clampedWidth = min(desiredWidth, maxAllowedWidth)
         let clampedHeight = min(desiredHeight, maxAllowedHeight)
-        
+
         // Calculate scaling factor to proportionately fit web content if screen is smaller than configured size
         let scaleX = clampedWidth / max(desiredWidth, 1)
         let scaleY = clampedHeight / max(desiredHeight, 1)
         let scale = min(scaleX, scaleY, 1.0)
-        
+
         let result = FittedDimensions(
             size: NSSize(width: clampedWidth, height: clampedHeight),
             autoFitScale: scale
         )
-        
+
         self.fittedSize = result.size
         self.autoFitScale = result.autoFitScale
         return result
     }
-    
+
     @objc private func handleScreenParametersChange() {
         DispatchQueue.main.async { [weak self] in
             guard let self = self else { return }
@@ -511,7 +543,7 @@ public final class WebWidgetInstanceController: NSObject, ObservableObject, NSPo
             self.webController.applyZoom(self.item.zoomScale * self.autoFitScale)
         }
     }
-    
+
     @objc private func handleFaviconUpdate(_ notification: Notification) {
         if let targetId = notification.userInfo?["widgetId"] as? UUID, targetId == item.id {
             DispatchQueue.main.async { [weak self] in
@@ -523,10 +555,10 @@ public final class WebWidgetInstanceController: NSObject, ObservableObject, NSPo
             }
         }
     }
-    
+
     public func updateStatusItemIcon() {
         guard let button = statusItem?.button else { return }
-        
+
         if item.useFavicon, let webIcon = WebFaviconManager.shared.menuBarIcon(for: item) {
             button.image = webIcon
         } else {
@@ -535,7 +567,7 @@ public final class WebWidgetInstanceController: NSObject, ObservableObject, NSPo
             button.image = img
         }
     }
-    
+
     public func removeStatusItem() {
         if let s = statusItem {
             NSStatusBar.system.removeStatusItem(s)
@@ -545,14 +577,14 @@ public final class WebWidgetInstanceController: NSObject, ObservableObject, NSPo
             popover.performClose(nil)
         }
     }
-    
+
     public func recreateStatusItem() {
         removeStatusItem()
         if module?.isEnabled == true && module?.showsDedicatedStatusItem == true && item.isEnabled {
             setup()
         }
     }
-    
+
     public func setup() {
         guard statusItem == nil else { return }
         let sItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
@@ -564,17 +596,17 @@ public final class WebWidgetInstanceController: NSObject, ObservableObject, NSPo
         }
         self.statusItem = sItem
         updateStatusItemIcon()
-        
+
         // Pre-create popover for instant zero-latency opening
         preparePopover()
-        
+
         if item.useFavicon {
             WebFaviconManager.shared.fetchFavicon(for: item.url, widgetId: item.id) { [weak self] _ in
                 self?.updateStatusItemIcon()
             }
         }
     }
-    
+
     public func preparePopover() {
         if popover == nil {
             updateFittedDimensions()
@@ -595,14 +627,14 @@ public final class WebWidgetInstanceController: NSObject, ObservableObject, NSPo
             self.popover = p
         }
     }
-    
+
     public func update(with newItem: WebWidgetItem) {
         let oldUrl = self.item.url
         let oldUseFavicon = self.item.useFavicon
         let oldIconName = self.item.iconName
         let oldFaviconURL = self.item.selectedFaviconURL
         let oldRemoveWhite = self.item.removeWhiteBackground
-        
+
         self.item = newItem
         updateFittedDimensions()
         webController.associatedItem = newItem
@@ -612,7 +644,7 @@ public final class WebWidgetInstanceController: NSObject, ObservableObject, NSPo
             zoomScale: newItem.zoomScale * autoFitScale,
             newURL: newItem.url
         )
-        
+
         if module?.isEnabled == true && module?.showsDedicatedStatusItem == true && newItem.isEnabled {
             if statusItem == nil {
                 setup()
@@ -625,19 +657,19 @@ public final class WebWidgetInstanceController: NSObject, ObservableObject, NSPo
         } else {
             removeStatusItem()
         }
-        
+
         let faviconNeedsRefresh = (newItem.url != oldUrl || newItem.useFavicon != oldUseFavicon || newItem.iconName != oldIconName || newItem.selectedFaviconURL != oldFaviconURL || newItem.removeWhiteBackground != oldRemoveWhite)
-        
+
         if faviconNeedsRefresh && newItem.useFavicon {
             WebFaviconManager.shared.fetchFavicon(for: newItem.url, widgetId: newItem.id) { [weak self] _ in
                 self?.updateStatusItemIcon()
             }
         }
-        
+
         popover?.contentSize = fittedSize
         popover?.behavior = newItem.isPinned ? .applicationDefined : .transient
     }
-    
+
     public func cleanup() {
         NotificationCenter.default.removeObserver(self)
         if let item = statusItem {
@@ -652,7 +684,7 @@ public final class WebWidgetInstanceController: NSObject, ObservableObject, NSPo
         webController.onPopoverClosed()
         webController.dispose()
     }
-    
+
     @objc private func statusItemClicked(_ sender: NSStatusBarButton) {
         let event = NSApp.currentEvent
         if event?.type == .rightMouseUp {
@@ -661,17 +693,17 @@ public final class WebWidgetInstanceController: NSObject, ObservableObject, NSPo
             togglePopover(sender)
         }
     }
-    
+
     public func openPopover() {
         if let button = statusItem?.button {
             togglePopover(button)
         }
     }
-    
+
     private func togglePopover(_ sender: NSStatusBarButton) {
         updateFittedDimensions(for: sender.window?.screen)
         preparePopover()
-        
+
         guard let p = popover else { return }
         if p.isShown {
             p.performClose(sender)
@@ -688,7 +720,7 @@ public final class WebWidgetInstanceController: NSObject, ObservableObject, NSPo
             }
         }
     }
-    
+
     private func showContextMenu(for sender: NSStatusBarButton) {
         let menu = NSMenu()
         menu.addItem(NSMenuItem(title: "\(item.title) öffnen", action: #selector(openPopoverAction), keyEquivalent: ""))
@@ -698,48 +730,48 @@ public final class WebWidgetInstanceController: NSObject, ObservableObject, NSPo
         menu.addItem(NSMenuItem(title: item.isPinned ? "Fenster lösen" : "Fenster anheften (Pin)", action: #selector(togglePinAction), keyEquivalent: "p"))
         menu.addItem(NSMenuItem.separator())
         menu.addItem(NSMenuItem(title: "Einstellungen...", action: #selector(openSettingsAction), keyEquivalent: ","))
-        
+
         for mItem in menu.items {
             mItem.target = self
         }
-        
+
         statusItem?.menu = menu
         sender.performClick(nil)
         statusItem?.menu = nil
     }
-    
+
     @objc private func openPopoverAction() {
         if let button = statusItem?.button {
             togglePopover(button)
         }
     }
-    
+
     @objc private func reloadAction() {
         webController.reload()
     }
-    
+
     @objc private func openInBrowserAction() {
         if let url = SecurityPolicy.webURL(webController.currentURL) {
             NSWorkspace.shared.open(url)
         }
     }
-    
+
     @objc private func togglePinAction() {
         var updated = item
         updated.isPinned.toggle()
         module?.updateWidget(updated)
     }
-    
+
     @objc private func openSettingsAction() {
         StatusItemController.shared.openSettingsWindow()
     }
-    
+
     // MARK: - NSPopoverDelegate
-    
+
     public func popoverWillShow(_ notification: Notification) {
         webController.onPopoverOpened()
     }
-    
+
     public func popoverDidClose(_ notification: Notification) {
         webController.onPopoverClosed()
         PopoverFocusCoordinator.shared.handlePopoverDidClose(of: popover)

@@ -21,7 +21,7 @@ func runWebPanelTests() {
                 isEnabled: true,
                 isPinned: true,
                 showsAddressBar: false,
-                hidesTopBar: true
+                showsTopBar: false
             )
 
             let encoder = JSONEncoder()
@@ -45,10 +45,11 @@ func runWebPanelTests() {
             assertEqual(decodedItem.isEnabled, originalItem.isEnabled)
             assertEqual(decodedItem.isPinned, originalItem.isPinned)
             assertEqual(decodedItem.showsAddressBar, originalItem.showsAddressBar)
+            assertEqual(decodedItem.showsTopBar, originalItem.showsTopBar)
             assertEqual(decodedItem.hidesTopBar, originalItem.hidesTopBar)
         }
 
-        harness.test("WebWidgetItem decodes legacy JSON without hidesTopBar to false") {
+        harness.test("WebWidgetItem decodes legacy JSON without showsTopBar to true") {
             let legacyJSON = """
             {
                 "id": "12345678-1234-1234-1234-123456789abc",
@@ -69,7 +70,25 @@ func runWebPanelTests() {
             """.data(using: .utf8)!
 
             let decoded = try JSONDecoder().decode(WebWidgetItem.self, from: legacyJSON)
-            assertFalse(decoded.hidesTopBar, "Legacy widget without hidesTopBar should default to false")
+            assertTrue(decoded.showsTopBar, "Legacy widget without showsTopBar should default to true")
+            assertFalse(decoded.hidesTopBar, "hidesTopBar should be false when showsTopBar is true")
+        }
+
+        harness.test("WebWidgetItem decodes JSON with legacy hidesTopBar flag") {
+            let json = """
+            {
+                "id": "12345678-1234-1234-1234-123456789abc",
+                "title": "Legacy Item",
+                "url": "https://example.com",
+                "sizePreset": "320 × 400 (Widget)",
+                "userAgentMode": "Immer Desktop",
+                "hidesTopBar": true
+            }
+            """.data(using: .utf8)!
+
+            let decoded = try JSONDecoder().decode(WebWidgetItem.self, from: json)
+            assertFalse(decoded.showsTopBar, "hidesTopBar=true should set showsTopBar=false")
+            assertTrue(decoded.hidesTopBar)
         }
 
         harness.test("WebSizePreset dimensions are accurate") {

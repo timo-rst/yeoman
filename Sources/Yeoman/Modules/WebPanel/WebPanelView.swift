@@ -384,7 +384,7 @@ public struct WebPanelView: View {
 
     public var body: some View {
         VStack(spacing: 0) {
-            if !item.hidesTopBar {
+            if item.showsTopBar {
                 Text(SecurityPolicy.origin(URL(string: controller.currentURL)))
                     .font(.caption).lineLimit(2).textSelection(.enabled)
                     .frame(maxWidth: .infinity, alignment: .leading).padding(6)
@@ -552,9 +552,9 @@ public struct WebPanelView: View {
                         onUpdateItem?(updated)
                     }
 
-                    Button(item.hidesTopBar ? "Obere Adressleiste einblenden" : "Obere Adressleiste ausblenden") {
+                    Button(item.showsTopBar ? "Obere Adressleiste ausblenden" : "Obere Adressleiste einblenden") {
                         var updated = item
-                        updated.hidesTopBar.toggle()
+                        updated.showsTopBar.toggle()
                         onUpdateItem?(updated)
                     }
 
