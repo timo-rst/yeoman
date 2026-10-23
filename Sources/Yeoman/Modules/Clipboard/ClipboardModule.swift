@@ -21,11 +21,9 @@ public final class ClipboardModule: NSObject, CustomizerModule, ObservableObject
         }
     }
     
-    @Published public var showsDedicatedStatusItem: Bool {
-        didSet {
-            UserDefaults.standard.set(showsDedicatedStatusItem, forKey: "clipboard_shows_dedicated_status_item")
-            ModuleManager.shared.recreateAllStatusItems()
-        }
+    public var showsDedicatedStatusItem: Bool {
+        get { isEnabled }
+        set { isEnabled = newValue }
     }
     
     @Published public var activeSubTab: ClipboardSubTab = .history
@@ -37,8 +35,6 @@ public final class ClipboardModule: NSObject, CustomizerModule, ObservableObject
     
     public override init() {
         self.isEnabled = UserDefaults.standard.object(forKey: "clipboard_is_enabled") as? Bool ?? true
-        // Default to true so Clipboard has its own menu bar icon by default
-        self.showsDedicatedStatusItem = UserDefaults.standard.object(forKey: "clipboard_shows_dedicated_status_item") as? Bool ?? true
         super.init()
     }
     

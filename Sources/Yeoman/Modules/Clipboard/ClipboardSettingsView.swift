@@ -74,20 +74,6 @@ public struct ClipboardSettingsView: View {
                 // Settings & Options View
                 ScrollView {
                     VStack(alignment: .leading, spacing: 20) {
-                        // Menüleisten-Option
-                        VStack(alignment: .leading, spacing: 14) {
-                            Text("Menüleisten-Integration")
-                                .font(.headline)
-                            
-                            HStack(spacing: 6) {
-                                Toggle("Eigenes Symbol in der Menüleiste anzeigen", isOn: $module.showsDedicatedStatusItem)
-                                    .font(.subheadline)
-                                InfoTooltip(text: "Zeigt ein separates Zwischenablagen-Symbol in der Menüleiste an, um den Verlauf schnell per Klick zu öffnen.")
-                            }
-                        }
-                        .padding()
-                        .background(RoundedRectangle(cornerRadius: 12).fill(Color(nsColor: .controlBackgroundColor)))
-                        
                         VStack(alignment: .leading, spacing: 14) {
                             Toggle("Aufzeichnung pausieren", isOn: $monitor.isPaused)
                             TextField("Ausgeschlossene Bundle-IDs, durch Kommas getrennt", text: $monitor.excludedBundleIDs)
