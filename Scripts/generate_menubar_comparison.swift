@@ -12,8 +12,8 @@ struct GenerateMenuBarComparison {
         let outputDir = URL(fileURLWithPath: "Resources/Mockups")
         try? FileManager.default.createDirectory(at: outputDir, withIntermediateDirectories: true)
 
-        let targetWidth: CGFloat = 1440
-        let targetHeight: CGFloat = 340
+        let targetWidth: CGFloat = 940
+        let targetHeight: CGFloat = 330
 
         let view = ComparisonGraphicView()
             .preferredColorScheme(.dark)
@@ -60,7 +60,7 @@ struct GenerateMenuBarComparison {
     }
 }
 
-// MARK: - Comparison View
+// MARK: - Comparison View (Zoomed In on Status Bar & Camera Notch)
 
 struct ComparisonGraphicView: View {
     var body: some View {
@@ -76,7 +76,7 @@ struct ComparisonGraphicView: View {
                 endPoint: .bottomTrailing
             )
 
-            // Subtle ambient glows
+            // Ambient lighting
             RadialGradient(
                 colors: [Color.blue.opacity(0.18), Color.clear],
                 center: .topTrailing,
@@ -90,7 +90,7 @@ struct ComparisonGraphicView: View {
                 endRadius: 380
             )
 
-            VStack(spacing: 24) {
+            VStack(spacing: 22) {
                 // Header
                 HStack(alignment: .center) {
                     VStack(alignment: .leading, spacing: 3) {
@@ -102,7 +102,7 @@ struct ComparisonGraphicView: View {
                                 .font(.system(size: 17, weight: .bold))
                                 .foregroundColor(.white)
                         }
-                        Text("Comparing stock macOS item padding against Yeoman's optimized layout, live stats, and widgets.")
+                        Text("Detailed status area comparison: Stock 16 pt item padding vs. Yeoman's compact 8 pt layout.")
                             .font(.system(size: 12))
                             .foregroundColor(.white.opacity(0.65))
                     }
@@ -120,9 +120,9 @@ struct ComparisonGraphicView: View {
                     .overlay(Capsule().stroke(Color.white.opacity(0.12), lineWidth: 1))
                 }
                 .padding(.horizontal, 28)
-                .padding(.top, 24)
+                .padding(.top, 22)
 
-                // Section 1: Default macOS
+                // Section 1: Default macOS Menu Bar
                 VStack(alignment: .leading, spacing: 8) {
                     HStack {
                         HStack(spacing: 6) {
@@ -149,11 +149,11 @@ struct ComparisonGraphicView: View {
                     }
                     .padding(.horizontal, 28)
 
-                    StockMenuBarView()
+                    ZoomedStockMenuBarView()
                         .padding(.horizontal, 24)
                 }
 
-                // Section 2: With Yeoman
+                // Section 2: With Yeoman Customizer
                 VStack(alignment: .leading, spacing: 8) {
                     HStack {
                         HStack(spacing: 6) {
@@ -165,7 +165,7 @@ struct ComparisonGraphicView: View {
                                 .foregroundColor(.white)
                         }
 
-                        Text("• Compact 8 pt spacing + Live CPU/RAM/GPU Monitor + Web Widgets + Independent Mouse Reverser")
+                        Text("• Compact 8 pt spacing + Live System Monitor + Web Widgets + Independent Mouse Reverser")
                             .font(.system(size: 11))
                             .foregroundColor(.white.opacity(0.6))
 
@@ -180,7 +180,7 @@ struct ComparisonGraphicView: View {
                     }
                     .padding(.horizontal, 28)
 
-                    YeomanMenuBarView()
+                    ZoomedYeomanMenuBarView()
                         .padding(.horizontal, 24)
                 }
 
@@ -196,370 +196,311 @@ struct ComparisonGraphicView: View {
     }
 }
 
-// MARK: - Stock Menu Bar (Wide 16pt spacing, no widgets, notch clash)
+// MARK: - Zoomed Stock Menu Bar (Showing items colliding with Camera Notch)
 
-struct StockMenuBarView: View {
+struct ZoomedStockMenuBarView: View {
     var body: some View {
-        ZStack {
-            // Background bar
-            RoundedRectangle(cornerRadius: 10)
-                .fill(Color(red: 0.12, green: 0.13, blue: 0.17).opacity(0.85))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 10)
-                        .stroke(Color.white.opacity(0.10), lineWidth: 1)
-                )
+        HStack(spacing: 0) {
+            // Camera Notch Anchor on the left
+            HStack(spacing: 5) {
+                RoundedRectangle(cornerRadius: 6)
+                    .fill(Color.black)
+                    .frame(width: 86, height: 26)
+                    .overlay(
+                        HStack(spacing: 5) {
+                            Circle().fill(Color.white.opacity(0.2)).frame(width: 5, height: 5)
+                            Text("Camera Notch")
+                                .font(.system(size: 8.5, weight: .semibold))
+                                .foregroundColor(.white.opacity(0.45))
+                        }
+                    )
+            }
+            .padding(.leading, 8)
 
-            // Content
-            HStack(spacing: 0) {
-                // Left Menus
-                HStack(spacing: 16) {
-                    Image(systemName: "applelogo")
-                        .font(.system(size: 13, weight: .semibold))
-                        .foregroundColor(.white)
-                    Text("Finder")
-                        .font(.system(size: 13, weight: .bold))
-                        .foregroundColor(.white)
-                    Text("File")
-                        .font(.system(size: 13))
+            Spacer()
+
+            // Right Status Items with wide 16 pt spacing
+            HStack(spacing: 15) {
+                // Notch Collision Warning Badge
+                HStack(spacing: 4) {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .font(.system(size: 9))
+                    Text("3 items hidden behind notch")
+                        .font(.system(size: 9, weight: .semibold))
+                }
+                .foregroundColor(.red.opacity(0.95))
+                .padding(.horizontal, 6)
+                .padding(.vertical, 3)
+                .background(RoundedRectangle(cornerRadius: 4).fill(Color.red.opacity(0.18)))
+                .fixedSize()
+
+                // Colliding cut-off items directly adjacent to notch
+                Image(systemName: "cloud.fill")
+                    .font(.system(size: 11))
+                    .foregroundColor(.red.opacity(0.6))
+
+                Image(systemName: "moon.fill")
+                    .font(.system(size: 11))
+                    .foregroundColor(.white.opacity(0.85))
+
+                Image(systemName: "lock.shield.fill")
+                    .font(.system(size: 12))
+                    .foregroundColor(.white.opacity(0.85))
+
+                Image(systemName: "message.fill")
+                    .font(.system(size: 12))
+                    .foregroundColor(.white.opacity(0.85))
+
+                Image(systemName: "dot.radiowaves.left.and.right")
+                    .font(.system(size: 11))
+                    .foregroundColor(.white.opacity(0.85))
+
+                Image(systemName: "wifi")
+                    .font(.system(size: 12))
+                    .foregroundColor(.white.opacity(0.85))
+
+                HStack(spacing: 4) {
+                    Text("100%")
+                        .font(.system(size: 11, weight: .medium))
                         .foregroundColor(.white.opacity(0.85))
-                    Text("Edit")
-                        .font(.system(size: 13))
-                        .foregroundColor(.white.opacity(0.85))
-                    Text("View")
-                        .font(.system(size: 13))
-                        .foregroundColor(.white.opacity(0.85))
-                    Text("Go")
-                        .font(.system(size: 13))
-                        .foregroundColor(.white.opacity(0.85))
-                    Text("Window")
-                        .font(.system(size: 13))
-                        .foregroundColor(.white.opacity(0.85))
-                    Text("Help")
+                    Image(systemName: "battery.100")
                         .font(.system(size: 13))
                         .foregroundColor(.white.opacity(0.85))
                 }
                 .fixedSize()
-                .padding(.leading, 14)
 
-                Spacer()
+                Image(systemName: "speaker.wave.2.fill")
+                    .font(.system(size: 11))
+                    .foregroundColor(.white.opacity(0.85))
 
-                // Right Status Items: Wide 16 pt spacing
-                HStack(spacing: 16) {
-                    // Notch Collision Warning Badge
-                    HStack(spacing: 4) {
-                        Image(systemName: "exclamationmark.triangle.fill")
-                            .font(.system(size: 9))
-                        Text("3 items hidden behind notch")
-                            .font(.system(size: 9, weight: .semibold))
-                    }
-                    .foregroundColor(.red.opacity(0.95))
-                    .padding(.horizontal, 6)
-                    .padding(.vertical, 3)
-                    .background(RoundedRectangle(cornerRadius: 4).fill(Color.red.opacity(0.18)))
+                Image(systemName: "magnifyingglass")
+                    .font(.system(size: 12))
+                    .foregroundColor(.white.opacity(0.85))
+
+                Image(systemName: "switch.2")
+                    .font(.system(size: 12))
+                    .foregroundColor(.white.opacity(0.85))
+
+                Text("Fri 22:45")
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundColor(.white.opacity(0.85))
                     .fixedSize()
-
-                    // Colliding cut-off items
-                    Image(systemName: "cloud.fill")
-                        .font(.system(size: 11))
-                        .foregroundColor(.red.opacity(0.6))
-
-                    Image(systemName: "moon.fill")
-                        .font(.system(size: 11))
-                        .foregroundColor(.white.opacity(0.85))
-
-                    Image(systemName: "lock.shield.fill")
-                        .font(.system(size: 12))
-                        .foregroundColor(.white.opacity(0.85))
-
-                    Image(systemName: "message.fill")
-                        .font(.system(size: 12))
-                        .foregroundColor(.white.opacity(0.85))
-
-                    Image(systemName: "dot.radiowaves.left.and.right")
-                        .font(.system(size: 11))
-                        .foregroundColor(.white.opacity(0.85))
-
-                    Image(systemName: "wifi")
-                        .font(.system(size: 12))
-                        .foregroundColor(.white.opacity(0.85))
-
-                    HStack(spacing: 4) {
-                        Text("100%")
-                            .font(.system(size: 11, weight: .medium))
-                            .foregroundColor(.white.opacity(0.85))
-                        Image(systemName: "battery.100")
-                            .font(.system(size: 13))
-                            .foregroundColor(.white.opacity(0.85))
-                    }
-                    .fixedSize()
-
-                    Image(systemName: "speaker.wave.2.fill")
-                        .font(.system(size: 11))
-                        .foregroundColor(.white.opacity(0.85))
-
-                    Image(systemName: "magnifyingglass")
-                        .font(.system(size: 12))
-                        .foregroundColor(.white.opacity(0.85))
-
-                    Image(systemName: "switch.2")
-                        .font(.system(size: 12))
-                        .foregroundColor(.white.opacity(0.85))
-
-                    Text("Fri 22:45")
-                        .font(.system(size: 12, weight: .medium))
-                        .foregroundColor(.white.opacity(0.85))
-                        .fixedSize()
-                }
-                .padding(.trailing, 14)
             }
-
-            // Centered MacBook Notch
-            RoundedRectangle(cornerRadius: 4)
-                .fill(Color.black)
-                .frame(width: 120, height: 26)
-                .overlay(
-                    HStack(spacing: 4) {
-                        Circle().fill(Color.white.opacity(0.15)).frame(width: 5, height: 5)
-                        Text("Camera Notch")
-                            .font(.system(size: 9, weight: .semibold))
-                            .foregroundColor(.white.opacity(0.4))
-                    }
-                )
+            .padding(.trailing, 14)
         }
-        .frame(height: 36)
+        .frame(height: 38)
+        .background(
+            RoundedRectangle(cornerRadius: 10)
+                .fill(Color(red: 0.12, green: 0.13, blue: 0.17).opacity(0.85))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 10)
+                .stroke(Color.white.opacity(0.10), lineWidth: 1)
+        )
     }
 }
 
-// MARK: - Yeoman Menu Bar (Compact 8pt, Web Widgets, Live Stats)
+// MARK: - Zoomed Yeoman Menu Bar (Compact 8pt, Web Widgets, Authentic System Monitor)
 
-struct YeomanMenuBarView: View {
+struct ZoomedYeomanMenuBarView: View {
     var body: some View {
-        ZStack {
-            // Background bar
-            RoundedRectangle(cornerRadius: 10)
-                .fill(Color(red: 0.12, green: 0.14, blue: 0.20).opacity(0.9))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 10)
-                        .stroke(Color.accentColor.opacity(0.35), lineWidth: 1)
-                )
+        HStack(spacing: 0) {
+            // Camera Notch Anchor on the left
+            HStack(spacing: 5) {
+                RoundedRectangle(cornerRadius: 6)
+                    .fill(Color.black)
+                    .frame(width: 86, height: 26)
+                    .overlay(
+                        HStack(spacing: 5) {
+                            Circle().fill(Color.white.opacity(0.2)).frame(width: 5, height: 5)
+                            Text("Camera Notch")
+                                .font(.system(size: 8.5, weight: .semibold))
+                                .foregroundColor(.white.opacity(0.45))
+                        }
+                    )
+            }
+            .padding(.leading, 8)
 
-            // Content
-            HStack(spacing: 0) {
-                // Left Menus
-                HStack(spacing: 16) {
-                    Image(systemName: "applelogo")
-                        .font(.system(size: 13, weight: .semibold))
-                        .foregroundColor(.white)
-                    Text("Finder")
-                        .font(.system(size: 13, weight: .bold))
-                        .foregroundColor(.white)
-                    Text("File")
-                        .font(.system(size: 13))
+            // Clearance Badge showing the massive free space won
+            HStack(spacing: 4) {
+                Image(systemName: "checkmark")
+                    .font(.system(size: 8, weight: .bold))
+                Text("+140 pt Clearance (Notch-Safe)")
+                    .font(.system(size: 9, weight: .bold))
+            }
+            .foregroundColor(.green)
+            .padding(.horizontal, 7)
+            .padding(.vertical, 3.5)
+            .background(Capsule().fill(Color.green.opacity(0.16)))
+            .fixedSize()
+            .padding(.leading, 12)
+
+            Spacer()
+
+            // Right Status Items with Yeoman Compact 8 pt Spacing
+            HStack(spacing: 8) {
+                // Existing third party apps (Cloud, 1Password, Slack)
+                Image(systemName: "cloud.fill")
+                    .font(.system(size: 11))
+                    .foregroundColor(.white.opacity(0.85))
+
+                Image(systemName: "lock.shield.fill")
+                    .font(.system(size: 11))
+                    .foregroundColor(.white.opacity(0.85))
+
+                Image(systemName: "message.fill")
+                    .font(.system(size: 11))
+                    .foregroundColor(.white.opacity(0.85))
+
+                // Divider line
+                Rectangle()
+                    .fill(Color.white.opacity(0.18))
+                    .frame(width: 1, height: 16)
+
+                // Yeoman Web Widgets (Native Template Status Icons)
+                Image(systemName: "sparkles")
+                    .font(.system(size: 12))
+                    .foregroundColor(.white.opacity(0.85))
+
+                Image(systemName: "calendar")
+                    .font(.system(size: 12))
+                    .foregroundColor(.white.opacity(0.85))
+
+                Image(systemName: "chevron.left.forwardslash.chevron.right")
+                    .font(.system(size: 11))
+                    .foregroundColor(.white.opacity(0.85))
+
+                // Yeoman Clipboard History Module
+                Image(systemName: "doc.on.clipboard")
+                    .font(.system(size: 12))
+                    .foregroundColor(.white.opacity(0.85))
+
+                // Yeoman Scroll Reverser Module
+                Image(systemName: "computermouse")
+                    .font(.system(size: 12))
+                    .foregroundColor(.white.opacity(0.85))
+
+                // Yeoman System Monitor (Exact MenuBarStatsWidgetView design: CPU, RAM, GPU)
+                HStack(spacing: 6) {
+                    // CPU Metric
+                    HStack(spacing: 3) {
+                        VStack(alignment: .trailing, spacing: -1) {
+                            Text("CPU")
+                                .font(.system(size: 7.5, weight: .bold))
+                                .foregroundColor(.blue)
+                                .lineLimit(1)
+                                .fixedSize()
+                            Text("14%")
+                                .font(.system(size: 8.5, weight: .semibold, design: .monospaced))
+                                .foregroundColor(.white)
+                                .lineLimit(1)
+                                .fixedSize()
+                        }
+
+                        ZStack(alignment: .bottom) {
+                            RoundedRectangle(cornerRadius: 1.5)
+                                .fill(Color.white.opacity(0.18))
+                                .frame(width: 4.5, height: 16)
+
+                            RoundedRectangle(cornerRadius: 1.5)
+                                .fill(Color.blue)
+                                .frame(width: 4.5, height: max(2.0, 16.0 * 0.14))
+                        }
+                    }
+                    .fixedSize()
+
+                    // RAM Metric
+                    HStack(spacing: 3) {
+                        VStack(alignment: .trailing, spacing: -1) {
+                            Text("RAM")
+                                .font(.system(size: 7.5, weight: .bold))
+                                .foregroundColor(.purple)
+                                .lineLimit(1)
+                                .fixedSize()
+                            Text("62%")
+                                .font(.system(size: 8.5, weight: .semibold, design: .monospaced))
+                                .foregroundColor(.white)
+                                .lineLimit(1)
+                                .fixedSize()
+                        }
+
+                        ZStack(alignment: .bottom) {
+                            RoundedRectangle(cornerRadius: 1.5)
+                                .fill(Color.white.opacity(0.18))
+                                .frame(width: 4.5, height: 16)
+
+                            RoundedRectangle(cornerRadius: 1.5)
+                                .fill(Color.purple)
+                                .frame(width: 4.5, height: max(2.0, 16.0 * 0.62))
+                        }
+                    }
+                    .fixedSize()
+
+                    // GPU Metric
+                    HStack(spacing: 3) {
+                        VStack(alignment: .trailing, spacing: -1) {
+                            Text("GPU")
+                                .font(.system(size: 7.5, weight: .bold))
+                                .foregroundColor(.green)
+                                .lineLimit(1)
+                                .fixedSize()
+                            Text("8%")
+                                .font(.system(size: 8.5, weight: .semibold, design: .monospaced))
+                                .foregroundColor(.white)
+                                .lineLimit(1)
+                                .fixedSize()
+                        }
+
+                        ZStack(alignment: .bottom) {
+                            RoundedRectangle(cornerRadius: 1.5)
+                                .fill(Color.white.opacity(0.18))
+                                .frame(width: 4.5, height: 16)
+
+                            RoundedRectangle(cornerRadius: 1.5)
+                                .fill(Color.green)
+                                .frame(width: 4.5, height: max(2.0, 16.0 * 0.08))
+                        }
+                    }
+                    .fixedSize()
+                }
+                .frame(height: 22)
+                .fixedSize()
+
+                // Native System Items (Wi-Fi, Battery, Control Center, Clock)
+                Image(systemName: "wifi")
+                    .font(.system(size: 12))
+                    .foregroundColor(.white.opacity(0.85))
+
+                HStack(spacing: 3) {
+                    Text("100%")
+                        .font(.system(size: 11, weight: .medium))
                         .foregroundColor(.white.opacity(0.85))
-                    Text("Edit")
-                        .font(.system(size: 13))
-                        .foregroundColor(.white.opacity(0.85))
-                    Text("View")
-                        .font(.system(size: 13))
-                        .foregroundColor(.white.opacity(0.85))
-                    Text("Go")
-                        .font(.system(size: 13))
-                        .foregroundColor(.white.opacity(0.85))
-                    Text("Window")
-                        .font(.system(size: 13))
-                        .foregroundColor(.white.opacity(0.85))
-                    Text("Help")
+                        .fixedSize()
+                    Image(systemName: "battery.100")
                         .font(.system(size: 13))
                         .foregroundColor(.white.opacity(0.85))
                 }
                 .fixedSize()
-                .padding(.leading, 14)
 
-                Spacer()
+                Image(systemName: "switch.2")
+                    .font(.system(size: 12))
+                    .foregroundColor(.white.opacity(0.85))
 
-                // Right Status Items: Yeoman Compact 8 pt Spacing
-                HStack(spacing: 8) {
-                    // Clearance badge
-                    HStack(spacing: 3) {
-                        Image(systemName: "checkmark")
-                            .font(.system(size: 8, weight: .bold))
-                        Text("+120 pt Clearance")
-                            .font(.system(size: 9, weight: .bold))
-                    }
-                    .foregroundColor(.green)
-                    .padding(.horizontal, 6)
-                    .padding(.vertical, 3)
-                    .background(Capsule().fill(Color.green.opacity(0.15)))
+                Text("Fri 22:45")
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundColor(.white.opacity(0.85))
                     .fixedSize()
-
-                    // Existing third party apps (now easily fitting!)
-                    Image(systemName: "cloud.fill")
-                        .font(.system(size: 11))
-                        .foregroundColor(.white.opacity(0.85))
-
-                    Image(systemName: "lock.shield.fill")
-                        .font(.system(size: 11))
-                        .foregroundColor(.white.opacity(0.85))
-
-                    Image(systemName: "message.fill")
-                        .font(.system(size: 11))
-                        .foregroundColor(.white.opacity(0.85))
-
-                    // Divider line between native/third-party and Yeoman additions
-                    Rectangle()
-                        .fill(Color.white.opacity(0.18))
-                        .frame(width: 1, height: 16)
-
-                    // Yeoman Web Widgets (Native Template Status Icons)
-                    Image(systemName: "sparkles")
-                        .font(.system(size: 12))
-                        .foregroundColor(.white.opacity(0.85))
-
-                    Image(systemName: "calendar")
-                        .font(.system(size: 12))
-                        .foregroundColor(.white.opacity(0.85))
-
-                    Image(systemName: "chevron.left.forwardslash.chevron.right")
-                        .font(.system(size: 11))
-                        .foregroundColor(.white.opacity(0.85))
-
-                    // Yeoman Clipboard History Module
-                    Image(systemName: "doc.on.clipboard")
-                        .font(.system(size: 12))
-                        .foregroundColor(.white.opacity(0.85))
-
-                    // Yeoman Scroll Reverser Module
-                    Image(systemName: "computermouse")
-                        .font(.system(size: 12))
-                        .foregroundColor(.white.opacity(0.85))
-
-                    // Yeoman System Monitor (Exact MenuBarStatsWidgetView implementation: CPU, RAM, GPU)
-                    HStack(spacing: 6) {
-                        // CPU
-                        HStack(spacing: 3) {
-                            VStack(alignment: .trailing, spacing: -1) {
-                                Text("CPU")
-                                    .font(.system(size: 7.5, weight: .bold))
-                                    .foregroundColor(.blue)
-                                    .lineLimit(1)
-                                    .fixedSize()
-                                Text("14%")
-                                    .font(.system(size: 8.5, weight: .semibold, design: .monospaced))
-                                    .foregroundColor(.white)
-                                    .lineLimit(1)
-                                    .fixedSize()
-                            }
-
-                            ZStack(alignment: .bottom) {
-                                RoundedRectangle(cornerRadius: 1.5)
-                                    .fill(Color.white.opacity(0.18))
-                                    .frame(width: 4.5, height: 16)
-
-                                RoundedRectangle(cornerRadius: 1.5)
-                                    .fill(Color.blue)
-                                    .frame(width: 4.5, height: max(2.0, 16.0 * 0.14))
-                            }
-                        }
-                        .fixedSize()
-
-                        // RAM
-                        HStack(spacing: 3) {
-                            VStack(alignment: .trailing, spacing: -1) {
-                                Text("RAM")
-                                    .font(.system(size: 7.5, weight: .bold))
-                                    .foregroundColor(.purple)
-                                    .lineLimit(1)
-                                    .fixedSize()
-                                Text("62%")
-                                    .font(.system(size: 8.5, weight: .semibold, design: .monospaced))
-                                    .foregroundColor(.white)
-                                    .lineLimit(1)
-                                    .fixedSize()
-                            }
-
-                            ZStack(alignment: .bottom) {
-                                RoundedRectangle(cornerRadius: 1.5)
-                                    .fill(Color.white.opacity(0.18))
-                                    .frame(width: 4.5, height: 16)
-
-                                RoundedRectangle(cornerRadius: 1.5)
-                                    .fill(Color.purple)
-                                    .frame(width: 4.5, height: max(2.0, 16.0 * 0.62))
-                            }
-                        }
-                        .fixedSize()
-
-                        // GPU
-                        HStack(spacing: 3) {
-                            VStack(alignment: .trailing, spacing: -1) {
-                                Text("GPU")
-                                    .font(.system(size: 7.5, weight: .bold))
-                                    .foregroundColor(.green)
-                                    .lineLimit(1)
-                                    .fixedSize()
-                                Text("8%")
-                                    .font(.system(size: 8.5, weight: .semibold, design: .monospaced))
-                                    .foregroundColor(.white)
-                                    .lineLimit(1)
-                                    .fixedSize()
-                            }
-
-                            ZStack(alignment: .bottom) {
-                                RoundedRectangle(cornerRadius: 1.5)
-                                    .fill(Color.white.opacity(0.18))
-                                    .frame(width: 4.5, height: 16)
-
-                                RoundedRectangle(cornerRadius: 1.5)
-                                    .fill(Color.green)
-                                    .frame(width: 4.5, height: max(2.0, 16.0 * 0.08))
-                            }
-                        }
-                        .fixedSize()
-                    }
-                    .frame(height: 22)
-                    .fixedSize()
-
-                    // Native System Items (Wi-Fi, Battery, Control Center, Clock)
-                    Image(systemName: "wifi")
-                        .font(.system(size: 12))
-                        .foregroundColor(.white.opacity(0.85))
-
-                    HStack(spacing: 3) {
-                        Text("100%")
-                            .font(.system(size: 11, weight: .medium))
-                            .foregroundColor(.white.opacity(0.85))
-                            .fixedSize()
-                        Image(systemName: "battery.100")
-                            .font(.system(size: 13))
-                            .foregroundColor(.white.opacity(0.85))
-                    }
-                    .fixedSize()
-
-                    Image(systemName: "switch.2")
-                        .font(.system(size: 12))
-                        .foregroundColor(.white.opacity(0.85))
-
-                    Text("Fri 22:45")
-                        .font(.system(size: 12, weight: .medium))
-                        .foregroundColor(.white.opacity(0.85))
-                        .fixedSize()
-                }
-                .padding(.trailing, 14)
             }
-
-            // Centered MacBook Notch
-            RoundedRectangle(cornerRadius: 4)
-                .fill(Color.black)
-                .frame(width: 120, height: 26)
-                .overlay(
-                    HStack(spacing: 4) {
-                        Circle().fill(Color.white.opacity(0.15)).frame(width: 5, height: 5)
-                        Text("Camera Notch")
-                            .font(.system(size: 9, weight: .semibold))
-                            .foregroundColor(.white.opacity(0.4))
-                    }
-                )
+            .padding(.trailing, 14)
         }
-        .frame(height: 36)
+        .frame(height: 38)
+        .background(
+            RoundedRectangle(cornerRadius: 10)
+                .fill(Color(red: 0.12, green: 0.14, blue: 0.20).opacity(0.9))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 10)
+                .stroke(Color.accentColor.opacity(0.35), lineWidth: 1)
+        )
     }
 }
