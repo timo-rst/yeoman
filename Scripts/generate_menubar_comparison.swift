@@ -8,20 +8,20 @@ struct GenerateMenuBarComparison {
         let app = NSApplication.shared
         app.setActivationPolicy(.prohibited)
         NSApp.appearance = NSAppearance(named: .darkAqua)
-        
+
         let outputDir = URL(fileURLWithPath: "Resources/Mockups")
         try? FileManager.default.createDirectory(at: outputDir, withIntermediateDirectories: true)
-        
+
         let targetWidth: CGFloat = 1440
         let targetHeight: CGFloat = 340
-        
+
         let view = ComparisonGraphicView()
             .preferredColorScheme(.dark)
             .frame(width: targetWidth, height: targetHeight)
-        
+
         let hostingView = NSHostingView(rootView: view)
         hostingView.frame = NSRect(x: 0, y: 0, width: targetWidth, height: targetHeight)
-        
+
         let window = NSWindow(
             contentRect: NSRect(x: 0, y: 0, width: targetWidth, height: targetHeight),
             styleMask: [.borderless],
@@ -35,21 +35,21 @@ struct GenerateMenuBarComparison {
         window.orderFront(nil)
         window.layoutIfNeeded()
         hostingView.layoutSubtreeIfNeeded()
-        
+
         RunLoop.current.run(until: Date().addingTimeInterval(0.5))
-        
+
         guard let rep = hostingView.bitmapImageRepForCachingDisplay(in: hostingView.bounds) else {
             print("Failed to create bitmap rep")
             return
         }
         rep.size = hostingView.bounds.size
         hostingView.cacheDisplay(in: hostingView.bounds, to: rep)
-        
+
         guard let png = rep.representation(using: .png, properties: [:]) else {
             print("Failed to encode PNG")
             return
         }
-        
+
         let destination = outputDir.appendingPathComponent("yeoman_menubar_comparison.png")
         do {
             try png.write(to: destination)
@@ -75,7 +75,7 @@ struct ComparisonGraphicView: View {
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
             )
-            
+
             // Subtle ambient glows
             RadialGradient(
                 colors: [Color.blue.opacity(0.18), Color.clear],
@@ -89,7 +89,7 @@ struct ComparisonGraphicView: View {
                 startRadius: 50,
                 endRadius: 380
             )
-            
+
             VStack(spacing: 24) {
                 // Header
                 HStack(alignment: .center) {
@@ -107,7 +107,7 @@ struct ComparisonGraphicView: View {
                             .foregroundColor(.white.opacity(0.65))
                     }
                     Spacer()
-                    
+
                     HStack(spacing: 6) {
                         Circle().fill(Color.green).frame(width: 8, height: 8)
                         Text("macOS 14+ Sonoma / Sequoia")
@@ -121,7 +121,7 @@ struct ComparisonGraphicView: View {
                 }
                 .padding(.horizontal, 28)
                 .padding(.top, 24)
-                
+
                 // Section 1: Default macOS
                 VStack(alignment: .leading, spacing: 8) {
                     HStack {
@@ -133,13 +133,13 @@ struct ComparisonGraphicView: View {
                                 .font(.system(size: 12, weight: .bold))
                                 .foregroundColor(.white)
                         }
-                        
+
                         Text("• Standard 16 pt spacing — wide gaps waste space and push icons behind the MacBook notch")
                             .font(.system(size: 11))
                             .foregroundColor(.white.opacity(0.6))
-                        
+
                         Spacer()
-                        
+
                         Text("Wide Spacing (16 pt)")
                             .font(.system(size: 10, weight: .semibold))
                             .padding(.horizontal, 7)
@@ -148,11 +148,11 @@ struct ComparisonGraphicView: View {
                             .foregroundColor(.red.opacity(0.9))
                     }
                     .padding(.horizontal, 28)
-                    
+
                     StockMenuBarView()
                         .padding(.horizontal, 24)
                 }
-                
+
                 // Section 2: With Yeoman
                 VStack(alignment: .leading, spacing: 8) {
                     HStack {
@@ -164,13 +164,13 @@ struct ComparisonGraphicView: View {
                                 .font(.system(size: 12, weight: .bold))
                                 .foregroundColor(.white)
                         }
-                        
+
                         Text("• Compact 8 pt spacing + Live CPU/RAM/GPU Monitor + Web Widgets + Independent Mouse Reverser")
                             .font(.system(size: 11))
                             .foregroundColor(.white.opacity(0.6))
-                        
+
                         Spacer()
-                        
+
                         Text("Optimized Layout (8 pt)")
                             .font(.system(size: 10, weight: .semibold))
                             .padding(.horizontal, 7)
@@ -179,11 +179,11 @@ struct ComparisonGraphicView: View {
                             .foregroundColor(.green)
                     }
                     .padding(.horizontal, 28)
-                    
+
                     YeomanMenuBarView()
                         .padding(.horizontal, 24)
                 }
-                
+
                 Spacer()
             }
         }
@@ -208,7 +208,7 @@ struct StockMenuBarView: View {
                     RoundedRectangle(cornerRadius: 10)
                         .stroke(Color.white.opacity(0.10), lineWidth: 1)
                 )
-            
+
             // Content
             HStack(spacing: 0) {
                 // Left Menus
@@ -240,9 +240,9 @@ struct StockMenuBarView: View {
                 }
                 .fixedSize()
                 .padding(.leading, 14)
-                
+
                 Spacer()
-                
+
                 // Right Status Items: Wide 16 pt spacing
                 HStack(spacing: 16) {
                     // Notch Collision Warning Badge
@@ -257,32 +257,32 @@ struct StockMenuBarView: View {
                     .padding(.vertical, 3)
                     .background(RoundedRectangle(cornerRadius: 4).fill(Color.red.opacity(0.18)))
                     .fixedSize()
-                    
+
                     // Colliding cut-off items
                     Image(systemName: "cloud.fill")
                         .font(.system(size: 11))
                         .foregroundColor(.red.opacity(0.6))
-                    
+
                     Image(systemName: "moon.fill")
                         .font(.system(size: 11))
                         .foregroundColor(.white.opacity(0.85))
-                    
+
                     Image(systemName: "lock.shield.fill")
                         .font(.system(size: 12))
                         .foregroundColor(.white.opacity(0.85))
-                    
+
                     Image(systemName: "message.fill")
                         .font(.system(size: 12))
                         .foregroundColor(.white.opacity(0.85))
-                    
+
                     Image(systemName: "dot.radiowaves.left.and.right")
                         .font(.system(size: 11))
                         .foregroundColor(.white.opacity(0.85))
-                    
+
                     Image(systemName: "wifi")
                         .font(.system(size: 12))
                         .foregroundColor(.white.opacity(0.85))
-                    
+
                     HStack(spacing: 4) {
                         Text("100%")
                             .font(.system(size: 11, weight: .medium))
@@ -292,19 +292,19 @@ struct StockMenuBarView: View {
                             .foregroundColor(.white.opacity(0.85))
                     }
                     .fixedSize()
-                    
+
                     Image(systemName: "speaker.wave.2.fill")
                         .font(.system(size: 11))
                         .foregroundColor(.white.opacity(0.85))
-                    
+
                     Image(systemName: "magnifyingglass")
                         .font(.system(size: 12))
                         .foregroundColor(.white.opacity(0.85))
-                    
+
                     Image(systemName: "switch.2")
                         .font(.system(size: 12))
                         .foregroundColor(.white.opacity(0.85))
-                    
+
                     Text("Fri 22:45")
                         .font(.system(size: 12, weight: .medium))
                         .foregroundColor(.white.opacity(0.85))
@@ -312,7 +312,7 @@ struct StockMenuBarView: View {
                 }
                 .padding(.trailing, 14)
             }
-            
+
             // Centered MacBook Notch
             RoundedRectangle(cornerRadius: 4)
                 .fill(Color.black)
@@ -342,7 +342,7 @@ struct YeomanMenuBarView: View {
                     RoundedRectangle(cornerRadius: 10)
                         .stroke(Color.accentColor.opacity(0.35), lineWidth: 1)
                 )
-            
+
             // Content
             HStack(spacing: 0) {
                 // Left Menus
@@ -374,9 +374,9 @@ struct YeomanMenuBarView: View {
                 }
                 .fixedSize()
                 .padding(.leading, 14)
-                
+
                 Spacer()
-                
+
                 // Right Status Items: Yeoman Compact 8 pt Spacing
                 HStack(spacing: 8) {
                     // Clearance badge
@@ -391,101 +391,139 @@ struct YeomanMenuBarView: View {
                     .padding(.vertical, 3)
                     .background(Capsule().fill(Color.green.opacity(0.15)))
                     .fixedSize()
-                    
+
                     // Existing third party apps (now easily fitting!)
                     Image(systemName: "cloud.fill")
                         .font(.system(size: 11))
                         .foregroundColor(.white.opacity(0.85))
-                    
+
                     Image(systemName: "lock.shield.fill")
                         .font(.system(size: 11))
                         .foregroundColor(.white.opacity(0.85))
-                    
+
                     Image(systemName: "message.fill")
                         .font(.system(size: 11))
                         .foregroundColor(.white.opacity(0.85))
-                    
+
                     // Divider line between native/third-party and Yeoman additions
                     Rectangle()
                         .fill(Color.white.opacity(0.18))
                         .frame(width: 1, height: 16)
-                    
-                    // Web Widget 1: Gemini
-                    ZStack {
-                        RoundedRectangle(cornerRadius: 4.5)
-                            .fill(LinearGradient(colors: [Color.blue.opacity(0.5), Color.purple.opacity(0.5)], startPoint: .topLeading, endPoint: .bottomTrailing))
-                            .frame(width: 20, height: 20)
-                        Image(systemName: "sparkles")
-                            .font(.system(size: 10, weight: .bold))
-                            .foregroundColor(.cyan)
-                    }
-                    
-                    // Web Widget 2: Proton Calendar
-                    ZStack {
-                        RoundedRectangle(cornerRadius: 4.5)
-                            .fill(Color.purple.opacity(0.45))
-                            .frame(width: 20, height: 20)
-                        Image(systemName: "calendar")
-                            .font(.system(size: 10, weight: .bold))
-                            .foregroundColor(.white)
-                    }
-                    
-                    // Web Widget 3: GitHub Pulse
-                    ZStack {
-                        RoundedRectangle(cornerRadius: 4.5)
-                            .fill(Color.white.opacity(0.14))
-                            .frame(width: 20, height: 20)
-                        Image(systemName: "chevron.left.forwardslash.chevron.right")
-                            .font(.system(size: 9, weight: .bold))
-                            .foregroundColor(.white.opacity(0.95))
-                    }
-                    
-                    // Module 4: Scroll Reverser
-                    Image(systemName: "computermouse.fill")
+
+                    // Yeoman Web Widgets (Native Template Status Icons)
+                    Image(systemName: "sparkles")
+                        .font(.system(size: 12))
+                        .foregroundColor(.white.opacity(0.85))
+
+                    Image(systemName: "calendar")
+                        .font(.system(size: 12))
+                        .foregroundColor(.white.opacity(0.85))
+
+                    Image(systemName: "chevron.left.forwardslash.chevron.right")
                         .font(.system(size: 11))
-                        .foregroundColor(.accentColor)
-                    
-                    // Module 5: System Stats Capsule Pill (Single line, monospaced)
+                        .foregroundColor(.white.opacity(0.85))
+
+                    // Yeoman Clipboard History Module
+                    Image(systemName: "doc.on.clipboard")
+                        .font(.system(size: 12))
+                        .foregroundColor(.white.opacity(0.85))
+
+                    // Yeoman Scroll Reverser Module
+                    Image(systemName: "computermouse")
+                        .font(.system(size: 12))
+                        .foregroundColor(.white.opacity(0.85))
+
+                    // Yeoman System Monitor (Exact MenuBarStatsWidgetView implementation: CPU, RAM, GPU)
                     HStack(spacing: 6) {
+                        // CPU
                         HStack(spacing: 3) {
-                            Text("CPU")
-                                .font(.system(size: 8, weight: .bold))
-                                .foregroundColor(.white.opacity(0.6))
-                                .fixedSize()
-                            Text("14%")
-                                .font(.system(size: 9, weight: .semibold))
-                                .foregroundColor(.cyan)
-                                .fixedSize()
-                            RoundedRectangle(cornerRadius: 1)
-                                .fill(Color.cyan)
-                                .frame(width: 2.5, height: 10)
+                            VStack(alignment: .trailing, spacing: -1) {
+                                Text("CPU")
+                                    .font(.system(size: 7.5, weight: .bold))
+                                    .foregroundColor(.blue)
+                                    .lineLimit(1)
+                                    .fixedSize()
+                                Text("14%")
+                                    .font(.system(size: 8.5, weight: .semibold, design: .monospaced))
+                                    .foregroundColor(.white)
+                                    .lineLimit(1)
+                                    .fixedSize()
+                            }
+
+                            ZStack(alignment: .bottom) {
+                                RoundedRectangle(cornerRadius: 1.5)
+                                    .fill(Color.white.opacity(0.18))
+                                    .frame(width: 4.5, height: 16)
+
+                                RoundedRectangle(cornerRadius: 1.5)
+                                    .fill(Color.blue)
+                                    .frame(width: 4.5, height: max(2.0, 16.0 * 0.14))
+                            }
                         }
-                        
+                        .fixedSize()
+
+                        // RAM
                         HStack(spacing: 3) {
-                            Text("RAM")
-                                .font(.system(size: 8, weight: .bold))
-                                .foregroundColor(.white.opacity(0.6))
-                                .fixedSize()
-                            Text("6.2G")
-                                .font(.system(size: 9, weight: .semibold))
-                                .foregroundColor(.purple)
-                                .fixedSize()
-                            RoundedRectangle(cornerRadius: 1)
-                                .fill(Color.purple)
-                                .frame(width: 2.5, height: 10)
+                            VStack(alignment: .trailing, spacing: -1) {
+                                Text("RAM")
+                                    .font(.system(size: 7.5, weight: .bold))
+                                    .foregroundColor(.purple)
+                                    .lineLimit(1)
+                                    .fixedSize()
+                                Text("62%")
+                                    .font(.system(size: 8.5, weight: .semibold, design: .monospaced))
+                                    .foregroundColor(.white)
+                                    .lineLimit(1)
+                                    .fixedSize()
+                            }
+
+                            ZStack(alignment: .bottom) {
+                                RoundedRectangle(cornerRadius: 1.5)
+                                    .fill(Color.white.opacity(0.18))
+                                    .frame(width: 4.5, height: 16)
+
+                                RoundedRectangle(cornerRadius: 1.5)
+                                    .fill(Color.purple)
+                                    .frame(width: 4.5, height: max(2.0, 16.0 * 0.62))
+                            }
                         }
+                        .fixedSize()
+
+                        // GPU
+                        HStack(spacing: 3) {
+                            VStack(alignment: .trailing, spacing: -1) {
+                                Text("GPU")
+                                    .font(.system(size: 7.5, weight: .bold))
+                                    .foregroundColor(.green)
+                                    .lineLimit(1)
+                                    .fixedSize()
+                                Text("8%")
+                                    .font(.system(size: 8.5, weight: .semibold, design: .monospaced))
+                                    .foregroundColor(.white)
+                                    .lineLimit(1)
+                                    .fixedSize()
+                            }
+
+                            ZStack(alignment: .bottom) {
+                                RoundedRectangle(cornerRadius: 1.5)
+                                    .fill(Color.white.opacity(0.18))
+                                    .frame(width: 4.5, height: 16)
+
+                                RoundedRectangle(cornerRadius: 1.5)
+                                    .fill(Color.green)
+                                    .frame(width: 4.5, height: max(2.0, 16.0 * 0.08))
+                            }
+                        }
+                        .fixedSize()
                     }
-                    .padding(.horizontal, 7)
-                    .padding(.vertical, 3)
-                    .background(Capsule().fill(Color.white.opacity(0.08)))
-                    .overlay(Capsule().stroke(Color.white.opacity(0.14), lineWidth: 0.8))
+                    .frame(height: 22)
                     .fixedSize()
-                    
+
                     // Native System Items (Wi-Fi, Battery, Control Center, Clock)
                     Image(systemName: "wifi")
                         .font(.system(size: 12))
                         .foregroundColor(.white.opacity(0.85))
-                    
+
                     HStack(spacing: 3) {
                         Text("100%")
                             .font(.system(size: 11, weight: .medium))
@@ -496,11 +534,11 @@ struct YeomanMenuBarView: View {
                             .foregroundColor(.white.opacity(0.85))
                     }
                     .fixedSize()
-                    
+
                     Image(systemName: "switch.2")
                         .font(.system(size: 12))
                         .foregroundColor(.white.opacity(0.85))
-                    
+
                     Text("Fri 22:45")
                         .font(.system(size: 12, weight: .medium))
                         .foregroundColor(.white.opacity(0.85))
@@ -508,7 +546,7 @@ struct YeomanMenuBarView: View {
                 }
                 .padding(.trailing, 14)
             }
-            
+
             // Centered MacBook Notch
             RoundedRectangle(cornerRadius: 4)
                 .fill(Color.black)
