@@ -51,7 +51,7 @@ public enum UpdateStatus: Equatable {
 public final class UpdateManager: ObservableObject {
     public static let shared = UpdateManager()
     public let repoOwner = "timo-rst"
-    public let repoName = "mac_customizer"
+    public let repoName = "yeoman"
     @Published public var status: UpdateStatus = .idle
     @Published public var lastCheckedDate: Date?
     @Published public var autoCheckForUpdates: Bool {
@@ -126,7 +126,7 @@ public final class UpdateManager: ObservableObject {
                 let asset = release.assets.first { $0.name == "Yeoman.zip" && $0.size > 0 && $0.size <= 128 * 1_048_576 }
                 let url = asset.flatMap { URL(string: $0.browserDownloadUrl) }.flatMap { UpdateURLPolicy.asset($0) ? $0 : nil }
                 let page = URL(string: release.htmlUrl).flatMap { UpdateURLPolicy.releasePage($0) ? $0 : nil }
-                    ?? URL(string: "https://github.com/timo-rst/mac_customizer/releases")!
+                    ?? URL(string: "https://github.com/timo-rst/yeoman/releases")!
                 status = .updateAvailable(version: release.tagName, notes: String((release.body ?? "").prefix(32768)), downloadUrl: url, htmlUrl: page)
             } catch { if !silent { status = .failed(message: error.localizedDescription) } }
         }

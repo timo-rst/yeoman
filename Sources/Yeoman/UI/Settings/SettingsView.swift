@@ -615,7 +615,7 @@ struct AboutView: View {
                 // GitHub & Support Links
                 HStack(spacing: 16) {
                     Button(action: {
-                        if let url = URL(string: "https://github.com/timo-rst/mac_customizer") {
+                        if let url = URL(string: "https://github.com/timo-rst/yeoman") {
                             NSWorkspace.shared.open(url)
                         }
                     }) {
@@ -627,7 +627,7 @@ struct AboutView: View {
                     .buttonStyle(.bordered)
                     
                     Button(action: {
-                        if let url = URL(string: "https://github.com/timo-rst/mac_customizer/releases") {
+                        if let url = URL(string: "https://github.com/timo-rst/yeoman/releases") {
                             NSWorkspace.shared.open(url)
                         }
                     }) {

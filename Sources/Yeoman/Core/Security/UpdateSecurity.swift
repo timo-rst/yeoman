@@ -53,8 +53,8 @@ public struct ReleaseVersion: Comparable {
 }
 
 public enum UpdateURLPolicy {
-    public static let repositoryPath = "/timo-rst/mac_customizer"
-    public static let api = URL(string: "https://api.github.com/repos/timo-rst/mac_customizer/releases/latest")!
+    public static let repositoryPath = "/timo-rst/yeoman"
+    public static let api = URL(string: "https://api.github.com/repos/timo-rst/yeoman/releases/latest")!
     // GitHub's runner network reference lists this exact host for release assets.
     public static let cdnHosts: Set<String> = ["release-assets.githubusercontent.com"]
     public static func transport(_ url: URL) -> Bool {

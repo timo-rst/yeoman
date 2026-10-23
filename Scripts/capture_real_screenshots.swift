@@ -76,7 +76,7 @@ struct CaptureRealScreenshots {
             ),
             WebWidgetItem(
                 title: "GitHub Pulse",
-                url: "https://github.com/timo-rst/mac_customizer",
+                url: "https://github.com/timo-rst/yeoman",
                 iconName: "chevron.left.forwardslash.chevron.right",
                 useFavicon: false,
                 sizePreset: .widget,
@@ -111,7 +111,7 @@ struct CaptureRealScreenshots {
         store.clearAll()
         store.addItem(content: "Meeting notes: Review menu bar spacing & widget performance", type: .text, sourceApp: "Notes")
         store.addItem(content: "let package = Package(name: \"Yeoman\", platforms: [.macOS(.v14)])", type: .code, sourceApp: "Xcode")
-        store.addItem(content: "https://github.com/timo-rst/mac_customizer", type: .url, sourceApp: "Safari")
+        store.addItem(content: "https://github.com/timo-rst/yeoman", type: .url, sourceApp: "Safari")
         store.addItem(content: "git commit -m \"feat: native clipboard manager\"", type: .code, sourceApp: "Terminal")
         store.addItem(content: "swift build -c release", type: .code, sourceApp: "Terminal")
         if let first = store.items.first {

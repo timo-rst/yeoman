@@ -31,8 +31,8 @@ func runUpdateManagerTests() {
         
         harness.test("isTrustedUpdateHost enforces HTTPS and GitHub whitelist") {
             // Valid trusted URLs
-            let releaseUrl = URL(string: "https://api.github.com/repos/timo-rst/mac_customizer/releases/latest")!
-            let downloadUrl = URL(string: "https://github.com/timo-rst/mac_customizer/releases/download/v1.0.0/Yeoman.zip")!
+            let releaseUrl = URL(string: "https://api.github.com/repos/timo-rst/yeoman/releases/latest")!
+            let downloadUrl = URL(string: "https://github.com/timo-rst/yeoman/releases/download/v1.0.0/Yeoman.zip")!
             let cdnUrl = URL(string: "https://objects.githubusercontent.com/github-production-release-asset-2e65be/Yeoman.zip")!
             
             assertFalse(UpdateManager.isTrustedUpdateHost(releaseUrl), "API endpoint is not an installable asset")
@@ -40,7 +40,7 @@ func runUpdateManagerTests() {
             assertFalse(UpdateManager.isTrustedUpdateHost(cdnUrl), "CDN is allowed only as a controlled redirect")
             
             // Insecure HTTP must be rejected
-            let insecureUrl = URL(string: "http://github.com/timo-rst/mac_customizer/releases/download/v1.0.0/Yeoman.zip")!
+            let insecureUrl = URL(string: "http://github.com/timo-rst/yeoman/releases/download/v1.0.0/Yeoman.zip")!
             assertFalse(UpdateManager.isTrustedUpdateHost(insecureUrl), "Insecure HTTP must be rejected")
             
             // Untrusted third-party domains must be rejected

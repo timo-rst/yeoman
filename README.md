@@ -93,7 +93,7 @@ Shows hardware usage in the menu bar.
 ## Installation
 
 ### Pre-built Binary
-Download `Yeoman.dmg` from [GitHub Releases](https://github.com/timo-rst/mac_customizer/releases). Open the disk image and move `Yeoman.app` to `/Applications`.
+Download `Yeoman.dmg` from [GitHub Releases](https://github.com/timo-rst/yeoman/releases). Open the disk image and move `Yeoman.app` to `/Applications`.
 
 Releases are ad-hoc signed, not notarized with an Apple Developer ID. Verify that the download came from the official GitHub release and compare its published checksum before bypassing Gatekeeper. Then open it via right-click → **Open**. If macOS still blocks the verified copy, you can clear its quarantine attribute:
 > ```bash
@@ -104,8 +104,8 @@ Releases are ad-hoc signed, not notarized with an Apple Developer ID. Verify tha
 Requires Xcode 15+ or the Swift 6.0 command-line tools.
 
 ```bash
-git clone https://github.com/timo-rst/mac_customizer.git
-cd mac_customizer
+git clone https://github.com/timo-rst/yeoman.git
+cd yeoman
 
 ./Scripts/build_app.sh
 open dist/Yeoman.app

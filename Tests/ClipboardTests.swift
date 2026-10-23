@@ -36,7 +36,7 @@ func runClipboardTests() {
             
             // Standard benign websites must NOT be flagged
             assertFalse(ClipboardMonitor.isPasswordManagerURL("https://developer.apple.com/documentation/swift/"))
-            assertFalse(ClipboardMonitor.isPasswordManagerURL("https://github.com/timo-rst/mac_customizer"))
+            assertFalse(ClipboardMonitor.isPasswordManagerURL("https://github.com/timo-rst/yeoman"))
             assertFalse(ClipboardMonitor.isPasswordManagerURL("https://en.wikipedia.org/wiki/Yeomen_Warders"))
             assertFalse(ClipboardMonitor.isPasswordManagerURL("https://news.ycombinator.com/"))
         }

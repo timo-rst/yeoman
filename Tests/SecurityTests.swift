@@ -129,7 +129,7 @@ func runSecurityTests() {
             rejects { _ = try SignedUpdate(payload: payload + Data([0]), signature: signed.signature).verified(key: key.publicKey, current: "1.0.0") }
         }
         h.test("Initial URL policy rejects foreign repositories, subdomains, credentials, ports and DMG") {
-            let prefix = "https://github.com/timo-rst/mac_customizer/releases/download/v1.2.3/"
+            let prefix = "https://github.com/timo-rst/yeoman/releases/download/v1.2.3/"
             assertTrue(UpdateURLPolicy.asset(URL(string: prefix + "Yeoman.zip")!))
             for raw in [prefix + "Yeoman.dmg", prefix.replacingOccurrences(of: "timo-rst", with: "other") + "Yeoman.zip",
                         prefix.replacingOccurrences(of: "github.com", with: "evil.github.com") + "Yeoman.zip",
@@ -147,8 +147,8 @@ func runSecurityTests() {
             assertFalse(UpdateURLPolicy.redirect(URL(string: "https://objects.githubusercontent.com/test")!, apiRequest: false, count: 1))
             assertFalse(UpdateURLPolicy.redirect(URL(string: "https://github-releases.githubusercontent.com/test")!, apiRequest: false, count: 1))
             assertFalse(UpdateURLPolicy.redirect(URL(string: "https://127.0.0.1/test")!, apiRequest: false, count: 1))
-            assertTrue(UpdateURLPolicy.releasePage(URL(string: "https://github.com/timo-rst/mac_customizer/releases/tag/v1.2.3")!))
-            assertFalse(UpdateURLPolicy.releasePage(URL(string: "https://github.com/timo-rst/mac_customizer/releases/tag/v1.2.3/extra")!))
+            assertTrue(UpdateURLPolicy.releasePage(URL(string: "https://github.com/timo-rst/yeoman/releases/tag/v1.2.3")!))
+            assertFalse(UpdateURLPolicy.releasePage(URL(string: "https://github.com/timo-rst/yeoman/releases/tag/v1.2.3/extra")!))
         }
         h.test("Streaming download succeeds without Content-Length") {
             let result = fixtureDownload(chunks: [Data("ab".utf8), Data("cd".utf8)], limit: 4)
