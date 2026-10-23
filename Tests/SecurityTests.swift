@@ -324,6 +324,15 @@ func runSecurityTests() {
                 assertFalse(FileManager.default.fileExists(atPath: redirected.url.appendingPathComponent(".secrets").path))
             }
         }
+        h.test("SecureFileSecretStore boundary root tolerates platform ACLs on trusted root") {
+            try temporary { root in
+                let result = try BoundedProcess.run("/bin/chmod", ["+a", "everyone allow read,write", root.url.path])
+                assertEqual(result.status, 0)
+                let store = SecureFileSecretStore(directoryURL: root.url.appendingPathComponent("Yeoman/.secrets"))
+                try store.write(Data("secret-data".utf8), account: "widgets-v1.enc-key")
+                assertEqual(try store.read("widgets-v1.enc-key"), Data("secret-data".utf8))
+            }
+        }
         h.test("Authenticated encryption binds record identity and rejects tampering") {
             let cipher = try RecordCipher(key: Data(repeating: 7, count: 32))
             var encrypted = try cipher.seal(Data("synthetic-secret".utf8), record: "id1")

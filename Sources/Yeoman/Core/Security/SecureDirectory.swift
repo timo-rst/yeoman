@@ -14,11 +14,28 @@ public final class SecureDirectory {
         catch { close(fd); throw error }
         descriptor = fd
     }
-    private init(url: URL, descriptor: Int32) throws {
+    /// Opens an existing trusted platform boundary root (such as the system Application Support
+    /// directory or an injected test root). Validates that the descriptor is a directory owned
+    /// by the current user without following a symlink at the root, but preserves platform
+    /// directory permissions and does not reject inherited system ACLs.
+    public static func boundaryRoot(_ url: URL) throws -> SecureDirectory {
+        let fd = Darwin.open(url.path, O_RDONLY | O_DIRECTORY | O_NOFOLLOW | O_CLOEXEC)
+        guard fd >= 0 else { throw failure() }
+        var info = stat()
+        guard fstat(fd, &info) == 0, info.st_uid == geteuid(),
+              (info.st_mode & S_IFMT) == S_IFDIR else {
+            close(fd)
+            throw failure()
+        }
+        return try SecureDirectory(url: url, descriptor: fd, skipValidation: true)
+    }
+    private init(url: URL, descriptor: Int32, skipValidation: Bool = false) throws {
         self.url = url
         self.descriptor = descriptor
-        do { try Self.validate(descriptor, directory: true); guard fchmod(descriptor, 0o700) == 0 else { throw Self.failure() } }
-        catch { close(descriptor); throw error }
+        if !skipValidation {
+            do { try Self.validate(descriptor, directory: true); guard fchmod(descriptor, 0o700) == 0 else { throw Self.failure() } }
+            catch { close(descriptor); throw error }
+        }
     }
     deinit { close(descriptor) }
     public static func name(_ name: String) throws {

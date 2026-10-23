@@ -87,7 +87,7 @@ public struct SecureFileSecretStore: SecretStore {
     /// Opens every application-owned component relative to a retained descriptor. The platform's
     /// Application Support directory (or an injected test root) is the trust boundary.
     private func openDirectory(create: Bool) throws -> SecureDirectory? {
-        var directory = try SecureDirectory(trustedRootURL, create: false)
+        var directory = try SecureDirectory.boundaryRoot(trustedRootURL)
         for component in relativeComponents {
             if !create {
                 guard try directory.exists(component) else { return nil }
