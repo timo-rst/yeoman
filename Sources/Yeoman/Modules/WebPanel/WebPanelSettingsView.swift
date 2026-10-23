@@ -679,6 +679,7 @@ struct WebWidgetEditorSheet: View {
     
     let isEditing: Bool
     let originalId: UUID?
+    let editorWidgetId: UUID
     let onSave: (WebWidgetItem) -> Void
     let onCancel: () -> Void
     
@@ -690,6 +691,8 @@ struct WebWidgetEditorSheet: View {
     ) {
         self.isEditing = (initialWidget != nil)
         self.originalId = initialWidget?.id
+        let targetId = initialWidget?.id ?? UUID()
+        self.editorWidgetId = targetId
         
         let initialTitle = initialWidget?.title ?? ""
         let initialURL = initialWidget?.url ?? ""
@@ -725,12 +728,24 @@ struct WebWidgetEditorSheet: View {
         _showsAddressBar = State(initialValue: initialBar)
         
         let targetW = initialPreset == .custom ? initialW : initialPreset.dimensions.width
-        _previewController = StateObject(wrappedValue: WebPanelController(
+        let preview = WebPanelController(
             initialURL: initialURL.isEmpty ? "about:blank" : initialURL,
+            widgetID: targetId,
             userAgentMode: initialUA,
             targetWidth: targetW,
             zoomScale: initialZoom
-        ))
+        )
+        if !initialURL.isEmpty {
+            preview.associatedItem = WebWidgetItem(
+                id: targetId,
+                title: initialTitle,
+                url: initialURL,
+                useFavicon: initialUseFavicon,
+                selectedFaviconURL: initialSelectedFaviconURL,
+                removeWhiteBackground: initialRemoveWhite
+            )
+        }
+        _previewController = StateObject(wrappedValue: preview)
         
         self.onSave = onSave
         self.onCancel = onCancel
@@ -789,7 +804,7 @@ struct WebWidgetEditorSheet: View {
                                                     .stroke(Color.primary.opacity(0.15), lineWidth: 1)
                                             )
                                         
-                                        if useFavicon, let favicon = faviconManager.previewIcon(for: url, widgetId: originalId, selectedFaviconURL: selectedFaviconURL, removeWhite: removeWhiteBackground) {
+                                        if useFavicon, let favicon = faviconManager.previewIcon(for: url, widgetId: editorWidgetId, selectedFaviconURL: selectedFaviconURL, removeWhite: removeWhiteBackground) {
                                             Image(nsImage: favicon)
                                                 .resizable()
                                                 .aspectRatio(contentMode: .fit)
@@ -879,7 +894,7 @@ struct WebWidgetEditorSheet: View {
                                     if useFavicon {
                                         // Status & Refresh
                                         HStack(spacing: 8) {
-                                            if let favicon = faviconManager.previewIcon(for: url, widgetId: originalId, selectedFaviconURL: selectedFaviconURL, removeWhite: removeWhiteBackground) {
+                                            if let favicon = faviconManager.previewIcon(for: url, widgetId: editorWidgetId, selectedFaviconURL: selectedFaviconURL, removeWhite: removeWhiteBackground) {
                                                 Image(nsImage: favicon)
                                                     .resizable()
                                                     .aspectRatio(contentMode: .fit)
@@ -902,7 +917,20 @@ struct WebWidgetEditorSheet: View {
                                             
                                             if !url.isEmpty {
                                                 Button(action: {
-                                                    faviconManager.discoverFavicons(for: url, widgetId: originalId)
+                                                    if let web = previewController.webView {
+                                                        let item = WebWidgetItem(
+                                                            id: editorWidgetId,
+                                                            title: title,
+                                                            url: url,
+                                                            useFavicon: useFavicon,
+                                                            selectedFaviconURL: selectedFaviconURL,
+                                                            removeWhiteBackground: removeWhiteBackground
+                                                        )
+                                                        previewController.associatedItem = item
+                                                        faviconManager.clearCache(for: item)
+                                                        faviconManager.extractFaviconFromWebView(web, for: item)
+                                                        previewController.reload()
+                                                    }
                                                 }) {
                                                     HStack(spacing: 4) {
                                                         Image(systemName: "arrow.clockwise")
@@ -917,7 +945,7 @@ struct WebWidgetEditorSheet: View {
                                         .background(RoundedRectangle(cornerRadius: 6).fill(Color.primary.opacity(0.04)))
                                         
                                         // Discovered Favicon Options Gallery
-                                        let options = faviconManager.options(for: originalId)
+                                        let options = faviconManager.options(for: editorWidgetId)
                                         if !options.isEmpty {
                                             VStack(alignment: .leading, spacing: 6) {
                                                 HStack(spacing: 5) {
@@ -954,7 +982,7 @@ struct WebWidgetEditorSheet: View {
                                                                         .fill(Color(nsColor: .controlBackgroundColor))
                                                                         .frame(width: 34, height: 34)
                                                                     
-                                                                    if let id = originalId, let img = faviconManager.icon(forOption: opt.urlString, widgetId: id, removeWhite: removeWhiteBackground) {
+                                                                    if let img = faviconManager.icon(forOption: opt.urlString, widgetId: editorWidgetId, removeWhite: removeWhiteBackground) {
                                                                         Image(nsImage: img)
                                                                             .resizable()
                                                                             .aspectRatio(contentMode: .fit)
@@ -1374,8 +1402,13 @@ struct WebWidgetEditorSheet: View {
             
             // Bottom Action Bar
             HStack {
-                Button("Abbrechen", action: onCancel)
-                    .keyboardShortcut(.cancelAction)
+                Button("Abbrechen") {
+                    if !isEditing {
+                        faviconManager.removeWidget(WebWidgetItem(id: editorWidgetId, title: "", url: ""))
+                    }
+                    onCancel()
+                }
+                .keyboardShortcut(.cancelAction)
                 Spacer()
                 Button(isEditing ? "Änderungen speichern" : "Web-Widget erstellen") {
                     var finalURL = url.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -1386,7 +1419,7 @@ struct WebWidgetEditorSheet: View {
                     let finalTitle = title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? defaultTitle : title
                     
                     let item = WebWidgetItem(
-                        id: originalId ?? UUID(),
+                        id: originalId ?? editorWidgetId,
                         title: finalTitle,
                         url: finalURL,
                         iconName: iconName,
@@ -1416,7 +1449,7 @@ struct WebWidgetEditorSheet: View {
         .onAppear {
             updateLivePreview()
             if useFavicon && !url.isEmpty {
-                faviconManager.discoverFavicons(for: url, widgetId: originalId)
+                faviconManager.discoverFavicons(for: url, widgetId: editorWidgetId)
             }
         }
     }
@@ -1442,7 +1475,7 @@ struct WebWidgetEditorSheet: View {
         selectedFaviconURL = nil
         updateLivePreview()
         if useFavicon {
-            faviconManager.discoverFavicons(for: str, widgetId: originalId)
+            faviconManager.discoverFavicons(for: str, widgetId: editorWidgetId)
         }
     }
     
@@ -1459,7 +1492,7 @@ struct WebWidgetEditorSheet: View {
         }
         updateLivePreview()
         if useFavicon {
-            faviconManager.discoverFavicons(for: newURL, widgetId: originalId)
+            faviconManager.discoverFavicons(for: newURL, widgetId: editorWidgetId)
         }
     }
     
@@ -1470,6 +1503,15 @@ struct WebWidgetEditorSheet: View {
         } else if !str.hasPrefix("http://") && !str.hasPrefix("https://") {
             str = "https://" + str
         }
+        let item = WebWidgetItem(
+            id: editorWidgetId,
+            title: title,
+            url: str,
+            useFavicon: useFavicon,
+            selectedFaviconURL: selectedFaviconURL,
+            removeWhiteBackground: removeWhiteBackground
+        )
+        previewController.associatedItem = item
         previewController.updateConfig(
             userAgentMode: userAgentMode,
             targetWidth: effectiveWidth,

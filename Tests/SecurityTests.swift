@@ -568,9 +568,12 @@ func runSecurityTests() {
             assertFalse(WebFaviconManager.cacheKey(widget: id, url: raw, removeWhite: false) == WebFaviconManager.cacheKey(widget: UUID(), url: raw, removeWhite: false))
             let page = URL(string: "https://example.com/app")!
             assertTrue(WebFaviconManager.allows(candidate: URL(string: "https://example.com/favicon.ico")!, page: page))
-            assertFalse(WebFaviconManager.allows(candidate: URL(string: "https://cdn.example.com/favicon.ico")!, page: page))
+            assertTrue(WebFaviconManager.allows(candidate: URL(string: "https://cdn.example.com/favicon.ico")!, page: page))
+            assertFalse(WebFaviconManager.allows(candidate: URL(string: "https://unrelated-domain.com/favicon.ico")!, page: page))
             assertFalse(WebFaviconManager.allows(candidate: URL(string: "https://127.0.0.1/favicon.ico")!, page: page))
             assertFalse(WebFaviconManager.allows(candidate: URL(string: "http://example.com/favicon.ico")!, page: page))
+            let gemini = URL(string: "https://gemini.google.com/app")!
+            assertTrue(WebFaviconManager.allows(candidate: URL(string: "https://www.gstatic.com/lamda/images/icon.png")!, page: gemini))
         }
         h.test("Image decoder checks encoded and pixel limits before conversion") {
             let rep = NSBitmapImageRep(bitmapDataPlanes: nil, pixelsWide: 10, pixelsHigh: 10, bitsPerSample: 8, samplesPerPixel: 4, hasAlpha: true, isPlanar: false, colorSpaceName: .deviceRGB, bytesPerRow: 0, bitsPerPixel: 0)!

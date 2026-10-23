@@ -95,6 +95,10 @@ public final class WebFaviconManager: ObservableObject {
         completion?(previewIcon(for: urlString, widgetId: widgetId))
     }
     public func discoverFavicons(for urlString: String, widgetId: UUID? = nil, completion: (([FaviconOption]) -> Void)? = nil) {
+        if let id = widgetId, let web = views[id]?.value {
+            let item = WebWidgetItem(id: id, title: "", url: urlString)
+            extractFaviconFromWebView(web, for: item)
+        }
         completion?(options(for: widgetId))
     }
     public func extractHost(from urlString: String) -> String? { SecurityPolicy.webURL(urlString)?.host }
@@ -102,7 +106,11 @@ public final class WebFaviconManager: ObservableObject {
         precondition(Thread.isMainThread)
         guard item.useFavicon else { return }
         views[item.id] = WeakWebView(value: webView)
-        guard pending.count < SecurityPolicy.widgetCount, active[item.id] == nil else { return }
+        guard pending.count < SecurityPolicy.widgetCount else { return }
+        if active[item.id] != nil {
+            pending[item.id] = item
+            return
+        }
         pending[item.id] = item; drain()
     }
     private func drain() {
@@ -149,7 +157,7 @@ public final class WebFaviconManager: ObservableObject {
                     }
                 }
             }
-            DispatchQueue.main.asyncAfter(deadline: .now() + 6) {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 3.5) {
                 self.finish(id: id, token: token)
             }
         }
@@ -170,50 +178,99 @@ public final class WebFaviconManager: ObservableObject {
     public static func allows(candidate: URL, page: URL) -> Bool {
         guard SecurityPolicy.webURL(candidate.absoluteString) != nil,
               candidate.scheme == "https", page.scheme == "https",
-              let host = candidate.host, host == page.host else { return false }
-        return (candidate.port ?? 443) == (page.port ?? 443)
+              let candHost = candidate.host?.lowercased(),
+              let pageHost = page.host?.lowercased() else { return false }
+        guard (candidate.port ?? 443) == (page.port ?? 443) else { return false }
+        return isAllowedHost(candHost: candHost, pageHost: pageHost)
+    }
+    public static func isAllowedHost(candHost: String, pageHost: String) -> Bool {
+        if candHost == pageHost { return true }
+        let candParts = candHost.split(separator: ".")
+        let pageParts = pageHost.split(separator: ".")
+        let candBase = candParts.count >= 2 ? candParts.suffix(2).joined(separator: ".") : candHost
+        let pageBase = pageParts.count >= 2 ? pageParts.suffix(2).joined(separator: ".") : pageHost
+        if candBase == pageBase { return true }
+        if candHost.hasSuffix("." + pageBase) || pageHost.hasSuffix("." + candBase) { return true }
+        if pageBase == "google.com" || pageBase.hasPrefix("google.") {
+            if candBase == "gstatic.com" || candBase == "googleusercontent.com" || candBase == "googleapis.com" { return true }
+        }
+        if pageBase == "github.com" && (candBase == "githubassets.com" || candBase == "githubusercontent.com") { return true }
+        if pageBase == "slack.com" && candBase == "slack-edge.com" { return true }
+        if pageBase == "notion.so" && candBase == "notion-static.com" { return true }
+        if pageBase == "discord.com" && (candBase == "discordapp.net" || candBase == "discordapp.com") { return true }
+        if (pageBase == "proton.me" || pageBase == "protonmail.com" || pageBase == "protonmail.ch") &&
+            (candBase == "proton.me" || candBase == "protonmail.com" || candBase == "protonmail.ch") { return true }
+        return false
     }
     private static let script = #"""
     const base = new URL(location.href);
     if (base.protocol !== 'https:' || base.username || base.password) return [];
+
+    const isAllowedHost = (candHost, baseHost) => {
+        if (candHost === baseHost) return true;
+        const getBase = h => {
+            const parts = h.split('.');
+            return parts.length >= 2 ? parts.slice(-2).join('.') : h;
+        };
+        const candBase = getBase(candHost);
+        const pageBase = getBase(baseHost);
+        if (candBase === pageBase) return true;
+        if (candHost.endsWith('.' + pageBase) || baseHost.endsWith('.' + candBase)) return true;
+        if (pageBase === 'google.com' || pageBase.startsWith('google.')) {
+            if (candBase === 'gstatic.com' || candBase === 'googleusercontent.com' || candBase === 'googleapis.com') return true;
+        }
+        if (pageBase === 'github.com' && (candBase === 'githubassets.com' || candBase === 'githubusercontent.com')) return true;
+        if (pageBase === 'slack.com' && candBase === 'slack-edge.com') return true;
+        if (pageBase === 'notion.so' && candBase === 'notion-static.com') return true;
+        if (pageBase === 'discord.com' && (candBase === 'discordapp.net' || candBase === 'discordapp.com')) return true;
+        if ((pageBase === 'proton.me' || pageBase === 'protonmail.com' || pageBase === 'protonmail.ch') &&
+            (candBase === 'proton.me' || candBase === 'protonmail.com' || candBase === 'protonmail.ch')) return true;
+        return false;
+    };
+
     const candidates = [];
     const add = value => {
         try {
             const u = new URL(value, base);
-            if (u.protocol === 'https:' && u.origin === base.origin && !u.username && !u.password &&
+            if (u.protocol === 'https:' && isAllowedHost(u.hostname, base.hostname) && !u.username && !u.password &&
                 u.href.length <= 8192 && candidates.length < 8 && !candidates.includes(u.href)) candidates.push(u.href);
         } catch (_) {}
     };
     if (selected) add(selected);
-    const links = document.querySelectorAll('link[rel~="icon"],link[rel="apple-touch-icon"]');
+    const links = document.querySelectorAll('link[rel*="icon"]');
     for (let i = 0; i < Math.min(links.length, 64) && candidates.length < 8; i++) add(links[i].href);
     add('/favicon.ico');
-    const result = [];
-    const deadline = Date.now() + 4000;
-    for (const url of candidates) {
-        const remaining = deadline - Date.now();
-        if (remaining <= 0) break;
+
+    const fetchOne = async (url) => {
         const abort = new AbortController();
-        const timer = setTimeout(() => abort.abort(), remaining);
+        const timer = setTimeout(() => abort.abort(), 2500);
         try {
-            const response = await fetch(url, {mode:'same-origin', credentials:'omit', redirect:'error', signal:abort.signal});
-            if (!response.ok || !response.body) continue;
+            const response = await fetch(url, {mode:'cors', credentials:'omit', redirect:'follow', signal:abort.signal});
+            if (!response.ok || !response.body) return null;
+            const ct = response.headers.get('content-type') || '';
+            if (ct.includes('text/html')) return null;
             const reader = response.body.getReader();
             let length = 0; const chunks = [];
             while (true) {
                 const part = await reader.read(); if (part.done) break;
                 length += part.value.byteLength;
-                if (length > 2097152) { await reader.cancel(); throw new Error('limit'); }
+                if (length > 2097152) { await reader.cancel(); return null; }
                 chunks.push(part.value);
             }
             let binary = '';
             for (const chunk of chunks) {
                 for (let i = 0; i < chunk.length; i += 16384) binary += String.fromCharCode(...chunk.subarray(i, i + 16384));
             }
-            result.push({url, data:btoa(binary)});
-        } catch (_) {} finally { clearTimeout(timer); }
-    }
-    return result;
+            return {url, data: btoa(binary)};
+        } catch (_) {
+            return null;
+        } finally {
+            clearTimeout(timer);
+        }
+    };
+
+    const results = (await Promise.all(candidates.map(fetchOne))).filter(Boolean);
+    return results;
     """#
     public static func isImageTransparent(_ image: NSImage) -> Bool {
         guard let cg = image.cgImage(forProposedRect: nil, context: nil, hints: nil) else { return false }
