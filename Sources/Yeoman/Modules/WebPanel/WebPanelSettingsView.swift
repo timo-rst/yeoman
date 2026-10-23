@@ -1268,8 +1268,8 @@ struct WebWidgetEditorSheet: View {
                                 }
 
                                 HStack(spacing: 6) {
-                                    Toggle("Obere Leiste mit Link entfernen", isOn: $hidesTopBar)
-                                    InfoTooltip(text: "Entfernt die Kopfzeile mit der Web-Adresse (URL) am oberen Fensterrand für eine komplett rahmenlose Widget-Ansicht.")
+                                    Toggle("Obere Adressleiste ausblenden", isOn: $hidesTopBar)
+                                    InfoTooltip(text: "Blendet die Web-Adresse (URL) am oberen Rand aus für eine komplett rahmenlose Widget-Ansicht.")
                                 }
                             }
                         } label: {
@@ -1280,9 +1280,6 @@ struct WebWidgetEditorSheet: View {
                                     .font(.subheadline)
                                     .fontWeight(.medium)
                                 Spacer()
-                                Text(isPinned && showsAddressBar ? "Pin & Navigationsleiste" : (isPinned ? "Angeheftet" : (showsAddressBar ? "Navigationsleiste" : (hidesTopBar ? "Ohne Link-Leiste" : "Standard"))))
-                                    .font(.caption2)
-                                    .foregroundColor(.secondary)
                             }
                             .contentShape(Rectangle())
                             .onTapGesture {

@@ -552,7 +552,7 @@ public struct WebPanelView: View {
                         onUpdateItem?(updated)
                     }
 
-                    Button(item.hidesTopBar ? "Obere Link-Leiste einblenden" : "Obere Leiste mit Link entfernen") {
+                    Button(item.hidesTopBar ? "Obere Adressleiste einblenden" : "Obere Adressleiste ausblenden") {
                         var updated = item
                         updated.hidesTopBar.toggle()
                         onUpdateItem?(updated)
