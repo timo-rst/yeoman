@@ -1287,10 +1287,10 @@ public final class LocalizationManager: ObservableObject {
             .french: "Personnalisez le nom, l'URL, l'icône et la taille de la fenêtre."
         ],
         "web_panel.editor_sec1": [
-            .german: "1. Name & Ziel-Webseite (URL)",
-            .english: "1. Name & Target Website (URL)",
-            .spanish: "1. Nombre y sitio web de destino (URL)",
-            .french: "1. Nom et site Web cible (URL)"
+            .german: "Name & Ziel-Webseite (URL)",
+            .english: "Name & Target Website (URL)",
+            .spanish: "Nombre y sitio web de destino (URL)",
+            .french: "Nom et site Web cible (URL)"
         ],
         "web_panel.editor_name_label": [
             .german: "Name des Web-Widgets:",
@@ -1329,10 +1329,10 @@ public final class LocalizationManager: ObservableObject {
             .french: "Analyser à nouveau"
         ],
         "web_panel.editor_sec2": [
-            .german: "2. Fenstergröße & Ansicht",
-            .english: "2. Window Size & View",
-            .spanish: "2. Tamaño de ventana y vista",
-            .french: "2. Taille de fenêtre et affichage"
+            .german: "Fenstergröße & Ansicht",
+            .english: "Window Size & View",
+            .spanish: "Tamaño de ventana y vista",
+            .french: "Taille de fenêtre et affichage"
         ],
         "web_panel.editor_width": [
             .german: "Breite:",
@@ -1359,10 +1359,10 @@ public final class LocalizationManager: ObservableObject {
             .french: "Apparence :"
         ],
         "web_panel.editor_sec3": [
-            .german: "3. Weitere Optionen",
-            .english: "3. Additional Options",
-            .spanish: "3. Opciones adicionales",
-            .french: "3. Options supplémentaires"
+            .german: "Weitere Optionen",
+            .english: "Additional Options",
+            .spanish: "Opciones adicionales",
+            .french: "Options supplémentaires"
         ],
         "web_panel.editor_pin": [
             .german: "Fenster anheften (Pin)",

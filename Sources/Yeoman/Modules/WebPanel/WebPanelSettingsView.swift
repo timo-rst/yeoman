@@ -767,7 +767,10 @@ struct WebWidgetEditorSheet: View {
         VStack(spacing: 0) {
             // Wizard Header
             HStack {
-                HStack(spacing: 6) {
+                HStack(spacing: 8) {
+                    Image(systemName: isEditing ? "slider.horizontal.2.square" : "plus.square.fill.on.square.fill")
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundColor(.accentColor)
                     Text(isEditing ? l10n("web_panel.editor_edit_title") : l10n("web_panel.editor_new_title"))
                         .font(.title3)
                         .fontWeight(.bold)
@@ -785,24 +788,42 @@ struct WebWidgetEditorSheet: View {
             HStack(spacing: 0) {
                 // Left Column: Configuration Forms
                 ScrollView {
-                    VStack(alignment: .leading, spacing: 16) {
-                        // 1. Name & Ziel-Webseite (URL)
+                    VStack(alignment: .leading, spacing: 14) {
+                        // Name & Ziel-Webseite (URL)
                         VStack(alignment: .leading, spacing: 14) {
-                            Text(l10n("web_panel.editor_sec1"))
-                                .font(.headline)
+                            HStack(spacing: 10) {
+                                ZStack {
+                                    RoundedRectangle(cornerRadius: 6)
+                                        .fill(Color.accentColor.opacity(0.12))
+                                        .frame(width: 26, height: 26)
+                                    Image(systemName: "globe")
+                                        .font(.system(size: 13, weight: .semibold))
+                                        .foregroundColor(.accentColor)
+                                }
+
+                                Text(l10n("web_panel.editor_sec1"))
+                                    .font(.system(size: 13, weight: .semibold))
+                                    .foregroundColor(.primary)
+
+                                Spacer()
+                            }
+
+                            Divider()
+                                .padding(.bottom, 2)
 
                             // Name Row
                             VStack(alignment: .leading, spacing: 5) {
                                 Text(l10n("web_panel.editor_name_label"))
                                     .font(.caption)
+                                    .fontWeight(.medium)
                                     .foregroundColor(.secondary)
 
                                 HStack(spacing: 10) {
                                     // Live Icon Preview Badge
                                     ZStack {
                                         RoundedRectangle(cornerRadius: 8)
-                                            .fill(Color(nsColor: .controlBackgroundColor))
-                                            .frame(width: 34, height: 34)
+                                            .fill(Color(nsColor: .controlColor))
+                                            .frame(width: 36, height: 36)
                                             .overlay(
                                                 RoundedRectangle(cornerRadius: 8)
                                                     .stroke(Color.primary.opacity(0.15), lineWidth: 1)
@@ -831,6 +852,7 @@ struct WebWidgetEditorSheet: View {
                             VStack(alignment: .leading, spacing: 5) {
                                 Text(l10n("web_panel.editor_url_label"))
                                     .font(.caption)
+                                    .fontWeight(.medium)
                                     .foregroundColor(.secondary)
 
                                 HStack(spacing: 8) {
@@ -839,23 +861,35 @@ struct WebWidgetEditorSheet: View {
                                     })
                                     .textFieldStyle(.roundedBorder)
 
-                                    Button(l10n("web_panel.editor_load_btn")) {
+                                    Button(action: {
                                         applyURLChange()
+                                    }) {
+                                        HStack(spacing: 5) {
+                                            Image(systemName: "arrow.clockwise")
+                                                .font(.system(size: 11, weight: .semibold))
+                                            Text(l10n("web_panel.editor_load_btn"))
+                                                .font(.system(size: 12, weight: .medium))
+                                        }
                                     }
                                     .buttonStyle(.bordered)
+                                    .controlSize(.regular)
                                 }
                             }
 
                             // Schnellvorlagen
-                            VStack(alignment: .leading, spacing: 6) {
+                            VStack(alignment: .leading, spacing: 8) {
                                 HStack(spacing: 5) {
-                                    Text(l10n("web_panel.editor_templates"))
+                                    Image(systemName: "sparkles")
                                         .font(.caption2)
+                                        .foregroundColor(.secondary)
+                                    Text(l10n("web_panel.editor_templates"))
+                                        .font(.caption)
+                                        .fontWeight(.medium)
                                         .foregroundColor(.secondary)
                                     InfoTooltip(text: l10n("web_panel.editor_templates_tooltip"))
                                 }
 
-                                LazyVGrid(columns: [GridItem(.adaptive(minimum: 120))], spacing: 6) {
+                                LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 8) {
                                     QuickButton(name: "Google Gemini", icon: "sparkles") {
                                         setPreset(url: "https://gemini.google.com", name: "Google Gemini", icon: "sparkles", preset: .smartphone)
                                     }
@@ -878,15 +912,35 @@ struct WebWidgetEditorSheet: View {
                             }
                         }
                         .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding()
-                        .background(RoundedRectangle(cornerRadius: 10).fill(Color(nsColor: .controlBackgroundColor)))
+                        .padding(14)
+                        .background(
+                            RoundedRectangle(cornerRadius: 12)
+                                .fill(Color(nsColor: .controlBackgroundColor))
+                        )
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 12)
+                                .stroke(Color.primary.opacity(0.08), lineWidth: 1)
+                        )
 
                         // Menüleisten-Symbol & Logo (Als einklappbares Untermenü)
-                        DisclosureGroup(isExpanded: $isLogoSettingsExpanded) {
+                        EditorCollapsibleSection(
+                            icon: "photo.badge.checkmark",
+                            title: l10n("web_panel.editor_logo_section"),
+                            isExpanded: $isLogoSettingsExpanded,
+                            trailingBadge: {
+                                Text(useFavicon ? l10n("web_panel.logo_picker_auto") : l10n("web_panel.badge_symbol"))
+                                    .font(.caption2)
+                                    .fontWeight(.medium)
+                                    .foregroundColor(.secondary)
+                                    .padding(.horizontal, 7)
+                                    .padding(.vertical, 3)
+                                    .background(
+                                        Capsule()
+                                            .fill(Color.primary.opacity(0.06))
+                                    )
+                            }
+                        ) {
                             VStack(alignment: .leading, spacing: 12) {
-                                Divider()
-                                    .padding(.vertical, 4)
-
                                 // Website Logo Option
                                 VStack(alignment: .leading, spacing: 8) {
                                     HStack(spacing: 6) {
@@ -1091,48 +1145,37 @@ struct WebWidgetEditorSheet: View {
                                                         RoundedRectangle(cornerRadius: 6)
                                                             .fill(iconName == icon ? Color.accentColor : Color(nsColor: .controlColor))
                                                     )
+                                                    .overlay(
+                                                        RoundedRectangle(cornerRadius: 6)
+                                                            .stroke(iconName == icon ? Color.accentColor : Color.primary.opacity(0.12), lineWidth: 1)
+                                                    )
                                             }
                                             .buttonStyle(.plain)
                                         }
                                     }
                                 }
                             }
-                        } label: {
-                            HStack(spacing: 8) {
-                                Image(systemName: "photo.badge.checkmark")
-                                    .foregroundColor(.accentColor)
-                                Text(l10n("web_panel.editor_logo_section"))
-                                    .font(.subheadline)
-                                    .fontWeight(.medium)
-                                Spacer()
-                                Text(useFavicon ? l10n("web_panel.logo_picker_auto") : l10n("web_panel.badge_symbol"))
-                                    .font(.caption2)
-                                    .foregroundColor(.secondary)
-                            }
-                            .contentShape(Rectangle())
-                            .onTapGesture {
-                                withAnimation(.easeInOut(duration: 0.2)) {
-                                    isLogoSettingsExpanded.toggle()
-                                }
-                            }
-                            .onHover { isHovered in
-                                if isHovered {
-                                    NSCursor.pointingHand.push()
-                                } else {
-                                    NSCursor.pop()
-                                }
-                            }
                         }
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding()
-                        .background(RoundedRectangle(cornerRadius: 10).fill(Color(nsColor: .controlBackgroundColor)))
 
                         // 2. Fenstergröße & Ansicht (Einklappbar)
-                        DisclosureGroup(isExpanded: $isSizeSettingsExpanded) {
+                        EditorCollapsibleSection(
+                            icon: "aspectratio",
+                            title: l10n("web_panel.editor_sec2"),
+                            isExpanded: $isSizeSettingsExpanded,
+                            trailingBadge: {
+                                Text("\(Int(effectiveWidth)) × \(Int(effectiveHeight)) pt")
+                                    .font(.caption2)
+                                    .fontWeight(.semibold)
+                                    .foregroundColor(.accentColor)
+                                    .padding(.horizontal, 7)
+                                    .padding(.vertical, 3)
+                                    .background(
+                                        Capsule()
+                                            .fill(Color.accentColor.opacity(0.12))
+                                    )
+                            }
+                        ) {
                             VStack(alignment: .leading, spacing: 10) {
-                                Divider()
-                                    .padding(.vertical, 4)
-
                                 Picker(l10n("web_panel.editor_size_label"), selection: $sizePreset) {
                                     ForEach(WebSizePreset.allCases) { preset in
                                         Text(preset.localizedTitle).tag(preset)
@@ -1221,43 +1264,15 @@ struct WebWidgetEditorSheet: View {
                                     updateLivePreview()
                                 }
                             }
-                        } label: {
-                            HStack(spacing: 8) {
-                                Image(systemName: "aspectratio")
-                                    .foregroundColor(.accentColor)
-                                Text(l10n("web_panel.editor_sec2"))
-                                    .font(.subheadline)
-                                    .fontWeight(.medium)
-                                Spacer()
-                                Text("\(Int(effectiveWidth)) × \(Int(effectiveHeight)) pt")
-                                    .font(.caption2)
-                                    .fontWeight(.bold)
-                                    .foregroundColor(.accentColor)
-                            }
-                            .contentShape(Rectangle())
-                            .onTapGesture {
-                                withAnimation(.easeInOut(duration: 0.2)) {
-                                    isSizeSettingsExpanded.toggle()
-                                }
-                            }
-                            .onHover { isHovered in
-                                if isHovered {
-                                    NSCursor.pointingHand.push()
-                                } else {
-                                    NSCursor.pop()
-                                }
-                            }
                         }
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding()
-                        .background(RoundedRectangle(cornerRadius: 10).fill(Color(nsColor: .controlBackgroundColor)))
 
                         // 3. Weitere Optionen (Einklappbar)
-                        DisclosureGroup(isExpanded: $isExtraOptionsExpanded) {
+                        EditorCollapsibleSection(
+                            icon: "slider.horizontal.3",
+                            title: l10n("web_panel.editor_sec3"),
+                            isExpanded: $isExtraOptionsExpanded
+                        ) {
                             VStack(alignment: .leading, spacing: 10) {
-                                Divider()
-                                    .padding(.vertical, 4)
-
                                 HStack(spacing: 6) {
                                     Toggle(l10n("web_panel.editor_pin"), isOn: $isPinned)
                                     InfoTooltip(text: l10n("web_panel.editor_pin_tooltip"))
@@ -1273,32 +1288,7 @@ struct WebWidgetEditorSheet: View {
                                     InfoTooltip(text: l10n("web_panel.editor_top_bar_tooltip"))
                                 }
                             }
-                        } label: {
-                            HStack(spacing: 8) {
-                                Image(systemName: "slider.horizontal.3")
-                                    .foregroundColor(.accentColor)
-                                Text(l10n("web_panel.editor_sec3"))
-                                    .font(.subheadline)
-                                    .fontWeight(.medium)
-                                Spacer()
-                            }
-                            .contentShape(Rectangle())
-                            .onTapGesture {
-                                withAnimation(.easeInOut(duration: 0.2)) {
-                                    isExtraOptionsExpanded.toggle()
-                                }
-                            }
-                            .onHover { isHovered in
-                                if isHovered {
-                                    NSCursor.pointingHand.push()
-                                } else {
-                                    NSCursor.pop()
-                                }
-                            }
                         }
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding()
-                        .background(RoundedRectangle(cornerRadius: 10).fill(Color(nsColor: .controlBackgroundColor)))
                     }
                     .padding(16)
                 }
@@ -1530,26 +1520,150 @@ struct WebWidgetEditorSheet: View {
     }
 }
 
+struct EditorCollapsibleSection<Content: View, TrailingBadge: View>: View {
+    let icon: String
+    let title: String
+    @Binding var isExpanded: Bool
+    @ViewBuilder let trailingBadge: () -> TrailingBadge
+    @ViewBuilder let content: () -> Content
+
+    @State private var isHeaderHovered = false
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            Button(action: {
+                withAnimation(.easeInOut(duration: 0.22)) {
+                    isExpanded.toggle()
+                }
+            }) {
+                HStack(spacing: 10) {
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 6)
+                            .fill(Color.accentColor.opacity(0.12))
+                            .frame(width: 26, height: 26)
+                        Image(systemName: icon)
+                            .font(.system(size: 13, weight: .semibold))
+                            .foregroundColor(.accentColor)
+                    }
+
+                    Text(title)
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundColor(.primary)
+
+                    Spacer()
+
+                    trailingBadge()
+
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundColor(.secondary)
+                        .rotationEffect(.degrees(isExpanded ? 90 : 0))
+                }
+                .padding(.horizontal, 14)
+                .padding(.vertical, 12)
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .background(
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(isHeaderHovered ? Color.primary.opacity(0.04) : Color.clear)
+            )
+            .onHover { hovering in
+                isHeaderHovered = hovering
+                if hovering {
+                    NSCursor.pointingHand.push()
+                } else {
+                    NSCursor.pop()
+                }
+            }
+
+            if isExpanded {
+                Divider()
+                    .padding(.horizontal, 14)
+                    .padding(.bottom, 12)
+
+                content()
+                    .padding(.horizontal, 14)
+                    .padding(.bottom, 14)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(Color(nsColor: .controlBackgroundColor))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(Color.primary.opacity(0.08), lineWidth: 1)
+        )
+    }
+}
+
+extension EditorCollapsibleSection where TrailingBadge == EmptyView {
+    init(
+        icon: String,
+        title: String,
+        isExpanded: Binding<Bool>,
+        @ViewBuilder content: @escaping () -> Content
+    ) {
+        self.init(
+            icon: icon,
+            title: title,
+            isExpanded: isExpanded,
+            trailingBadge: { EmptyView() },
+            content: content
+        )
+    }
+}
+
 struct QuickButton: View {
     let name: String
     let icon: String
     let action: () -> Void
 
+    @State private var isHovered = false
+
     var body: some View {
         Button(action: action) {
-            HStack(spacing: 4) {
+            HStack(spacing: 7) {
                 Image(systemName: icon)
-                    .font(.caption2)
-                    .foregroundColor(.accentColor)
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundColor(isHovered ? .accentColor : .accentColor.opacity(0.85))
+                    .frame(width: 14, height: 14)
+
                 Text(name)
-                    .font(.caption2)
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundColor(.primary)
                     .lineLimit(1)
+
+                Spacer(minLength: 0)
+
+                Image(systemName: "plus")
+                    .font(.system(size: 8, weight: .bold))
+                    .foregroundColor(isHovered ? .accentColor : .secondary.opacity(0.4))
             }
-            .padding(.horizontal, 6)
-            .padding(.vertical, 4)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(RoundedRectangle(cornerRadius: 6).fill(Color(nsColor: .windowBackgroundColor)))
+            .padding(.horizontal, 9)
+            .padding(.vertical, 7)
+            .background(
+                RoundedRectangle(cornerRadius: 8)
+                    .fill(isHovered ? Color.accentColor.opacity(0.14) : Color(nsColor: .controlColor))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 8)
+                    .stroke(isHovered ? Color.accentColor.opacity(0.45) : Color.primary.opacity(0.12), lineWidth: 1)
+            )
+            .contentShape(RoundedRectangle(cornerRadius: 8))
         }
         .buttonStyle(.plain)
+        .onHover { hovering in
+            withAnimation(.easeInOut(duration: 0.15)) {
+                isHovered = hovering
+            }
+            if hovering {
+                NSCursor.pointingHand.push()
+            } else {
+                NSCursor.pop()
+            }
+        }
     }
 }
