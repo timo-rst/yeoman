@@ -26,13 +26,15 @@
 
 Yeoman is an open-source macOS menu bar tool that bundles several customization modules into a single native process. Each module can be enabled or disabled independently.
 
+The settings window behaves like a regular macOS window: it remains visible in Mission Control and the standard window cycle until the user closes or minimizes it.
+
 ### Specifications & Resource Usage
 
 - **Target OS:** macOS 14.0 (Sonoma) or newer. Pre-built releases currently target Apple Silicon (`arm64`); Intel source compatibility has not been release-tested.
 - **Frameworks:** Apple AppKit & SwiftUI (0 external libraries or third-party dependencies)
 - **Networking:** No telemetry or analytics. Web widgets access their configured sites, and the updater checks the Yeoman GitHub release endpoints when automatic checks are enabled.
 - **Disk Storage:** Standard macOS Application Support directory (`~/Library/Application Support/Yeoman`) with POSIX `0700` permissions
-- **Idle Memory:** ~60 MB RAM (with WebKit views unloaded)
+- **Idle Memory:** Depends on enabled modules and loaded websites. Closed web widgets keep their page state warm for immediate reopening, while their popover, SwiftUI hierarchy, and rendering surface are released.
 - **Idle CPU:** < 1%
 
 ---
@@ -54,7 +56,7 @@ Displays websites inside floating panels accessible directly from menu bar icons
 - **Configurable Dimensions:** Freeform width and height sliders or presets (320×400, 375×667, 500×700).
 - **User Agent Modes:** Auto, forced mobile (iPhone), or forced desktop.
 - **Window Pinning:** Optional pin mode to keep windows open when clicking outside.
-- **Lifecycle:** Closed panels are hidden and throttled; media is suspended and caches are purged. WebKit may retain process state until the widget or app is closed.
+- **Lifecycle:** Website content is preloaded for immediate opening. Closed panels release their popover and rendering hierarchy while retaining the live page; autoplay is blocked, media is suspended, and volatile caches are purged. Widgets keep separate persistent website-data containers. WebKit may retain page memory until the widget or app is closed.
 
 <p align="center">
   <img src="Resources/Mockups/yeoman_web_widgets.png" alt="Yeoman Web Widgets" width="92%" />
@@ -62,6 +64,7 @@ Displays websites inside floating panels accessible directly from menu bar icons
 
 ### 2. Clipboard History
 Records copied text and images locally.
+- **Pinned window:** Keep the clipboard popover open while copying multiple entries; toggle it from module settings or the footer pin.
 - **Privacy Filtering:** Best-effort filtering ignores standard transient/concealed markers and known password-manager patterns. Applications that omit these signals cannot be identified reliably.
 - **Search & Filter:** Search by text content or filter by category (text, images, pinned favorites).
 - **Storage:** Optional persistence uses AES-GCM authenticated encryption in `~/Library/Application Support/Yeoman/`. Keys are permission-restricted files under `.secrets`; this protects against other user accounts and accidental disclosure, but a malicious process running as the same macOS user can read both key and ciphertext.
@@ -91,6 +94,7 @@ Separates scroll direction handling between mouse wheels and trackpads.
 Shows hardware usage in the menu bar.
 - **Metrics:** CPU utilization, memory allocation, and battery status.
 - **Process List:** Inspects running processes with sorting by CPU and memory usage.
+- **Pinned task manager:** Keep the task-manager popover open from module settings or its footer pin.
 
 ---
 

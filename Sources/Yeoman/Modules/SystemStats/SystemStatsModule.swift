@@ -111,10 +111,12 @@ public final class SystemStatsModule: NSObject, CustomizerModule, ObservableObje
             updateStatusItemLength()
         }
     }
+    public let popoverPin = PopoverPinPreference(storageKey: "system_stats_popover_pinned")
     
     private var statusItem: NSStatusItem?
     private var popover: NSPopover?
     private var spacingCancellable: AnyCancellable?
+    private var pinCancellable: AnyCancellable?
     
     public override init() {
         self.isEnabled = UserDefaults.standard.object(forKey: "system_stats_is_enabled") as? Bool ?? true
@@ -148,6 +150,13 @@ public final class SystemStatsModule: NSObject, CustomizerModule, ObservableObje
             .receive(on: RunLoop.main)
             .sink { [weak self] _ in
                 self?.updateStatusItemLength()
+            }
+        self.pinCancellable = popoverPin.$isPinned
+            .dropFirst()
+            .receive(on: RunLoop.main)
+            .sink { [weak self] _ in
+                guard let self else { return }
+                self.popover?.behavior = self.popoverPin.popoverBehavior
             }
         
         // Listen for system / window / space changes to automatically recover status item if needed
@@ -317,10 +326,10 @@ public final class SystemStatsModule: NSObject, CustomizerModule, ObservableObje
         if popover == nil {
             let p = NSPopover()
             p.contentSize = NSSize(width: 460, height: 495)
-            p.behavior = .transient
+            p.behavior = popoverPin.popoverBehavior
             p.animates = true
             p.delegate = self
-            p.contentViewController = NSHostingController(rootView: TaskManagerPopoverView())
+            p.contentViewController = NSHostingController(rootView: TaskManagerPopoverView(pinPreference: popoverPin))
             self.popover = p
         }
         
@@ -389,6 +398,12 @@ public struct SystemStatsSettingsView: View {
     @ObservedObject var module: SystemStatsModule
     @ObservedObject var provider = SystemMetricsProvider.shared
     @ObservedObject var l10nObj = LocalizationManager.shared
+    @ObservedObject private var popoverPin: PopoverPinPreference
+
+    public init(module: SystemStatsModule) {
+        self.module = module
+        self._popoverPin = ObservedObject(wrappedValue: module.popoverPin)
+    }
     
     public var body: some View {
         VStack(spacing: 0) {
@@ -507,6 +522,8 @@ public struct SystemStatsSettingsView: View {
                             }
                             .buttonStyle(.bordered)
                         }
+
+                        Toggle(l10n("common.keep_window_pinned"), isOn: $popoverPin.isPinned)
                     }
                     .padding()
                     .background(RoundedRectangle(cornerRadius: 12).fill(Color(nsColor: .controlBackgroundColor)))

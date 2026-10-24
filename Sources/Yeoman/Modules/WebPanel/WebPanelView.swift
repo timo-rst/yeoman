@@ -45,8 +45,9 @@ public final class WebPanelController: NSObject, ObservableObject, WKNavigationD
         let safeStoreId = widgetID.flatMap { $0.isValidWebKitIdentifier ? $0 : nil }
         config.websiteDataStore = safeStoreId.map { WKWebsiteDataStore(forIdentifier: $0) } ?? .nonPersistent()
 
-        // Enable media playback (videos on Reddit, YouTube, etc.) without requiring direct gesture on <video>
-        config.mediaTypesRequiringUserActionForPlayback = []
+        // Match modern browser behavior: a page may preload, but cannot start costly
+        // audio/video playback before the user interacts with the closed widget.
+        config.mediaTypesRequiringUserActionForPlayback = .all
 
         let prefs = WKWebpagePreferences()
         prefs.allowsContentJavaScript = true
@@ -134,6 +135,13 @@ public final class WebPanelController: NSObject, ObservableObject, WKNavigationD
 
     public func stopLoading() {
         webView?.stopLoading()
+    }
+
+    /// Releases AppKit/Core Animation presentation resources while preserving the
+    /// live page, JavaScript state, navigation history, and authenticated session.
+    public func detachFromPresentation() {
+        guard !isDisposed else { return }
+        webView?.removeFromSuperview()
     }
 
     public func dispose() {
@@ -355,6 +363,12 @@ public struct WebViewRepresentable: NSViewRepresentable {
         if abs(nsView.pageZoom - CGFloat(controller.zoomScale)) > 0.01 {
             nsView.pageZoom = CGFloat(controller.zoomScale)
         }
+    }
+
+    public static func dismantleNSView(_ nsView: WKWebView, coordinator: ()) {
+        // SwiftUI may retain representable views beyond the popover lifetime. Detach
+        // explicitly so a closed widget has no hidden rendering hierarchy.
+        nsView.removeFromSuperview()
     }
 }
 

@@ -29,14 +29,21 @@ public enum ClipboardTabFilter: String, CaseIterable, Identifiable {
 }
 
 public struct ClipboardView: View {
-    @ObservedObject var store = ClipboardHistoryStore.shared
+    @ObservedObject var store: ClipboardHistoryStore
     @ObservedObject var l10nObj = LocalizationManager.shared
     @State private var selectedTab: ClipboardTabFilter = .all
     @State private var previewItem: ClipboardItem? = nil
     public var onCopy: (() -> Void)?
+    private let pinPreference: PopoverPinPreference?
     
-    public init(onCopy: (() -> Void)? = nil) {
+    public init(
+        store: ClipboardHistoryStore = .shared,
+        onCopy: (() -> Void)? = nil,
+        pinPreference: PopoverPinPreference? = nil
+    ) {
+        self.store = store
         self.onCopy = onCopy
+        self.pinPreference = pinPreference
     }
     
     private var displayedItems: [ClipboardItem] {
@@ -187,12 +194,17 @@ public struct ClipboardView: View {
                 Text(l10n("clipboard.footer_hint"))
                     .font(.caption2)
                     .foregroundColor(.secondary.opacity(0.8))
+                if let pinPreference {
+                    PopoverPinButton(preference: pinPreference)
+                }
             }
             .padding(.horizontal, 12)
             .padding(.vertical, 6)
             .background(Color(nsColor: .windowBackgroundColor))
         }
         .frame(width: 380, height: 480)
+        .background(Color(nsColor: .windowBackgroundColor))
+        .environment(\.controlActiveState, .active)
         .sheet(item: $previewItem) { item in
             ImageDetailModalView(item: item) {
                 ClipboardMonitor.shared.copyItemToClipboard(item)

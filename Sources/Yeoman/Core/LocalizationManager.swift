@@ -836,6 +836,24 @@ public final class LocalizationManager: ObservableObject {
             .spanish: "Clic para copiar al portapapeles",
             .french: "Cliquer pour copier dans le presse-papiers"
         ],
+        "common.pin_window": [
+            .german: "Fenster anpinnen",
+            .english: "Pin window",
+            .spanish: "Fijar ventana",
+            .french: "Épingler la fenêtre"
+        ],
+        "common.unpin_window": [
+            .german: "Fenster lösen",
+            .english: "Unpin window",
+            .spanish: "Desfijar ventana",
+            .french: "Désépingler la fenêtre"
+        ],
+        "common.keep_window_pinned": [
+            .german: "Fenster angepinnt lassen",
+            .english: "Keep window pinned",
+            .spanish: "Mantener la ventana fijada",
+            .french: "Garder la fenêtre épinglée"
+        ],
         "clipboard.clear_unpinned": [
             .german: "Nicht angepinnte löschen",
             .english: "Clear unpinned items",

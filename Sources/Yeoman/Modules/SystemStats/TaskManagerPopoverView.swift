@@ -8,8 +8,11 @@ public struct TaskManagerPopoverView: View {
     @State private var killedPid: Int?
     @State private var isSearchExpanded: Bool = false
     @FocusState private var isSearchFocused: Bool
+    private let pinPreference: PopoverPinPreference?
     
-    public init() {}
+    public init(pinPreference: PopoverPinPreference? = nil) {
+        self.pinPreference = pinPreference
+    }
     
     public var body: some View {
         VStack(spacing: 0) {
@@ -76,16 +79,8 @@ public struct TaskManagerPopoverView: View {
                     }
                     .padding(.horizontal, 8)
                     .padding(.vertical, 5)
+                    .frame(maxWidth: .infinity)
                     .background(RoundedRectangle(cornerRadius: 6).fill(Color(nsColor: .windowBackgroundColor)))
-                    
-                    // Compact Sort Picker
-                    Picker("", selection: $provider.sortMode) {
-                        Text(SystemMetricsProvider.TaskSortMode.cpu.localizedTitle).tag(SystemMetricsProvider.TaskSortMode.cpu)
-                        Text(SystemMetricsProvider.TaskSortMode.memory.localizedTitle).tag(SystemMetricsProvider.TaskSortMode.memory)
-                        Text(SystemMetricsProvider.TaskSortMode.name.localizedTitle).tag(SystemMetricsProvider.TaskSortMode.name)
-                    }
-                    .pickerStyle(.segmented)
-                    .frame(width: 140)
                 } else {
                     // Collapsed: Compact Magnifying Glass Button
                     Button(action: {
@@ -106,6 +101,7 @@ public struct TaskManagerPopoverView: View {
                         )
                     }
                     .buttonStyle(.plain)
+                    .focusable(false)
                     .help(l10n("system_stats.search_tooltip"))
                     
                     // Full-width Sort Picker
@@ -196,12 +192,18 @@ public struct TaskManagerPopoverView: View {
                 }
                 .buttonStyle(.plain)
                 .foregroundColor(.accentColor)
+
+                if let pinPreference {
+                    PopoverPinButton(preference: pinPreference)
+                }
             }
             .padding(.horizontal, 12)
             .padding(.vertical, 8)
             .background(Color(nsColor: .controlBackgroundColor))
         }
         .frame(width: 460, height: 495)
+        .background(Color(nsColor: .windowBackgroundColor))
+        .environment(\.controlActiveState, .active)
     }
 }
 

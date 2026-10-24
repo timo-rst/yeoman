@@ -26,9 +26,11 @@ public struct ClipboardSettingsView: View {
     @ObservedObject var store = ClipboardHistoryStore.shared
     @ObservedObject var monitor = ClipboardMonitor.shared
     @ObservedObject var l10nObj = LocalizationManager.shared
+    @ObservedObject private var popoverPin: PopoverPinPreference
     
     public init(module: ClipboardModule) {
         self.module = module
+        self._popoverPin = ObservedObject(wrappedValue: module.popoverPin)
     }
     
     public var body: some View {
@@ -76,6 +78,7 @@ public struct ClipboardSettingsView: View {
                     VStack(alignment: .leading, spacing: 20) {
                         VStack(alignment: .leading, spacing: 14) {
                             Toggle(l10n("clipboard.pause_recording"), isOn: $monitor.isPaused)
+                            Toggle(l10n("common.keep_window_pinned"), isOn: $popoverPin.isPinned)
                             TextField(l10n("clipboard.excluded_bundle_ids"), text: $monitor.excludedBundleIDs)
                             Toggle(l10n("clipboard.save_encrypted"), isOn: Binding(get: { store.isPersistent }, set: { store.setPersistent($0) }))
                             if let error = store.storageError { Text(error).foregroundColor(.red).font(.caption) }

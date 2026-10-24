@@ -231,11 +231,12 @@ public final class WebPanelModule: NSObject, CustomizerModule, ObservableObject 
 
     private var instanceControllers: [UUID: WebWidgetInstanceController] = [:]
     @Published public private(set) var storageError: String?
-    private let storage = WidgetStorage()
+    private let storage: WidgetStorage
     private var didLoadWidgets = false
     private let widgetsStorageKey = "web_panel_widgets_list_json"
 
-    public override init() {
+    public init(storage: WidgetStorage = WidgetStorage()) {
+        self.storage = storage
         self.isEnabled = UserDefaults.standard.object(forKey: "web_panel_is_enabled") as? Bool ?? true
         self.showsDedicatedStatusItem = true
         UserDefaults.standard.set(true, forKey: "web_panel_shows_status_item")
@@ -614,8 +615,9 @@ public final class WebWidgetInstanceController: NSObject, ObservableObject, NSPo
         self.statusItem = sItem
         updateStatusItemIcon()
 
-        // Pre-create popover for instant zero-latency opening
-        preparePopover()
+        // The page itself is already preloaded by WebPanelController. Build the
+        // inexpensive popover/view hierarchy only when it is actually opened so
+        // closed widgets do not retain hidden SwiftUI and Core Animation surfaces.
 
         if item.useFavicon {
             WebFaviconManager.shared.fetchFavicon(for: item.url, widgetId: item.id) { [weak self] _ in
@@ -792,5 +794,16 @@ public final class WebWidgetInstanceController: NSObject, ObservableObject, NSPo
     public func popoverDidClose(_ notification: Notification) {
         webController.onPopoverClosed()
         PopoverFocusCoordinator.shared.handlePopoverDidClose(of: popover)
+
+        // Keep the live WKWebView and its page state warm, but release the closed
+        // popover and all presentation-only resources. preparePopover() recreates
+        // this lightweight shell around the same web view on the next click.
+        guard let closedPopover = notification.object as? NSPopover else { return }
+        closedPopover.contentViewController = nil
+        closedPopover.delegate = nil
+        webController.detachFromPresentation()
+        if popover === closedPopover {
+            popover = nil
+        }
     }
 }

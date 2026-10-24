@@ -513,6 +513,7 @@ func runSecurityTests() {
             var a: WebPanelController? = WebPanelController(initialURL: "https://example.invalid", widgetID: firstID, preload: false)
             var b: WebPanelController? = WebPanelController(initialURL: "https://example.invalid", widgetID: secondID, preload: false)
             assertFalse(a!.webView.configuration.websiteDataStore === b!.webView.configuration.websiteDataStore)
+            assertEqual(a!.webView.configuration.mediaTypesRequiringUserActionForPlayback, .all)
             assertFalse(a!.webView.configuration.preferences.javaScriptCanOpenWindowsAutomatically)
             assertFalse(a!.webView.configuration.preferences.isElementFullscreenEnabled)
             assertTrue(a!.webView.configuration.defaultWebpagePreferences.allowsContentJavaScript)
@@ -834,6 +835,19 @@ func runSecurityTests() {
             controller.dispose()
             controller.purgeMemoryCache()
             RunLoop.current.run(until: Date().addingTimeInterval(3.2))
+        }
+        h.test("WebPanelController detaches rendering without discarding the live page") {
+            let controller = WebPanelController(initialURL: "https://example.invalid", preload: false)
+            let retainedWebView = controller.webView!
+            let host = NSView(frame: NSRect(x: 0, y: 0, width: 320, height: 400))
+            host.addSubview(retainedWebView)
+            assertTrue(retainedWebView.superview === host)
+
+            controller.detachFromPresentation()
+
+            assertTrue(controller.webView === retainedWebView)
+            assertTrue(retainedWebView.superview == nil)
+            controller.dispose()
         }
         h.test("Image decoder accepts multi-frame ICO favicons (AUD-09)") {
             let data = NSMutableData()

@@ -1,6 +1,16 @@
 import AppKit
 import SwiftUI
 
+public enum SettingsWindowPolicy {
+    /// Keep settings consistent with a regular macOS application window: visible
+    /// in Mission Control and Cmd-Tab/window cycling until closed or minimized.
+    public static func apply(to window: NSWindow) {
+        window.collectionBehavior = [.managed, .participatesInCycle, .fullScreenPrimary]
+        window.isExcludedFromWindowsMenu = false
+        window.tabbingMode = .automatic
+    }
+}
+
 public final class StatusItemController: NSObject, ObservableObject, NSMenuDelegate, NSWindowDelegate {
     public static let shared = StatusItemController()
     
@@ -309,7 +319,7 @@ public final class StatusItemController: NSObject, ObservableObject, NSMenuDeleg
             )
             window.title = l10n("window.settings_title")
             window.minSize = NSSize(width: minWidth, height: minHeight)
-            window.collectionBehavior = [.fullScreenPrimary]
+            SettingsWindowPolicy.apply(to: window)
             window.contentView = NSHostingView(rootView: SettingsView())
             window.center()
             window.isReleasedWhenClosed = false
@@ -319,6 +329,7 @@ public final class StatusItemController: NSObject, ObservableObject, NSMenuDeleg
             window.title = l10n("window.settings_title")
             window.level = .normal
             window.minSize = NSSize(width: minWidth, height: minHeight)
+            SettingsWindowPolicy.apply(to: window)
             if window.frame.width < minWidth || window.frame.height < minHeight {
                 var frame = window.frame
                 frame.size.width = max(frame.size.width, standardWidth)

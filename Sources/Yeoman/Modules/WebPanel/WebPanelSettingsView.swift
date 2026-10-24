@@ -255,29 +255,6 @@ struct WebWidgetRowView: View {
                         .font(.system(size: 14, weight: .semibold))
                         .lineLimit(1)
 
-                    if widget.useFavicon {
-                        Text(l10n("web_panel.badge_web_icon"))
-                            .font(.caption2)
-                            .padding(.horizontal, 6)
-                            .padding(.vertical, 2)
-                            .background(Capsule().fill(Color.purple.opacity(0.18)))
-                            .foregroundColor(.purple)
-                    } else {
-                        Text(l10n("web_panel.badge_symbol"))
-                            .font(.caption2)
-                            .padding(.horizontal, 6)
-                            .padding(.vertical, 2)
-                            .background(Capsule().fill(Color.secondary.opacity(0.15)))
-                            .foregroundColor(.secondary)
-                    }
-
-                    Text("\(Int(widget.effectiveWidth)) × \(Int(widget.effectiveHeight)) pt")
-                        .font(.caption2)
-                        .padding(.horizontal, 6)
-                        .padding(.vertical, 2)
-                        .background(Capsule().fill(Color.primary.opacity(0.08)))
-                        .foregroundColor(.secondary)
-
                     if widget.userAgentMode == .mobile {
                         Text(l10n("web_panel.badge_smartphone"))
                             .font(.caption2)
@@ -666,6 +643,7 @@ struct WebWidgetEditorSheet: View {
     @State private var isLogoSettingsExpanded: Bool = false
     @State private var isSizeSettingsExpanded: Bool = false
     @State private var isExtraOptionsExpanded: Bool = false
+    @State private var isTemplatesExpanded: Bool = false
     @State private var sizePreset: WebSizePreset
     @State private var customWidth: CGFloat
     @State private var customHeight: CGFloat
@@ -875,18 +853,30 @@ struct WebWidgetEditorSheet: View {
                                     .controlSize(.regular)
                                 }
                             }
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(14)
+                        .background(
+                            RoundedRectangle(cornerRadius: 12)
+                                .fill(Color(nsColor: .controlBackgroundColor))
+                        )
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 12)
+                                .stroke(Color.primary.opacity(0.08), lineWidth: 1)
+                        )
 
-                            // Schnellvorlagen
+                        // Schnellvorlagen (einklappbar)
+                        EditorCollapsibleSection(
+                            icon: "sparkles",
+                            title: l10n("web_panel.editor_templates"),
+                            isExpanded: $isTemplatesExpanded
+                        ) {
                             VStack(alignment: .leading, spacing: 8) {
                                 HStack(spacing: 5) {
-                                    Image(systemName: "sparkles")
-                                        .font(.caption2)
-                                        .foregroundColor(.secondary)
-                                    Text(l10n("web_panel.editor_templates"))
+                                    Text(l10n("web_panel.editor_templates_tooltip"))
                                         .font(.caption)
-                                        .fontWeight(.medium)
                                         .foregroundColor(.secondary)
-                                    InfoTooltip(text: l10n("web_panel.editor_templates_tooltip"))
+                                        .fixedSize(horizontal: false, vertical: true)
                                 }
 
                                 LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 8) {
@@ -911,34 +901,12 @@ struct WebWidgetEditorSheet: View {
                                 }
                             }
                         }
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(14)
-                        .background(
-                            RoundedRectangle(cornerRadius: 12)
-                                .fill(Color(nsColor: .controlBackgroundColor))
-                        )
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 12)
-                                .stroke(Color.primary.opacity(0.08), lineWidth: 1)
-                        )
 
                         // Menüleisten-Symbol & Logo (Als einklappbares Untermenü)
                         EditorCollapsibleSection(
                             icon: "photo.badge.checkmark",
                             title: l10n("web_panel.editor_logo_section"),
-                            isExpanded: $isLogoSettingsExpanded,
-                            trailingBadge: {
-                                Text(useFavicon ? l10n("web_panel.logo_picker_auto") : l10n("web_panel.badge_symbol"))
-                                    .font(.caption2)
-                                    .fontWeight(.medium)
-                                    .foregroundColor(.secondary)
-                                    .padding(.horizontal, 7)
-                                    .padding(.vertical, 3)
-                                    .background(
-                                        Capsule()
-                                            .fill(Color.primary.opacity(0.06))
-                                    )
-                            }
+                            isExpanded: $isLogoSettingsExpanded
                         ) {
                             VStack(alignment: .leading, spacing: 12) {
                                 // Website Logo Option

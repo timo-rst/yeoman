@@ -1,5 +1,6 @@
 import SwiftUI
 import AppKit
+import Combine
 
 public final class ClipboardModule: NSObject, CustomizerModule, ObservableObject, NSPopoverDelegate {
     public let id = "clipboard_manager"
@@ -27,13 +28,22 @@ public final class ClipboardModule: NSObject, CustomizerModule, ObservableObject
     }
     
     @Published public var activeSubTab: ClipboardSubTab = .history
+    public let popoverPin = PopoverPinPreference(storageKey: "clipboard_popover_pinned")
     
     private var statusItem: NSStatusItem?
     private var popover: NSPopover?
+    private var pinCancellable: AnyCancellable?
     
     public override init() {
         self.isEnabled = UserDefaults.standard.object(forKey: "clipboard_is_enabled") as? Bool ?? true
         super.init()
+        pinCancellable = popoverPin.$isPinned
+            .dropFirst()
+            .receive(on: RunLoop.main)
+            .sink { [weak self] _ in
+                guard let self else { return }
+                self.popover?.behavior = self.popoverPin.popoverBehavior
+            }
     }
     
     public func start() {
@@ -105,12 +115,18 @@ public final class ClipboardModule: NSObject, CustomizerModule, ObservableObject
         if popover == nil {
             let p = NSPopover()
             p.contentSize = NSSize(width: 380, height: 480)
-            p.behavior = .transient
+            p.behavior = popoverPin.popoverBehavior
             p.animates = true
             p.delegate = self
-            p.contentViewController = NSHostingController(rootView: ClipboardView(onCopy: { [weak self] in
-                self?.closePopoverAndRestoreFocus()
-            }))
+            p.contentViewController = NSHostingController(
+                rootView: ClipboardView(
+                    onCopy: { [weak self] in
+                        guard let self, !self.popoverPin.isPinned else { return }
+                        self.closePopoverAndRestoreFocus()
+                    },
+                    pinPreference: popoverPin
+                )
+            )
             self.popover = p
         }
         

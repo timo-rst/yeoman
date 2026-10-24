@@ -158,7 +158,11 @@ public struct SettingsView: View {
             Group {
                 switch selectedTab {
                 case .general:
-                    GeneralSettingsView()
+                    GeneralSettingsView { destination in
+                        withAnimation(.easeInOut(duration: 0.18)) {
+                            selectedTab = destination
+                        }
+                    }
                 case .menuBar:
                     moduleManager.menuBarModule.settingsView()
                 case .scrollReverser:
@@ -297,6 +301,11 @@ struct GeneralSettingsView: View {
     @ObservedObject private var menuBar = ModuleManager.shared.menuBarModule
     @ObservedObject private var statusController = StatusItemController.shared
     @ObservedObject private var faviconManager = WebFaviconManager.shared
+    let onSelectModule: (SettingsTab) -> Void
+
+    init(onSelectModule: @escaping (SettingsTab) -> Void) {
+        self.onSelectModule = onSelectModule
+    }
     
     var body: some View {
         VStack(spacing: 0) {
@@ -374,7 +383,8 @@ struct GeneralSettingsView: View {
                             isOn: Binding(
                                 get: { menuBar.isEnabled },
                                 set: { mm.toggleModule(id: menuBar.id, enabled: $0) }
-                            )
+                            ),
+                            onOpen: { onSelectModule(.menuBar) }
                         )
                         
                         Divider()
@@ -387,7 +397,8 @@ struct GeneralSettingsView: View {
                             isOn: Binding(
                                 get: { scrollReverser.isEnabled },
                                 set: { mm.toggleModule(id: scrollReverser.id, enabled: $0) }
-                            )
+                            ),
+                            onOpen: { onSelectModule(.scrollReverser) }
                         )
                         
                         Divider()
@@ -401,6 +412,7 @@ struct GeneralSettingsView: View {
                                 get: { webPanel.isEnabled },
                                 set: { mm.toggleModule(id: webPanel.id, enabled: $0) }
                             ),
+                            onOpen: { onSelectModule(.webPanel) },
                             extraContent: {
                                 if webPanel.isEnabled && !webPanel.widgets.isEmpty {
                                     VStack(spacing: 6) {
@@ -462,7 +474,8 @@ struct GeneralSettingsView: View {
                             isOn: Binding(
                                 get: { clipboard.isEnabled },
                                 set: { mm.toggleModule(id: clipboard.id, enabled: $0) }
-                            )
+                            ),
+                            onOpen: { onSelectModule(.clipboard) }
                         )
                         
                         Divider()
@@ -475,7 +488,8 @@ struct GeneralSettingsView: View {
                             isOn: Binding(
                                 get: { stats.isEnabled },
                                 set: { mm.toggleModule(id: stats.id, enabled: $0) }
-                            )
+                            ),
+                            onOpen: { onSelectModule(.systemStats) }
                         )
                     }
                     .padding()
@@ -492,6 +506,7 @@ struct ModuleToggleRow<ExtraContent: View>: View {
     let subtitle: String
     let icon: String
     @Binding var isOn: Bool
+    let onOpen: () -> Void
     var extraContent: ExtraContent
     
     init(
@@ -499,32 +514,46 @@ struct ModuleToggleRow<ExtraContent: View>: View {
         subtitle: String,
         icon: String,
         isOn: Binding<Bool>,
+        onOpen: @escaping () -> Void,
         @ViewBuilder extraContent: () -> ExtraContent = { EmptyView() }
     ) {
         self.title = title
         self.subtitle = subtitle
         self.icon = icon
         self._isOn = isOn
+        self.onOpen = onOpen
         self.extraContent = extraContent()
     }
     
     var body: some View {
         VStack(spacing: 8) {
             HStack(spacing: 12) {
-                Image(systemName: icon)
-                    .font(.title2)
-                    .foregroundColor(.accentColor)
-                    .frame(width: 28)
+                Button(action: onOpen) {
+                    HStack(spacing: 12) {
+                        Image(systemName: icon)
+                            .font(.title2)
+                            .foregroundColor(.accentColor)
+                            .frame(width: 28)
 
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(title)
-                        .fontWeight(.medium)
-                    Text(subtitle)
-                        .font(.caption)
-                        .foregroundColor(.secondary)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(title)
+                                .fontWeight(.medium)
+                                .foregroundColor(.primary)
+                            Text(subtitle)
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
+
+                        Spacer()
+
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 10, weight: .semibold))
+                            .foregroundColor(.secondary.opacity(0.7))
+                    }
+                    .contentShape(Rectangle())
                 }
-
-                Spacer()
+                .buttonStyle(.plain)
+                .accessibilityLabel(title)
 
                 HStack(spacing: 10) {
                     Text(isOn ? l10n("common.enabled") : l10n("common.disabled"))

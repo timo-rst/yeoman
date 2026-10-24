@@ -9,9 +9,22 @@ struct CaptureRealScreenshots {
         let app = NSApplication.shared
         app.setActivationPolicy(.prohibited)
         NSApp.appearance = NSAppearance(named: .darkAqua)
-        // Force English localization for documentation and GitHub screenshots
-        UserDefaults.standard.set(AppLanguage.english.rawValue, forKey: "app_language")
+        // Force English localization for screenshots, then restore the user's choice.
+        let previousLanguage = UserDefaults.standard.object(forKey: "app_language")
+        defer {
+            if let previousLanguage { UserDefaults.standard.set(previousLanguage, forKey: "app_language") }
+            else { UserDefaults.standard.removeObject(forKey: "app_language") }
+        }
         LocalizationManager.shared.selectedLanguage = .english
+
+        // NEVER touch production data: all mutable fixtures live in a private temp root.
+        let sandbox = FileManager.default.temporaryDirectory
+            .appendingPathComponent("yeoman-capture-\(UUID().uuidString)", isDirectory: true)
+        try? FileManager.default.createDirectory(at: sandbox, withIntermediateDirectories: true,
+                                                 attributes: [.posixPermissions: 0o700])
+        defer { try? FileManager.default.removeItem(at: sandbox) }
+        let sandboxDefaults = UserDefaults(suiteName: "de.trst.Yeoman.capture.\(UUID().uuidString)")!
+        let sandboxSecrets = SecureFileSecretStore(directoryURL: sandbox.appendingPathComponent(".secrets"))
 
         let outputDir = URL(fileURLWithPath: "Resources/Mockups")
         try? FileManager.default.createDirectory(at: outputDir, withIntermediateDirectories: true)
@@ -38,11 +51,8 @@ struct CaptureRealScreenshots {
         // ----------------------------------------------------
         // 2. Web Widgets Module (WebPanelSettingsView with real widgets)
         // ----------------------------------------------------
-        let webModule = moduleManager.webPanelModule
-        webModule.isEnabled = true
-        for widget in webModule.widgets {
-            webModule.deleteWidget(id: widget.id)
-        }
+        let webModule = WebPanelModule(storage: WidgetStorage(url: sandbox, defaults: sandboxDefaults, secrets: sandboxSecrets))
+        RunLoop.current.run(until: Date().addingTimeInterval(0.3)) // let isolated storage load
         let sampleWidgets = [
             WebWidgetItem(
                 title: "Google Gemini",
@@ -110,8 +120,7 @@ struct CaptureRealScreenshots {
         // ----------------------------------------------------
         // 3. Native Privacy Clipboard Popover (ClipboardView)
         // ----------------------------------------------------
-        let store = ClipboardHistoryStore.shared
-        store.clearAll()
+        let store = ClipboardHistoryStore(directory: nil, secrets: sandboxSecrets, defaults: sandboxDefaults)
         store.addItem(content: "Meeting notes: Review menu bar spacing & widget performance", type: .text, sourceApp: "Notes")
         store.addItem(content: "let package = Package(name: \"Yeoman\", platforms: [.macOS(.v14)])", type: .code, sourceApp: "Xcode")
         store.addItem(content: "https://github.com/timo-rst/yeoman", type: .url, sourceApp: "Safari")
@@ -124,7 +133,7 @@ struct CaptureRealScreenshots {
         let clipWidth: CGFloat = 380
         let clipHeight: CGFloat = 490
         let clipChrome = PopoverChrome(contentWidth: clipWidth, contentHeight: clipHeight) {
-            ClipboardView()
+            ClipboardView(store: store)
         }
         .preferredColorScheme(.dark)
         
