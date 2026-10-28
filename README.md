@@ -88,7 +88,7 @@ Adjusts layout and spacing of macOS menu bar items.
 
 ### 4. Independent Scroll Reverser
 Separates scroll direction handling between mouse wheels and trackpads.
-- **Event Tap:** Inverts wheel deltas using a `CGEventTap` without altering system trackpad preferences.
+- **Event Tap:** Runs on a dedicated user-interactive thread at the tail of macOS's scroll-processing chain and inverts wheel deltas without altering system trackpad preferences. Devices configured for native scrolling take a no-op path; scroll handling never dispatches UI or diagnostic work.
 
 ### 5. System Stats
 Shows hardware usage in the menu bar.

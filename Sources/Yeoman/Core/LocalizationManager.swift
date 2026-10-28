@@ -2365,10 +2365,16 @@ public final class LocalizationManager: ObservableObject {
             .french: "Ouvrir dans le navigateur par défaut"
         ],
         "system_stats.layout_vertical": [
-            .german: "Vertikal gestapelt",
-            .english: "Vertically stacked",
-            .spanish: "Apilado verticalmente",
-            .french: "Empilé verticalement"
+            .german: "Vertikal (Balken rechts)",
+            .english: "Vertical (Bar right)",
+            .spanish: "Vertical (Barra derecha)",
+            .french: "Vertical (Barre à droite)"
+        ],
+        "system_stats.layout_vertical_bar_bottom": [
+            .german: "Vertikal (Balken unten)",
+            .english: "Vertical (Bar below)",
+            .spanish: "Vertical (Barra abajo)",
+            .french: "Vertical (Barre en bas)"
         ],
         "system_stats.layout_horizontal": [
             .german: "Horizontal nebeneinander",
@@ -2377,10 +2383,10 @@ public final class LocalizationManager: ObservableObject {
             .french: "Horizontalement côte à côte"
         ],
         "system_stats.graph_minibar": [
-            .german: "Vertikaler Füllbalken",
-            .english: "Vertical Fill Bar",
-            .spanish: "Barra de llenado vertical",
-            .french: "Barre de remplissage verticale"
+            .german: "Füllbalken",
+            .english: "Fill Bar",
+            .spanish: "Barra de llenado",
+            .french: "Barre de remplissage"
         ],
         "system_stats.graph_sparkline": [
             .german: "Mini-Verlaufskurve",

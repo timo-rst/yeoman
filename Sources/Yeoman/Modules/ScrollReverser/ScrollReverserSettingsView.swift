@@ -175,30 +175,6 @@ public struct ScrollReverserSettingsView: View {
                                 .foregroundColor(manager.isRunning ? .green : .secondary)
                         }
                         
-                        HStack(spacing: 12) {
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text(l10n("scroll_reverser.last_device"))
-                                    .font(.caption2)
-                                    .foregroundColor(.secondary)
-                                Text(manager.lastEventDevice)
-                                    .font(.subheadline)
-                                    .fontWeight(.medium)
-                            }
-                            
-                            Spacer()
-                            
-                            VStack(alignment: .trailing, spacing: 4) {
-                                Text(l10n("scroll_reverser.action"))
-                                    .font(.caption2)
-                                    .foregroundColor(.secondary)
-                                Text(manager.lastEventSummary)
-                                    .font(.subheadline)
-                                    .fontWeight(.medium)
-                                    .foregroundColor(.accentColor)
-                            }
-                        }
-                        .padding(10)
-                        .background(RoundedRectangle(cornerRadius: 8).fill(Color(nsColor: .windowBackgroundColor)))
                     }
                     .padding()
                     .background(RoundedRectangle(cornerRadius: 12).fill(Color(nsColor: .controlBackgroundColor)))

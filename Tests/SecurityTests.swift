@@ -503,6 +503,39 @@ func runSecurityTests() {
             assertFalse(ScrollReverserManager.shouldTransform(.keyDown))
             assertFalse(ScrollReverserManager.shouldTransform(.leftMouseDown))
             assertEqual(ScrollReverserManager.eventMask, CGEventMask(1 << CGEventType.scrollWheel.rawValue))
+            assertEqual(ScrollReverserManager.tapPlacement.rawValue, CGEventTapPlacement.tailAppendEventTap.rawValue)
+            assertFalse(ScrollReverserManager.requiresMutation(
+                isContinuous: true,
+                reverseMouseVertical: true,
+                reverseMouseHorizontal: true,
+                reverseTrackpadVertical: false,
+                reverseTrackpadHorizontal: false,
+                mouseStepMultiplier: 5
+            ))
+            assertTrue(ScrollReverserManager.requiresMutation(
+                isContinuous: true,
+                reverseMouseVertical: false,
+                reverseMouseHorizontal: false,
+                reverseTrackpadVertical: true,
+                reverseTrackpadHorizontal: false,
+                mouseStepMultiplier: 1
+            ))
+            assertFalse(ScrollReverserManager.requiresMutation(
+                isContinuous: false,
+                reverseMouseVertical: false,
+                reverseMouseHorizontal: false,
+                reverseTrackpadVertical: true,
+                reverseTrackpadHorizontal: true,
+                mouseStepMultiplier: 1
+            ))
+            assertTrue(ScrollReverserManager.requiresMutation(
+                isContinuous: false,
+                reverseMouseVertical: false,
+                reverseMouseHorizontal: false,
+                reverseTrackpadVertical: false,
+                reverseTrackpadHorizontal: false,
+                mouseStepMultiplier: 2
+            ))
         }
         h.test("Single-flight prevents overlapping work and resets after completion") {
             let gate = SingleFlight()

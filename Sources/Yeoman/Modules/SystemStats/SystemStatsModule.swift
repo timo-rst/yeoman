@@ -4,11 +4,26 @@ import Combine
 
 public enum StatsLayoutMode: String, CaseIterable, Codable {
     case vertical = "Vertikal gestapelt"
+    case verticalBarBottom = "Vertikal (Balken unten)"
     case horizontal = "Horizontal nebeneinander"
+
+    public init?(rawValue: String) {
+        switch rawValue {
+        case "Vertikal gestapelt", "vertical", "vertical_bar_right", "Vertikal (Balken rechts)":
+            self = .vertical
+        case "Vertikal (Balken unten)", "vertical_bar_bottom", "stacked_bar_bottom", "Vertikal gestapelt 2", "vertical_bar_below":
+            self = .verticalBarBottom
+        case "Horizontal nebeneinander", "horizontal":
+            self = .horizontal
+        default:
+            return nil
+        }
+    }
 
     public var localizedTitle: String {
         switch self {
         case .vertical: return l10n("system_stats.layout_vertical")
+        case .verticalBarBottom: return l10n("system_stats.layout_vertical_bar_bottom")
         case .horizontal: return l10n("system_stats.layout_horizontal")
         }
     }
@@ -202,7 +217,8 @@ public final class SystemStatsModule: NSObject, CustomizerModule, ObservableObje
         let paddingPerItem: CGFloat = useSubtleBackground ? 8.0 : 4.0
         let outerPadding: CGFloat = 4.0
         
-        if layoutMode == .vertical {
+        switch layoutMode {
+        case .vertical:
             // Vertical stacked layout (label top, percentage bottom, bar or sparkline right)
             var textW: CGFloat = 0
             if showLabels && showPercentage {
@@ -222,7 +238,45 @@ public final class SystemStatsModule: NSObject, CustomizerModule, ObservableObje
             let singleItemW = textW + graphW + spacingBetweenTextAndGraph + paddingPerItem
             let total = (CGFloat(activeMetricsCount) * singleItemW) + (CGFloat(activeMetricsCount - 1) * interItemSpacing) + outerPadding
             return ceil(total)
-        } else {
+
+        case .verticalBarBottom:
+            // Vertical layout with label & percentage side-by-side on top, horizontal bar underneath
+            var textW: CGFloat = 0
+            if showLabels && showPercentage {
+                textW = 42.0
+            } else if showPercentage {
+                textW = 24.0
+            } else if showLabels {
+                textW = 22.0
+            }
+
+            var graphW: CGFloat = 0
+            if showGraphs && graphStyle != .none {
+                if showLabels && showPercentage {
+                    graphW = 42.0
+                } else if showPercentage || showLabels {
+                    graphW = max(textW, 24.0)
+                } else {
+                    graphW = 28.0
+                }
+            }
+
+            let itemContentW: CGFloat
+            if textW > 0 && graphW > 0 {
+                itemContentW = max(textW, graphW)
+            } else if textW > 0 {
+                itemContentW = textW
+            } else if graphW > 0 {
+                itemContentW = graphW
+            } else {
+                itemContentW = 16.0
+            }
+
+            let singleItemW = itemContentW + paddingPerItem
+            let total = (CGFloat(activeMetricsCount) * singleItemW) + (CGFloat(activeMetricsCount - 1) * interItemSpacing) + outerPadding
+            return ceil(total)
+
+        case .horizontal:
             // Horizontal layout (label, percentage, graph side by side)
             var componentsW: CGFloat = 0
             var count = 0

@@ -2,38 +2,128 @@ import AppKit
 import ApplicationServices
 import Combine
 
+private final class ScrollEventTapWorker {
+    typealias Handler = (CGEventTapProxy, CGEventType, CGEvent) -> Unmanaged<CGEvent>?
+
+    private let handler: Handler
+    private let stateLock = NSLock()
+    private var tap: CFMachPort?
+    private var runLoop: CFRunLoop?
+    private let ready = DispatchSemaphore(value: 0)
+    private let stopped = DispatchSemaphore(value: 0)
+
+    init(handler: @escaping Handler) {
+        self.handler = handler
+    }
+
+    func start(mask: CGEventMask) -> Bool {
+        let thread = Thread { [self] in
+            let callback: CGEventTapCallBack = { proxy, type, event, refcon in
+                guard let refcon else { return Unmanaged.passUnretained(event) }
+                let worker = Unmanaged<ScrollEventTapWorker>.fromOpaque(refcon).takeUnretainedValue()
+                if type == .tapDisabledByTimeout || type == .tapDisabledByUserInput {
+                    worker.enableTap()
+                    return Unmanaged.passUnretained(event)
+                }
+                return worker.handler(proxy, type, event)
+            }
+            guard let createdTap = CGEvent.tapCreate(
+                tap: .cgSessionEventTap,
+                // Let macOS finish its own acceleration and momentum processing
+                // before Yeoman applies the final per-device direction change.
+                place: ScrollReverserManager.tapPlacement,
+                options: .defaultTap,
+                eventsOfInterest: mask,
+                callback: callback,
+                userInfo: Unmanaged.passUnretained(self).toOpaque()
+            ) else {
+                ready.signal()
+                stopped.signal()
+                return
+            }
+
+            let source = CFMachPortCreateRunLoopSource(kCFAllocatorDefault, createdTap, 0)
+            let workerRunLoop = CFRunLoopGetCurrent()
+            stateLock.lock()
+            tap = createdTap
+            runLoop = workerRunLoop
+            stateLock.unlock()
+            CFRunLoopAddSource(workerRunLoop, source, .commonModes)
+            CGEvent.tapEnable(tap: createdTap, enable: true)
+            ready.signal()
+            CFRunLoopRun()
+            CGEvent.tapEnable(tap: createdTap, enable: false)
+            CFMachPortInvalidate(createdTap)
+            CFRunLoopRemoveSource(workerRunLoop, source, .commonModes)
+            stateLock.lock()
+            tap = nil
+            runLoop = nil
+            stateLock.unlock()
+            stopped.signal()
+        }
+        thread.name = "de.trst.Yeoman.scroll-event-tap"
+        thread.qualityOfService = .userInteractive
+        thread.start()
+        guard ready.wait(timeout: .now() + 2) == .success else { return false }
+        stateLock.lock()
+        let installed = tap != nil
+        stateLock.unlock()
+        return installed
+    }
+
+    func stop() {
+        stateLock.lock()
+        let workerRunLoop = runLoop
+        stateLock.unlock()
+        guard let workerRunLoop else { return }
+        CFRunLoopStop(workerRunLoop)
+        CFRunLoopWakeUp(workerRunLoop)
+        _ = stopped.wait(timeout: .now() + 2)
+    }
+
+    private func enableTap() {
+        stateLock.lock()
+        let currentTap = tap
+        stateLock.unlock()
+        if let currentTap { CGEvent.tapEnable(tap: currentTap, enable: true) }
+    }
+}
+
 public final class ScrollReverserManager: ObservableObject {
     public static let shared = ScrollReverserManager()
-    
+
     // MARK: - Preferences
     @Published public var isRunning: Bool = false
     
     @Published public var reverseMouseVertical: Bool {
-        didSet { UserDefaults.standard.set(reverseMouseVertical, forKey: "sr_reverse_mouse_vertical") }
+        didSet { updateConfiguration(); UserDefaults.standard.set(reverseMouseVertical, forKey: "sr_reverse_mouse_vertical") }
     }
     @Published public var reverseMouseHorizontal: Bool {
-        didSet { UserDefaults.standard.set(reverseMouseHorizontal, forKey: "sr_reverse_mouse_horizontal") }
+        didSet { updateConfiguration(); UserDefaults.standard.set(reverseMouseHorizontal, forKey: "sr_reverse_mouse_horizontal") }
     }
     @Published public var reverseTrackpadVertical: Bool {
-        didSet { UserDefaults.standard.set(reverseTrackpadVertical, forKey: "sr_reverse_trackpad_vertical") }
+        didSet { updateConfiguration(); UserDefaults.standard.set(reverseTrackpadVertical, forKey: "sr_reverse_trackpad_vertical") }
     }
     @Published public var reverseTrackpadHorizontal: Bool {
-        didSet { UserDefaults.standard.set(reverseTrackpadHorizontal, forKey: "sr_reverse_trackpad_horizontal") }
+        didSet { updateConfiguration(); UserDefaults.standard.set(reverseTrackpadHorizontal, forKey: "sr_reverse_trackpad_horizontal") }
     }
     @Published public var mouseStepMultiplier: Int {
-        didSet { mouseStepMultiplier = min(5, max(1, mouseStepMultiplier)); UserDefaults.standard.set(mouseStepMultiplier, forKey: "sr_mouse_step_multiplier") }
+        didSet { mouseStepMultiplier = min(5, max(1, mouseStepMultiplier)); updateConfiguration(); UserDefaults.standard.set(mouseStepMultiplier, forKey: "sr_mouse_step_multiplier") }
     }
     
     // Live Diagnostics for User Feedback
     @Published public var hasAccessibilityPermission: Bool = false
     @Published public private(set) var permissionError: String?
-    @Published public var lastEventDevice: String = "Noch keine Events empfangen"
-    @Published public var lastEventSummary: String = "Warte auf Scroll-Vorgang..."
-    @Published public var lastEventTimestamp: Date?
-    
-    // Core Event Tap handles
-    private var eventTapPort: CFMachPort?
-    private var runLoopSource: CFRunLoopSource?
+    private struct ScrollConfiguration {
+        var reverseMouseVertical = true
+        var reverseMouseHorizontal = false
+        var reverseTrackpadVertical = false
+        var reverseTrackpadHorizontal = false
+        var mouseStepMultiplier = 1
+    }
+    private let configurationLock = NSLock()
+    private var configuration = ScrollConfiguration()
+    private var tapWorker: ScrollEventTapWorker?
     private var permissionCheckTimer: AnyCancellable?
     
     public init() {
@@ -43,6 +133,7 @@ public final class ScrollReverserManager: ObservableObject {
         self.reverseTrackpadVertical = UserDefaults.standard.object(forKey: "sr_reverse_trackpad_vertical") as? Bool ?? false
         self.reverseTrackpadHorizontal = UserDefaults.standard.object(forKey: "sr_reverse_trackpad_horizontal") as? Bool ?? false
         self.mouseStepMultiplier = min(5, max(1, UserDefaults.standard.object(forKey: "sr_mouse_step_multiplier") as? Int ?? 1))
+        updateConfiguration()
         
         NotificationCenter.default.addObserver(self, selector: #selector(applicationActivated), name: NSApplication.didBecomeActiveNotification, object: nil)
     }
@@ -114,31 +205,12 @@ public final class ScrollReverserManager: ObservableObject {
         reconcilePermission()
     }
     private func installTap() -> Bool {
-        let mask = Self.eventMask
-        let callback: CGEventTapCallBack = { proxy, type, event, refcon in
-            guard let refcon = refcon else { return Unmanaged.passUnretained(event) }
-            let manager = Unmanaged<ScrollReverserManager>.fromOpaque(refcon).takeUnretainedValue()
-            return manager.handleTapEvent(proxy: proxy, type: type, event: event)
+        let worker = ScrollEventTapWorker { [weak self] proxy, type, event in
+            guard let self else { return Unmanaged.passUnretained(event) }
+            return self.handleTapEvent(proxy: proxy, type: type, event: event)
         }
-        
-        guard let tap = CGEvent.tapCreate(
-            tap: .cgSessionEventTap,
-            place: .headInsertEventTap,
-            options: .defaultTap,
-            eventsOfInterest: mask,
-            callback: callback,
-            userInfo: Unmanaged.passUnretained(self).toOpaque()
-        ) else {
-            return false
-        }
-
-        self.eventTapPort = tap
-        let source = CFMachPortCreateRunLoopSource(kCFAllocatorDefault, tap, 0)
-        self.runLoopSource = source
-        
-        CFRunLoopAddSource(CFRunLoopGetMain(), source, .commonModes)
-        CGEvent.tapEnable(tap: tap, enable: true)
-        
+        guard worker.start(mask: Self.eventMask) else { return false }
+        tapWorker = worker
         return true
     }
     
@@ -150,26 +222,9 @@ public final class ScrollReverserManager: ObservableObject {
         isRunning = lifecycle.running
     }
     private func tearDownTap() {
-        
-        if let tap = eventTapPort {
-            CGEvent.tapEnable(tap: tap, enable: false)
-            CFMachPortInvalidate(tap)
-            eventTapPort = nil
-        }
-        
-        if let source = runLoopSource {
-            CFRunLoopRemoveSource(CFRunLoopGetMain(), source, .commonModes)
-            runLoopSource = nil
-        }
-        
+        tapWorker?.stop()
+        tapWorker = nil
         isRunning = false
-    }
-    
-    public func reEnableTap() {
-        guard lifecycle.requested, checkAccessibility() else { tearDownTap(); return }
-        if let tap = eventTapPort {
-            CGEvent.tapEnable(tap: tap, enable: true)
-        }
     }
     
     public func startPermissionPolling() {
@@ -187,11 +242,6 @@ public final class ScrollReverserManager: ObservableObject {
     // MARK: - Event Processing Logic
     
     private func handleTapEvent(proxy: CGEventTapProxy, type: CGEventType, event: CGEvent) -> Unmanaged<CGEvent>? {
-        if type == .tapDisabledByTimeout || type == .tapDisabledByUserInput {
-            DispatchQueue.main.async { [weak self] in self?.reEnableTap() }
-            return Unmanaged.passUnretained(event)
-        }
-        
         guard Self.shouldTransform(type) else {
             return Unmanaged.passUnretained(event)
         }
@@ -200,11 +250,27 @@ public final class ScrollReverserManager: ObservableObject {
         // Trackpads and continuous surfaces (Magic Mouse / Magic Trackpad) report continuous == 1.
         // Traditional wheel mice report continuous == 0.
         let isContinuous = event.getIntegerValueField(.scrollWheelEventIsContinuous) != 0
+        let configuration = configurationSnapshot()
+
+        // A passive device must stay on the shortest possible path. In particular,
+        // do not inspect more deltas or enqueue diagnostics for native trackpad
+        // scrolling: the event tap is synchronous and extra callback work can make
+        // rapid direction changes feel delayed.
+        guard Self.requiresMutation(
+            isContinuous: isContinuous,
+            reverseMouseVertical: configuration.reverseMouseVertical,
+            reverseMouseHorizontal: configuration.reverseMouseHorizontal,
+            reverseTrackpadVertical: configuration.reverseTrackpadVertical,
+            reverseTrackpadHorizontal: configuration.reverseTrackpadHorizontal,
+            mouseStepMultiplier: configuration.mouseStepMultiplier
+        ) else {
+            return Unmanaged.passUnretained(event)
+        }
         
         // 2. Determine inversion configuration
-        let reverseV = isContinuous ? reverseTrackpadVertical : reverseMouseVertical
-        let reverseH = isContinuous ? reverseTrackpadHorizontal : reverseMouseHorizontal
-        let stepMultiplier = isContinuous ? 1 : min(5, max(1, mouseStepMultiplier))
+        let reverseV = isContinuous ? configuration.reverseTrackpadVertical : configuration.reverseMouseVertical
+        let reverseH = isContinuous ? configuration.reverseTrackpadHorizontal : configuration.reverseMouseHorizontal
+        let stepMultiplier = isContinuous ? 1 : configuration.mouseStepMultiplier
         
         let vmul = reverseV ? -stepMultiplier : stepMultiplier
         let hmul = reverseH ? -stepMultiplier : stepMultiplier
@@ -239,40 +305,43 @@ public final class ScrollReverserManager: ObservableObject {
             event.setIntegerValueField(.scrollWheelEventPointDeltaAxis2, value: horizontalPoint)
         }
         
-        // 5. Update Diagnostics (throttled)
-        recordDiagnosticEvent(
-            isContinuous: isContinuous,
-            axis1: axis1,
-            axis2: axis2,
-            reversedV: reverseV,
-            reversedH: reverseH
-        )
-        
         return Unmanaged.passUnretained(event)
     }
 
     public static let eventMask = CGEventMask(1 << CGEventType.scrollWheel.rawValue)
+    public static let tapPlacement = CGEventTapPlacement.tailAppendEventTap
     public static func shouldTransform(_ type: CGEventType) -> Bool { type == .scrollWheel }
-    
-    private var lastDiagnosticUpdateTime: TimeInterval = 0
-    
-    private func recordDiagnosticEvent(isContinuous: Bool, axis1: Int64, axis2: Int64, reversedV: Bool, reversedH: Bool) {
-        let now = ProcessInfo.processInfo.systemUptime
-        guard now - lastDiagnosticUpdateTime > 0.1 else { return }
-        lastDiagnosticUpdateTime = now
-        
-        let deviceName = isContinuous ? "Trackpad (Geste / Kontinuierlich)" : "Maus (Mausrad / Diskret)"
-        var summary = ""
-        if axis1 != 0 {
-            summary = "Vertikal: \(axis1) \(reversedV ? "→ Umgekehrt 🔄" : "→ Nativ")"
-        } else if axis2 != 0 {
-            summary = "Horizontal: \(axis2) \(reversedH ? "→ Umgekehrt 🔄" : "→ Nativ")"
+
+    public static func requiresMutation(
+        isContinuous: Bool,
+        reverseMouseVertical: Bool,
+        reverseMouseHorizontal: Bool,
+        reverseTrackpadVertical: Bool,
+        reverseTrackpadHorizontal: Bool,
+        mouseStepMultiplier: Int
+    ) -> Bool {
+        if isContinuous {
+            return reverseTrackpadVertical || reverseTrackpadHorizontal
         }
-        
-        DispatchQueue.main.async {
-            self.lastEventDevice = deviceName
-            self.lastEventSummary = summary
-            self.lastEventTimestamp = Date()
-        }
+        return reverseMouseVertical || reverseMouseHorizontal || mouseStepMultiplier != 1
+    }
+
+    private func updateConfiguration() {
+        configurationLock.lock()
+        configuration = ScrollConfiguration(
+            reverseMouseVertical: reverseMouseVertical,
+            reverseMouseHorizontal: reverseMouseHorizontal,
+            reverseTrackpadVertical: reverseTrackpadVertical,
+            reverseTrackpadHorizontal: reverseTrackpadHorizontal,
+            mouseStepMultiplier: min(5, max(1, mouseStepMultiplier))
+        )
+        configurationLock.unlock()
+    }
+
+    private func configurationSnapshot() -> ScrollConfiguration {
+        configurationLock.lock()
+        let snapshot = configuration
+        configurationLock.unlock()
+        return snapshot
     }
 }

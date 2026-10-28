@@ -108,9 +108,12 @@ struct CompactMetricItemView: View {
     
     var body: some View {
         Group {
-            if layoutMode == .vertical {
+            switch layoutMode {
+            case .vertical:
                 verticalLayout
-            } else {
+            case .verticalBarBottom:
+                verticalBarBottomLayout
+            case .horizontal:
                 horizontalLayout
             }
         }
@@ -169,6 +172,60 @@ struct CompactMetricItemView: View {
                 }
             }
         }
+    }
+
+    private var verticalBarBottomContentWidth: CGFloat {
+        if showLabel && showPercentage {
+            return 42.0
+        } else if showPercentage {
+            return 24.0
+        } else if showLabel {
+            return 22.0
+        } else if showGraph && graphStyle != .none {
+            return 28.0
+        } else {
+            return 16.0
+        }
+    }
+
+    // VERTICAL BAR BOTTOM LAYOUT (Label & value side-by-side on top, horizontal bar underneath)
+    private var verticalBarBottomLayout: some View {
+        let contentWidth = verticalBarBottomContentWidth
+        let hasText = showLabel || showPercentage
+        let hasGraph = showGraph && graphStyle != .none
+
+        return VStack(alignment: .center, spacing: 1.5) {
+            // Top row: Label and Value side-by-side
+            if hasText {
+                HStack(spacing: 2) {
+                    if showLabel {
+                        Text(label)
+                            .font(.system(size: 7.5, weight: .bold))
+                            .foregroundColor(color)
+                            .lineLimit(1)
+                    }
+                    if showPercentage {
+                        Text(value)
+                            .font(.system(size: 8.5, weight: .semibold, design: .monospaced))
+                            .foregroundColor(.primary)
+                            .lineLimit(1)
+                    }
+                }
+                .frame(width: contentWidth, alignment: .center)
+            }
+
+            // Bottom row: Visual indicator (horizontal fill bar or sparkline)
+            if hasGraph {
+                if graphStyle == .miniBar {
+                    HorizontalFillBar(percent: percent, color: color)
+                        .frame(width: contentWidth, height: hasText ? 4.0 : 6.0)
+                } else {
+                    MiniSparkline(data: history, color: color)
+                        .frame(width: contentWidth, height: hasText ? 7.5 : 12.0)
+                }
+            }
+        }
+        .frame(width: contentWidth)
     }
     
     // HORIZONTAL LAYOUT
@@ -256,6 +313,29 @@ struct MiniBarGauge: View {
                     .fill(LinearGradient(colors: [color.opacity(0.7), color], startPoint: .leading, endPoint: .trailing))
                     .frame(width: fillW, height: max(2, geo.size.height - 2))
                     .padding(.leading, 1)
+            }
+        }
+    }
+}
+
+struct HorizontalFillBar: View {
+    let percent: Double
+    let color: Color
+
+    var body: some View {
+        GeometryReader { geo in
+            let clampedPercent = min(100.0, max(0.0, percent)) / 100.0
+            let fillW = clampedPercent > 0 ? max(2.0, geo.size.width * CGFloat(clampedPercent)) : 0
+            ZStack(alignment: .leading) {
+                RoundedRectangle(cornerRadius: geo.size.height / 2.0)
+                    .fill(Color.primary.opacity(0.18))
+                    .frame(width: geo.size.width, height: geo.size.height)
+
+                if fillW > 0 {
+                    RoundedRectangle(cornerRadius: geo.size.height / 2.0)
+                        .fill(color)
+                        .frame(width: min(geo.size.width, fillW), height: geo.size.height)
+                }
             }
         }
     }

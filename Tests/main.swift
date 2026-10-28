@@ -11,6 +11,7 @@ runModuleManagerTests()
 runSecurityTests()
 runPopoverFocusCoordinatorTests()
 runSingleInstanceGuardTests()
+runSystemStatsTests()
 removeTestDefaults()
 
 let exitCode = TestHarness.shared.printSummary()

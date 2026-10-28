@@ -9,12 +9,12 @@ if [[ "$MODE" != "development" && "$MODE" != "release" ]]; then
     echo "Usage: $0 [development|release]" >&2
     exit 1
 fi
-VERSION="${YEOMAN_VERSION:-0.2.6}"
+VERSION="${YEOMAN_VERSION:-0.2.7}"
 if [[ ! "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
     echo "Invalid YEOMAN_VERSION" >&2
     exit 1
 fi
-BUILD_VERSION="${YEOMAN_BUILD_VERSION:-8}"
+BUILD_VERSION="${YEOMAN_BUILD_VERSION:-9}"
 if [[ ! "$BUILD_VERSION" =~ ^[1-9][0-9]*$ ]]; then
     echo "Invalid YEOMAN_BUILD_VERSION" >&2
     exit 1

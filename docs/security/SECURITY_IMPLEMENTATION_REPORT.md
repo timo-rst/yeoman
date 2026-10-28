@@ -1,6 +1,6 @@
 # Security Implementation Report
 
-As of: 24 October 2026
+As of: 28 October 2026
 Audit Baseline: `c3c8e75`  
 Platform: macOS 14+, Swift/AppKit/SwiftUI  
 Status: v0.2.1 independently audited; YEA-01 through YEA-06 remediated for v0.2.2.
@@ -36,7 +36,7 @@ Per explicit user direction, Apple Developer ID signing and notarization are not
 | SEC-19 | Process sampling drains stdout/stderr simultaneously and applies aggregate output caps, deadlines, cancellation, and single-flight execution; lossless `ps` parser | Pipe capacity deadlock prevention, stderr load, size limits, timeouts, and lossy numeric input rejection | Subprocesses must not leave orphan daemons with inherited pipes |
 | SEC-20 | Task-manager termination uses exact PID verification (`pid_t(exactly:)`), PID + UID + start time binding, libproc re-verification, a single signal pathway, and protection of self and system processes | PID recycling, UID checks, self-termination protection, signal handling | Darwin kernel offers no atomic check-and-signal syscall; residual race window is minimized |
 | SEC-21 | Centralized bounds for URLs, strings, widget counts/IDs, width, height, user zoom, auto-fit zoom, scroll multipliers, menu spacing; overflow-safe arithmetic | Negative/extreme/NaN/infinite inputs, duplicates, integer overflows | Direct operating system memory exhaustion follows standard error paths |
-| SEC-22 | Event tap mask strictly `scrollWheel`; event type validation; pure tap state machine; periodic re-verification; graceful teardown upon TCC revocation | Permission revocation, failed creation, idempotent start/stop, non-scroll events | Real TCC state reset is not executed in automated unit tests |
+| SEC-22 | Event tap mask strictly `scrollWheel`; tail placement after macOS acceleration/momentum processing; dedicated user-interactive thread and run loop isolated from UI work; event type validation; pure tap state machine; periodic TCC re-verification; direct timeout recovery; native device settings bypass delta processing; no callback diagnostics | Permission revocation, failed creation, idempotent start/stop, non-scroll events, mouse/trackpad no-op routing, and ThreadSanitizer suite | Real TCC state reset and physical scroll latency are not measured in automated tests |
 | SEC-23 | Closed web widgets release their SwiftUI/AppKit rendering hierarchy without discarding live page state; autoplay requires user interaction and each widget retains its distinct persistent `WKWebsiteDataStore` | Data-store separation, autoplay policy, and rendering detachment tests | Public WebKit APIs do not guarantee reclamation of a live page's DOM or JavaScript heap |
 | SEC-24 | The settings window is explicitly classified as a normal managed macOS window that participates in Mission Control, fullscreen mode, and window cycling until closed or minimized | Window-policy regression test verifies every collection-behavior flag | Standard macOS WindowServer behavior controls Mission Control layout and minimized-window presentation |
 | SEC-25 | Clipboard and task-manager popovers use one persisted pin preference per module; pinned state maps to native `applicationDefined` behavior and the footer/settings controls share the same observable state | Isolated-defaults persistence and native popover-behavior regression test | Pinned popovers remain user-controlled foreground UI until explicitly closed or unpinned |
@@ -70,15 +70,15 @@ Per explicit user direction, Apple Developer ID signing and notarization are not
 ## Verification Results
 
 - `swift build`: Successful.
-- `swift run YeomanTests`: **85/85 tests passed**.
-- `swift run --sanitize thread YeomanTests`: **85/85 tests passed**, 0 ThreadSanitizer warnings.
+- `swift run YeomanTests`: **88/88 tests passed**.
+- `swift run --sanitize thread YeomanTests`: **88/88 tests passed**, 0 ThreadSanitizer warnings.
 - `swift test`: unavailable with Command Line Tools; the repository's native executable test harness remains the supported entry point.
 - `Scripts/capture_real_screenshots.swift`: typechecks cleanly with `YeomanCore` using public API methods.
 - `./Scripts/build_app.sh release`: Successful; app bundle and nested `YeomanInstaller` signed with ad-hoc signatures.
-- Release candidate `0.2.6 (8)`: `arm64` application and helper; ZIP integrity and DMG checksum verification successful.
-- `Yeoman.zip` SHA-256: `44b92d2e8e6cce322fb0036768bfe725bc657b020eeacab5b68a88be7076f856`.
-- `Yeoman.dmg` SHA-256: `990b462d983e860e981e86d7cabc54a729387df4bc7ce4439bf7a0c8fe42f117`.
+- Release candidate `0.2.7 (9)`: `arm64` application and helper; ZIP integrity and DMG checksum verification successful.
+- `Yeoman.zip` SHA-256: `5ae30f9819629ac0788c75aa973079ec42fcc30ad48f8e5291516bdadae65766`.
+- `Yeoman.dmg` SHA-256: `49534dacc6545c3a8740087d53ac5a70203e18d560d58c383d703ade44bff186`.
 - `codesign --verify --deep --strict dist/Yeoman.app`: Valid.
-- `./Scripts/package_release.sh`: Successful for v0.2.2 using external `0600` release key; produced `dist/Yeoman.dmg`, `dist/Yeoman.zip`, and signed `dist/Yeoman.update.json`.
-- Signed manifest verification: Successful; Ed25519 signature, version `0.2.2`, archive size `3444522`, and archive SHA-256 (`4e962cdfc0ca09c9d5286942ae8cb609f259c8a6134be6a7c009f50b934a8a6f`) all match.
+- `./Scripts/package_release.sh`: Successful for v0.2.7 using external `0600` release key; produced `dist/Yeoman.dmg`, `dist/Yeoman.zip`, and signed `dist/Yeoman.update.json`.
+- Signed manifest verification: Successful; Ed25519 signature, version `0.2.7`, archive size `3691035`, and archive SHA-256 (`5ae30f9819629ac0788c75aa973079ec42fcc30ad48f8e5291516bdadae65766`) all match.
 - `git diff --check`: Clean; no whitespace or syntax errors.
