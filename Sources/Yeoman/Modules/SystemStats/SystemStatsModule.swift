@@ -365,6 +365,7 @@ public final class SystemStatsModule: NSObject, CustomizerModule, ObservableObje
         if let popover = popover, popover.isShown {
             popover.performClose(nil)
         }
+        SystemMetricsProvider.shared.stopProcessPolling()
     }
     
     @objc private func statusItemClicked(_ sender: NSStatusBarButton) {
@@ -393,7 +394,7 @@ public final class SystemStatsModule: NSObject, CustomizerModule, ObservableObje
         } else {
             PopoverFocusCoordinator.shared.prepareForPresentation(of: p)
             SystemMetricsProvider.shared.refreshMetrics()
-            SystemMetricsProvider.shared.refreshProcessList()
+            SystemMetricsProvider.shared.startProcessPolling()
             p.show(relativeTo: sender.bounds, of: sender, preferredEdge: .minY)
             p.contentViewController?.view.window?.makeKey()
             if #available(macOS 14.0, *) {
@@ -445,6 +446,13 @@ public final class SystemStatsModule: NSObject, CustomizerModule, ObservableObje
 extension SystemStatsModule: NSPopoverDelegate {
     public func popoverDidClose(_ notification: Notification) {
         PopoverFocusCoordinator.shared.handlePopoverDidClose(of: popover)
+        SystemMetricsProvider.shared.stopProcessPolling()
+        guard let closedPopover = notification.object as? NSPopover else { return }
+        closedPopover.contentViewController = nil
+        closedPopover.delegate = nil
+        if popover === closedPopover {
+            popover = nil
+        }
     }
 }
 

@@ -65,6 +65,7 @@ Displays websites inside floating panels accessible directly from menu bar icons
 ### 2. Clipboard History
 Records copied text and images locally.
 - **Pinned window:** Keep the clipboard popover open while copying multiple entries; toggle it from module settings or the footer pin.
+- **Image Preview & Full Viewer:** Inspect copied images in a pin-aware floating preview panel (clicking outside closes both preview and popover when unpinned, or keeps both open when pinned), and open full-resolution images in a resizable in-memory viewer window with Fit-to-Window and zoom controls.
 - **Privacy Filtering:** Best-effort filtering ignores standard transient/concealed markers and known password-manager patterns. Applications that omit these signals cannot be identified reliably.
 - **Search & Filter:** Search by text content or filter by category (text, images, pinned favorites).
 - **Storage:** Optional persistence uses AES-GCM authenticated encryption in `~/Library/Application Support/Yeoman/`. Keys are permission-restricted files under `.secrets`; this protects against other user accounts and accidental disclosure, but a malicious process running as the same macOS user can read both key and ciphertext.
@@ -93,7 +94,7 @@ Separates scroll direction handling between mouse wheels and trackpads.
 ### 5. System Stats
 Shows hardware usage in the menu bar.
 - **Metrics:** CPU utilization, memory allocation, and battery status.
-- **Process List:** Inspects running processes with sorting by CPU and memory usage.
+- **Process List:** Inspects running processes with sorting by CPU, memory, and name. Process sampling runs only while the task-manager popover is open, and app icons are cached in memory (`NSCache`).
 - **Pinned task manager:** Keep the task-manager popover open from module settings or its footer pin.
 
 ---

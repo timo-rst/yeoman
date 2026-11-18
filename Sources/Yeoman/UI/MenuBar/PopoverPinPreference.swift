@@ -42,6 +42,8 @@ public struct PopoverPinButton: View {
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        .focusable(false)
+        .focusEffectDisabled()
         .help(preference.isPinned ? l10n("common.unpin_window") : l10n("common.pin_window"))
         .accessibilityLabel(preference.isPinned ? l10n("common.unpin_window") : l10n("common.pin_window"))
     }

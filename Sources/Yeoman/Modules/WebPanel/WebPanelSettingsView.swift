@@ -544,8 +544,11 @@ struct WebWidgetIconPickerPopover: View {
                                             RoundedRectangle(cornerRadius: 6)
                                                 .fill(isSelected ? Color.accentColor.opacity(0.08) : Color.clear)
                                         )
+                                        .contentShape(Rectangle())
                                     }
                                     .buttonStyle(.plain)
+                                    .focusable(false)
+                                    .focusEffectDisabled()
                                     .help(opt.urlString)
                                 }
                             }
@@ -606,8 +609,11 @@ struct WebWidgetIconPickerPopover: View {
                                     RoundedRectangle(cornerRadius: 6)
                                         .fill(iconName == icon ? Color.accentColor : Color(nsColor: .controlColor))
                                 )
+                                .contentShape(Rectangle())
                         }
                         .buttonStyle(.plain)
+                        .focusable(false)
+                        .focusEffectDisabled()
                     }
                 }
             }
@@ -1053,8 +1059,11 @@ struct WebWidgetEditorSheet: View {
                                                                 RoundedRectangle(cornerRadius: 8)
                                                                     .fill(isSelected ? Color.accentColor.opacity(0.08) : Color.clear)
                                                             )
+                                                            .contentShape(Rectangle())
                                                         }
                                                         .buttonStyle(.plain)
+                                                        .focusable(false)
+                                                        .focusEffectDisabled()
                                                         .help(opt.urlString)
                                                     }
                                                 }
@@ -1117,8 +1126,11 @@ struct WebWidgetEditorSheet: View {
                                                         RoundedRectangle(cornerRadius: 6)
                                                             .stroke(iconName == icon ? Color.accentColor : Color.primary.opacity(0.12), lineWidth: 1)
                                                     )
+                                                    .contentShape(Rectangle())
                                             }
                                             .buttonStyle(.plain)
+                                            .focusable(false)
+                                            .focusEffectDisabled()
                                         }
                                     }
                                 }

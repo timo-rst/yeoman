@@ -890,6 +890,42 @@ public final class LocalizationManager: ObservableObject {
             .spanish: "Eliminar",
             .french: "Supprimer"
         ],
+        "clipboard.preview_title_screenshot": [
+            .german: "Screenshot-Vorschau",
+            .english: "Screenshot Preview",
+            .spanish: "Vista previa de captura",
+            .french: "Aperçu de la capture"
+        ],
+        "clipboard.preview_title_image": [
+            .german: "Bild-Vorschau",
+            .english: "Image Preview",
+            .spanish: "Vista previa de imagen",
+            .french: "Aperçu de l’image"
+        ],
+        "clipboard.copied_from_format": [
+            .german: "Kopiert aus: %@",
+            .english: "Copied from: %@",
+            .spanish: "Copiado de: %@",
+            .french: "Copié depuis : %@"
+        ],
+        "clipboard.copy_to_clipboard": [
+            .german: "In Zwischenablage kopieren",
+            .english: "Copy to Clipboard",
+            .spanish: "Copiar al portapapeles",
+            .french: "Copier dans le presse-papiers"
+        ],
+        "clipboard.open_full_image": [
+            .german: "Bild öffnen",
+            .english: "Open Image",
+            .spanish: "Abrir imagen",
+            .french: "Ouvrir l’image"
+        ],
+        "clipboard.fit_to_window": [
+            .german: "Anpassen",
+            .english: "Fit",
+            .spanish: "Ajustar",
+            .french: "Ajuster"
+        ],
         "clipboard.characters": [
             .german: "Zeichen",
             .english: "chars",

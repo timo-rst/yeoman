@@ -74,8 +74,11 @@ public struct TaskManagerPopoverView: View {
                             Image(systemName: "xmark.circle.fill")
                                 .foregroundColor(.secondary)
                                 .font(.system(size: 12))
+                                .contentShape(Rectangle())
                         }
                         .buttonStyle(.plain)
+                        .focusable(false)
+                        .focusEffectDisabled()
                     }
                     .padding(.horizontal, 8)
                     .padding(.vertical, 5)
@@ -99,18 +102,41 @@ public struct TaskManagerPopoverView: View {
                             RoundedRectangle(cornerRadius: 6)
                                 .fill(Color(nsColor: .windowBackgroundColor))
                         )
+                        .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
                     .focusable(false)
+                    .focusEffectDisabled()
                     .help(l10n("system_stats.search_tooltip"))
                     
-                    // Full-width Sort Picker
-                    Picker("", selection: $provider.sortMode) {
+                    // Full-width Sort Control (pure SwiftUI)
+                    HStack(spacing: 2) {
                         ForEach(SystemMetricsProvider.TaskSortMode.allCases, id: \.self) { mode in
-                            Text(mode.localizedTitle).tag(mode)
+                            let isSelected = provider.sortMode == mode
+                            Button {
+                                withAnimation(.easeInOut(duration: 0.15)) {
+                                    provider.sortMode = mode
+                                }
+                            } label: {
+                                Text(mode.localizedTitle)
+                                    .font(.system(size: 11, weight: isSelected ? .semibold : .regular))
+                                    .foregroundColor(isSelected ? .primary : .secondary)
+                                    .frame(maxWidth: .infinity)
+                                    .padding(.vertical, 4)
+                                    .background(
+                                        RoundedRectangle(cornerRadius: 5)
+                                            .fill(isSelected ? Color(nsColor: .controlColor) : Color.clear)
+                                            .shadow(color: Color.black.opacity(isSelected ? 0.08 : 0), radius: 1, y: 1)
+                                    )
+                                    .contentShape(Rectangle())
+                            }
+                            .buttonStyle(.plain)
+                            .focusable(false)
+                            .focusEffectDisabled()
                         }
                     }
-                    .pickerStyle(.segmented)
+                    .padding(2)
+                    .background(RoundedRectangle(cornerRadius: 7).fill(Color(nsColor: .windowBackgroundColor)))
                 }
             }
             .padding(.horizontal, 12)
@@ -189,8 +215,11 @@ public struct TaskManagerPopoverView: View {
                         Text(l10n("system_stats.activity_monitor_short"))
                     }
                     .font(.caption2)
+                    .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
+                .focusable(false)
+                .focusEffectDisabled()
                 .foregroundColor(.accentColor)
 
                 if let pinPreference {
@@ -204,6 +233,13 @@ public struct TaskManagerPopoverView: View {
         .frame(width: 460, height: 495)
         .background(Color(nsColor: .windowBackgroundColor))
         .environment(\.controlActiveState, .active)
+        .focusEffectDisabled()
+        .onAppear {
+            provider.startProcessPolling()
+        }
+        .onDisappear {
+            provider.stopProcessPolling()
+        }
     }
 }
 
@@ -368,8 +404,11 @@ struct TaskRowView: View {
                                 Circle()
                                     .fill(isHovered ? Color.red : Color.red.opacity(0.15))
                             )
+                            .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
+                    .focusable(false)
+                    .focusEffectDisabled()
                     .help(String(format: l10n("system_stats.kill_tooltip"), item.name))
                 }
             }

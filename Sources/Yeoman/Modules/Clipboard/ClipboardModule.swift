@@ -33,6 +33,10 @@ public final class ClipboardModule: NSObject, CustomizerModule, ObservableObject
     private var statusItem: NSStatusItem?
     private var popover: NSPopover?
     private var pinCancellable: AnyCancellable?
+    private var localMouseMonitor: Any?
+    private var globalMouseMonitor: Any?
+    private var resignActiveObserver: NSObjectProtocol?
+    private var isClosingPopover = false
     
     public override init() {
         self.isEnabled = UserDefaults.standard.object(forKey: "clipboard_is_enabled") as? Bool ?? true
@@ -44,6 +48,10 @@ public final class ClipboardModule: NSObject, CustomizerModule, ObservableObject
                 guard let self else { return }
                 self.popover?.behavior = self.popoverPin.popoverBehavior
             }
+    }
+
+    deinit {
+        removeDismissMonitors()
     }
     
     public func start() {
@@ -124,6 +132,9 @@ public final class ClipboardModule: NSObject, CustomizerModule, ObservableObject
                         guard let self, !self.popoverPin.isPinned else { return }
                         self.closePopoverAndRestoreFocus()
                     },
+                    onDismissPopover: { [weak self] in
+                        self?.closePopoverAndRestoreFocus()
+                    },
                     pinPreference: popoverPin
                 )
             )
@@ -134,9 +145,11 @@ public final class ClipboardModule: NSObject, CustomizerModule, ObservableObject
         if p.isShown {
             closePopoverAndRestoreFocus()
         } else {
+            isClosingPopover = false
             PopoverFocusCoordinator.shared.prepareForPresentation(of: p)
             p.show(relativeTo: sender.bounds, of: sender, preferredEdge: .minY)
             p.contentViewController?.view.window?.makeKey()
+            installDismissMonitors()
             if #available(macOS 14.0, *) {
                 NSApp.activate()
             } else {
@@ -146,13 +159,120 @@ public final class ClipboardModule: NSObject, CustomizerModule, ObservableObject
     }
     
     private func closePopoverAndRestoreFocus() {
+        guard !isClosingPopover else { return }
+        isClosingPopover = true
+        removeDismissMonitors()
+        ClipboardImagePreviewController.shared.closePreviewOnly(restoreParentFocus: false)
         if let p = popover, p.isShown {
             p.performClose(nil)
+        } else {
+            isClosingPopover = false
         }
+    }
+
+    public func popoverShouldClose(_ popover: NSPopover) -> Bool {
+        // While the non-modal image preview panel is visible, outside-click/resign
+        // monitors and explicit close actions govern dismissal so clicks inside the
+        // preview panel do not trigger AppKit's transient close.
+        !ClipboardImagePreviewController.shared.isShown
     }
     
     public func popoverDidClose(_ notification: Notification) {
+        isClosingPopover = false
+        removeDismissMonitors()
+        ClipboardImagePreviewController.shared.closePreviewOnly(restoreParentFocus: false)
         PopoverFocusCoordinator.shared.handlePopoverDidClose(of: popover)
+        guard let closedPopover = notification.object as? NSPopover else { return }
+        closedPopover.contentViewController = nil
+        closedPopover.delegate = nil
+        if popover === closedPopover {
+            popover = nil
+        }
+    }
+
+    private func installDismissMonitors() {
+        removeDismissMonitors()
+
+        localMouseMonitor = NSEvent.addLocalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown, .otherMouseDown]) { [weak self] event in
+            self?.handleOutsideMouseDown(event: event, isGlobal: false)
+            return event
+        }
+
+        globalMouseMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown, .otherMouseDown]) { [weak self] event in
+            self?.handleOutsideMouseDown(event: event, isGlobal: true)
+        }
+
+        resignActiveObserver = NotificationCenter.default.addObserver(
+            forName: NSApplication.didResignActiveNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            guard let self,
+                  !self.popoverPin.isPinned,
+                  let popover = self.popover,
+                  popover.isShown else { return }
+            self.closePopoverAndRestoreFocus()
+        }
+    }
+
+    private func removeDismissMonitors() {
+        if let localMouseMonitor {
+            NSEvent.removeMonitor(localMouseMonitor)
+            self.localMouseMonitor = nil
+        }
+        if let globalMouseMonitor {
+            NSEvent.removeMonitor(globalMouseMonitor)
+            self.globalMouseMonitor = nil
+        }
+        if let resignActiveObserver {
+            NotificationCenter.default.removeObserver(resignActiveObserver)
+            self.resignActiveObserver = nil
+        }
+    }
+
+    private func handleOutsideMouseDown(event: NSEvent, isGlobal: Bool) {
+        guard let popover, popover.isShown, !isClosingPopover else { return }
+
+        if !isGlobal {
+            if let buttonWindow = statusItem?.button?.window, event.window === buttonWindow {
+                return
+            }
+            if let eventWindow = event.window,
+               String(describing: type(of: eventWindow)).contains("Menu") {
+                return
+            }
+        }
+
+        let mouseLocation = NSEvent.mouseLocation
+        let previewWindow = ClipboardImagePreviewController.shared.panelWindow
+        let isPreviewShown = ClipboardImagePreviewController.shared.isShown
+        let popoverWindow = popover.contentViewController?.view.window
+
+        let clickedInsidePreview: Bool
+        if !isGlobal, isPreviewShown, let previewWindow {
+            clickedInsidePreview = (event.window === previewWindow) || previewWindow.frame.contains(mouseLocation)
+        } else {
+            clickedInsidePreview = false
+        }
+
+        let clickedInsidePopover: Bool
+        if !isGlobal, let popoverWindow {
+            clickedInsidePopover = (event.window === popoverWindow) || popoverWindow.frame.contains(mouseLocation)
+        } else {
+            clickedInsidePopover = false
+        }
+
+        let action = ClipboardPreviewDismissalPolicy.actionForOutsideEvent(
+            isPinned: popoverPin.isPinned,
+            isPreviewShown: isPreviewShown,
+            isPopoverShown: popover.isShown,
+            clickedInsidePreview: clickedInsidePreview,
+            clickedInsidePopover: clickedInsidePopover
+        )
+
+        if action == .closePreviewAndPopover {
+            closePopoverAndRestoreFocus()
+        }
     }
     
     private func showContextMenu(for sender: NSStatusBarButton) {

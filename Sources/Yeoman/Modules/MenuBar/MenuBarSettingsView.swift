@@ -213,7 +213,10 @@ struct PresetButton: View {
                     .fill(isSelected ? Color.accentColor : Color(nsColor: .controlColor))
             )
             .foregroundColor(isSelected ? .white : .primary)
+            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        .focusable(false)
+        .focusEffectDisabled()
     }
 }

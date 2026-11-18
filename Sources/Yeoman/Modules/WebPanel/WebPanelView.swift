@@ -426,8 +426,11 @@ public struct WebPanelView: View {
                         Image(systemName: "arrow.right.circle.fill")
                             .font(.system(size: 12))
                             .foregroundColor(.accentColor)
+                            .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
+                    .focusable(false)
+                    .focusEffectDisabled()
                 }
                 .padding(.horizontal, 10)
                 .padding(.vertical, 5)
@@ -464,8 +467,11 @@ public struct WebPanelView: View {
                             .padding(5)
                             .background(Circle().fill(Color(nsColor: .controlBackgroundColor).opacity(0.9)))
                             .shadow(radius: 2)
+                            .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
+                    .focusable(false)
+                    .focusEffectDisabled()
                     .padding(6)
                     .opacity(isHovered ? 0.9 : 0.0)
                     .help(l10n("web_panel.popup_show_toolbar"))
@@ -483,16 +489,22 @@ public struct WebPanelView: View {
                 Button(action: { controller.goHome() }) {
                     Image(systemName: "house")
                         .font(.system(size: 11))
+                        .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
+                .focusable(false)
+                .focusEffectDisabled()
                 .help(String(format: l10n("web_panel.popup_home"), item.title))
 
                 // Back
                 Button(action: { controller.goBack() }) {
                     Image(systemName: "chevron.left")
                         .font(.system(size: 11))
+                        .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
+                .focusable(false)
+                .focusEffectDisabled()
                 .disabled(!controller.canGoBack)
                 .help(l10n("web_panel.popup_back"))
 
@@ -500,8 +512,11 @@ public struct WebPanelView: View {
                 Button(action: { controller.goForward() }) {
                     Image(systemName: "chevron.right")
                         .font(.system(size: 11))
+                        .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
+                .focusable(false)
+                .focusEffectDisabled()
                 .disabled(!controller.canGoForward)
                 .help(l10n("web_panel.popup_forward"))
 
@@ -509,8 +524,11 @@ public struct WebPanelView: View {
                 Button(action: { controller.reload() }) {
                     Image(systemName: "arrow.clockwise")
                         .font(.system(size: 11))
+                        .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
+                .focusable(false)
+                .focusEffectDisabled()
                 .help(l10n("web_panel.popup_reload"))
 
                 Spacer()
@@ -649,8 +667,11 @@ public struct WebPanelView: View {
                     Image(systemName: isShowingAddressInput ? "link.circle.fill" : "link")
                         .font(.system(size: 11))
                         .foregroundColor(isShowingAddressInput ? .accentColor : .primary)
+                        .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
+                .focusable(false)
+                .focusEffectDisabled()
                 .help(l10n("web_panel.popup_edit_url"))
 
                 // Pin Window
@@ -662,8 +683,11 @@ public struct WebPanelView: View {
                     Image(systemName: item.isPinned ? "pin.fill" : "pin")
                         .font(.system(size: 11))
                         .foregroundColor(item.isPinned ? .accentColor : .primary)
+                        .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
+                .focusable(false)
+                .focusEffectDisabled()
                 .help(item.isPinned ? l10n("web_panel.popup_unpin") : l10n("web_panel.popup_pin"))
 
                 if !item.showsAddressBar && isToolbarTemporarilyVisible {
@@ -675,8 +699,11 @@ public struct WebPanelView: View {
                         Image(systemName: "xmark.circle")
                             .font(.system(size: 11))
                             .foregroundColor(.secondary)
+                            .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
+                    .focusable(false)
+                    .focusEffectDisabled()
                     .help(l10n("web_panel.popup_close_toolbar"))
                 } else {
                     // Open in External Browser
@@ -687,8 +714,11 @@ public struct WebPanelView: View {
                     }) {
                         Image(systemName: "arrow.up.forward.square")
                             .font(.system(size: 11))
+                            .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
+                    .focusable(false)
+                    .focusEffectDisabled()
                     .help(l10n("web_panel.popup_open_default_browser"))
                 }
             }

@@ -13,6 +13,7 @@ public struct ProcessTaskItem: Identifiable, Equatable {
     public let bundleIdentifier: String?
     public let customIcon: NSImage?
     public let widgetTitle: String?
+    public let icon: NSImage?
 
     public init(
         id: Int,
@@ -24,7 +25,8 @@ public struct ProcessTaskItem: Identifiable, Equatable {
         bundleIdentifier: String?,
         customIcon: NSImage? = nil,
         widgetTitle: String? = nil,
-        identity: ProcessIdentity? = nil
+        identity: ProcessIdentity? = nil,
+        icon: NSImage? = nil
     ) {
         self.identity = identity
         self.id = id
@@ -36,17 +38,7 @@ public struct ProcessTaskItem: Identifiable, Equatable {
         self.bundleIdentifier = bundleIdentifier
         self.customIcon = customIcon
         self.widgetTitle = widgetTitle
-    }
-
-    public var icon: NSImage? {
-        if let customIcon = customIcon {
-            return customIcon
-        }
-        if let bundleId = bundleIdentifier,
-           let app = NSWorkspace.shared.runningApplications.first(where: { $0.bundleIdentifier == bundleId }) {
-            return app.icon
-        }
-        return nil
+        self.icon = icon ?? customIcon
     }
 
     public static func == (lhs: ProcessTaskItem, rhs: ProcessTaskItem) -> Bool {
@@ -63,6 +55,7 @@ public struct ProcessTaskItem: Identifiable, Equatable {
 
 public final class SystemMetricsProvider: ObservableObject {
     public static let shared = SystemMetricsProvider()
+    private static let iconCache = NSCache<NSString, NSImage>()
 
     // Overall Metrics
     @Published public var cpuUsagePercent: Double = 0.0
@@ -97,24 +90,42 @@ public final class SystemMetricsProvider: ObservableObject {
 
     private var prevCpuInfo: host_cpu_load_info?
     private var timer: Timer?
+    private var processTimer: Timer?
+    private var isProcessPollingActive = false
     private let refreshGate = SingleFlight()
     @Published public private(set) var processError: String?
 
     public init(autoRefresh: Bool = true) {
-        if autoRefresh { refreshMetrics(); refreshProcessList() }
+        if autoRefresh { refreshMetrics() }
     }
 
     public func startPolling(interval: TimeInterval = 1.5) {
         timer?.invalidate()
         timer = Timer.scheduledTimer(withTimeInterval: interval, repeats: true) { [weak self] _ in
             self?.refreshMetrics()
-            self?.refreshProcessList()
         }
     }
 
     public func stopPolling() {
         timer?.invalidate()
         timer = nil
+        stopProcessPolling()
+    }
+
+    public func startProcessPolling(interval: TimeInterval = 2.0) {
+        guard !isProcessPollingActive else { return }
+        isProcessPollingActive = true
+        refreshProcessList()
+        processTimer?.invalidate()
+        processTimer = Timer.scheduledTimer(withTimeInterval: interval, repeats: true) { [weak self] _ in
+            self?.refreshProcessList()
+        }
+    }
+
+    public func stopProcessPolling() {
+        isProcessPollingActive = false
+        processTimer?.invalidate()
+        processTimer = nil
     }
 
     public var filteredProcesses: [ProcessTaskItem] {
@@ -242,9 +253,22 @@ public final class SystemMetricsProvider: ObservableObject {
                 guard result.status == 0, let output = String(data: result.data, encoding: .utf8) else { return }
 
                 let runningApps = NSWorkspace.shared.runningApplications
-                var appMap: [pid_t: (name: String, bundleId: String?)] = [:]
+                var appMap: [pid_t: (name: String, bundleId: String?, icon: NSImage?)] = [:]
                 for app in runningApps {
-                    appMap[app.processIdentifier] = (app.localizedName ?? "", app.bundleIdentifier)
+                    let pid = app.processIdentifier
+                    let bundleId = app.bundleIdentifier
+                    var appIcon: NSImage? = nil
+                    if let bundleId = bundleId {
+                        if let cached = Self.iconCache.object(forKey: bundleId as NSString) {
+                            appIcon = cached
+                        } else if let icon = app.icon {
+                            Self.iconCache.setObject(icon, forKey: bundleId as NSString)
+                            appIcon = icon
+                        }
+                    } else if let icon = app.icon {
+                        appIcon = icon
+                    }
+                    appMap[pid] = (app.localizedName ?? "", bundleId, appIcon)
                 }
 
                 var items: [ProcessTaskItem] = []
@@ -262,9 +286,10 @@ public final class SystemMetricsProvider: ObservableObject {
                     let rawName = sample.command
                     let memoryMB = rssKB / 1024.0
 
-                    let isApp = appMap[sample.pid] != nil
-                    let friendlyName = appMap[sample.pid]?.name ?? rawName
-                    let bundleId = appMap[sample.pid]?.bundleId
+                    let appInfo = appMap[sample.pid]
+                    let isApp = appInfo != nil
+                    let friendlyName = appInfo?.name ?? rawName
+                    let bundleId = appInfo?.bundleId
 
                     var customIcon: NSImage? = nil
                     var matchedWidgetTitle: String? = nil
@@ -282,6 +307,8 @@ public final class SystemMetricsProvider: ObservableObject {
                         displayName = self?.sanitizeProcessName(friendlyName) ?? friendlyName
                     }
 
+                    let resolvedIcon = customIcon ?? appInfo?.icon
+
                     items.append(ProcessTaskItem(
                         id: pid,
                         pid: pid,
@@ -292,7 +319,8 @@ public final class SystemMetricsProvider: ObservableObject {
                         bundleIdentifier: bundleId,
                         customIcon: customIcon,
                         widgetTitle: matchedWidgetTitle,
-                        identity: identity
+                        identity: identity,
+                        icon: resolvedIcon
                     ))
                 }
 

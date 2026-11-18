@@ -64,5 +64,115 @@ func runClipboardTests() {
             customPb.declareTypes([NSPasteboard.PasteboardType(ClipboardMonitor.remoteClipboardType), .string], owner: nil)
             assertTrue(ClipboardMonitor.isRemotePasteboard(customPb))
         }
+
+        harness.test("ClipboardPreviewDismissalPolicy respects pin state for preview and popover outside clicks") {
+            // Unpinned + preview open + click outside preview -> dismisses both
+            assertEqual(
+                ClipboardPreviewDismissalPolicy.actionForOutsideEvent(
+                    isPinned: false,
+                    isPreviewShown: true,
+                    isPopoverShown: true,
+                    clickedInsidePreview: false,
+                    clickedInsidePopover: false
+                ),
+                .closePreviewAndPopover
+            )
+            // Unpinned + preview open + click on underlying popover outside preview -> dismisses both
+            assertEqual(
+                ClipboardPreviewDismissalPolicy.actionForOutsideEvent(
+                    isPinned: false,
+                    isPreviewShown: true,
+                    isPopoverShown: true,
+                    clickedInsidePreview: false,
+                    clickedInsidePopover: true
+                ),
+                .closePreviewAndPopover
+            )
+            // Unpinned + preview open + click inside preview -> stays open for interaction
+            assertEqual(
+                ClipboardPreviewDismissalPolicy.actionForOutsideEvent(
+                    isPinned: false,
+                    isPreviewShown: true,
+                    isPopoverShown: true,
+                    clickedInsidePreview: true,
+                    clickedInsidePopover: true
+                ),
+                .none
+            )
+            // Pinned + preview open + click outside preview -> neither closes
+            assertEqual(
+                ClipboardPreviewDismissalPolicy.actionForOutsideEvent(
+                    isPinned: true,
+                    isPreviewShown: true,
+                    isPopoverShown: true,
+                    clickedInsidePreview: false,
+                    clickedInsidePopover: false
+                ),
+                .none
+            )
+            // Unpinned + preview closed + click outside popover -> dismisses popover
+            assertEqual(
+                ClipboardPreviewDismissalPolicy.actionForOutsideEvent(
+                    isPinned: false,
+                    isPreviewShown: false,
+                    isPopoverShown: true,
+                    clickedInsidePreview: false,
+                    clickedInsidePopover: false
+                ),
+                .closePreviewAndPopover
+            )
+            // Unpinned + preview closed + click inside popover -> stays open
+            assertEqual(
+                ClipboardPreviewDismissalPolicy.actionForOutsideEvent(
+                    isPinned: false,
+                    isPreviewShown: false,
+                    isPopoverShown: true,
+                    clickedInsidePreview: false,
+                    clickedInsidePopover: true
+                ),
+                .none
+            )
+            // Pinned + preview closed + click outside popover -> stays open
+            assertEqual(
+                ClipboardPreviewDismissalPolicy.actionForOutsideEvent(
+                    isPinned: true,
+                    isPreviewShown: false,
+                    isPopoverShown: true,
+                    clickedInsidePreview: false,
+                    clickedInsidePopover: false
+                ),
+                .none
+            )
+        }
+
+        harness.test("ClipboardFullImageWindowController computes bounded initial window sizes") {
+            let visible = CGRect(x: 0, y: 0, width: 1440, height: 900)
+
+            // Tiny image enforces minimum window dimensions (520 x 400)
+            let tiny = ClipboardItem(content: "tiny", type: .image, imageWidth: 120, imageHeight: 80)
+            let tinySize = ClipboardFullImageWindowController.initialContentSize(for: tiny, visibleFrame: visible)
+            assertEqual(tinySize.width, 520)
+            assertEqual(tinySize.height, 400)
+
+            // Medium wide screenshot preserves full width when within 85% of screen
+            let medium = ClipboardItem(content: "wide", type: .image, imageWidth: 930, imageHeight: 106)
+            let mediumSize = ClipboardFullImageWindowController.initialContentSize(for: medium, visibleFrame: visible)
+            assertEqual(mediumSize.width, 930)
+            assertEqual(mediumSize.height, 400)
+
+            // Oversized 4K image scales down to at most 85% of visible screen bounds
+            let huge = ClipboardItem(content: "huge", type: .image, imageWidth: 3840, imageHeight: 2160)
+            let hugeSize = ClipboardFullImageWindowController.initialContentSize(for: huge, visibleFrame: visible)
+            assertTrue(hugeSize.width <= floor(visible.width * 0.85))
+            assertTrue(hugeSize.height <= floor(visible.height * 0.85))
+            assertTrue(hugeSize.width >= 520)
+            assertTrue(hugeSize.height >= 400)
+
+            // Missing dimensions fall back cleanly
+            let unknown = ClipboardItem(content: "unknown", type: .image)
+            let fallbackSize = ClipboardFullImageWindowController.initialContentSize(for: unknown, visibleFrame: visible)
+            assertEqual(fallbackSize.width, 760)
+            assertEqual(fallbackSize.height, 560)
+        }
     }
 }

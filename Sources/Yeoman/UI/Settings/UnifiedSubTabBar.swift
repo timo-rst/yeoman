@@ -84,6 +84,8 @@ private struct TabButton<Tab: SubTabProtocol>: View {
             )
         }
         .buttonStyle(.plain)
+        .focusable(false)
+        .focusEffectDisabled()
         .onHover { isHovered = $0 }
     }
 }

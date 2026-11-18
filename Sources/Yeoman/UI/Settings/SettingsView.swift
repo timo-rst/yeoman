@@ -656,8 +656,11 @@ struct LanguageSettingsCard: View {
                             RoundedRectangle(cornerRadius: 10)
                                 .stroke(isSelected ? Color.accentColor : Color.primary.opacity(0.08), lineWidth: isSelected ? 1.5 : 1.0)
                         )
+                        .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
+                    .focusable(false)
+                    .focusEffectDisabled()
                     .onHover { isHovered in
                         hoveredLang = isHovered ? lang : nil
                     }
