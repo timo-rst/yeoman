@@ -346,6 +346,12 @@ public final class LocalizationManager: ObservableObject {
             .spanish: "Portapapeles",
             .french: "Presse-papiers"
         ],
+        "tab.finderCut": [
+            .german: "Finder Ausschneiden",
+            .english: "Finder Cut",
+            .spanish: "Cortar en Finder",
+            .french: "Couper dans le Finder"
+        ],
         "tab.systemStats": [
             .german: "System-Monitor",
             .english: "System Monitor",
@@ -461,6 +467,18 @@ public final class LocalizationManager: ObservableObject {
             .english: "Inverts mouse scroll direction while keeping trackpad scrolling natural",
             .spanish: "Invierte la dirección del ratón manteniendo el trackpad natural",
             .french: "Inverse le sens de défilement de la souris tout en conservant le trackpad naturel"
+        ],
+        "general.finder_cut_title": [
+            .german: "Finder Ausschneiden (⌘X)",
+            .english: "Finder Cut (⌘X)",
+            .spanish: "Cortar en Finder (⌘X)",
+            .french: "Couper dans le Finder (⌘X)"
+        ],
+        "general.finder_cut_sub": [
+            .german: "Ermöglicht echtes Ausschneiden (⌘X) und Einfügen (⌘V) von Dateien im Finder wie unter Windows",
+            .english: "Enables Windows-style Cut (⌘X) and Paste (⌘V) for files and folders in Finder",
+            .spanish: "Permite cortar (⌘X) y pegar (⌘V) archivos y carpetas en Finder como en Windows",
+            .french: "Permet de couper (⌘X) et coller (⌘V) des fichiers et dossiers dans le Finder comme sous Windows"
         ],
         "general.web_panel_title": [
             .german: "Web-Widgets (Popups)",
@@ -2400,6 +2418,18 @@ public final class LocalizationManager: ObservableObject {
             .spanish: "Abrir en navegador predeterminado",
             .french: "Ouvrir dans le navigateur par défaut"
         ],
+        "web_panel.load_failed_title": [
+            .german: "Seite konnte nicht geladen werden",
+            .english: "Page could not be loaded",
+            .spanish: "No se pudo cargar la página",
+            .french: "Impossible de charger la page"
+        ],
+        "web_panel.retry_load": [
+            .german: "Erneut laden",
+            .english: "Reload",
+            .spanish: "Recargar",
+            .french: "Recharger"
+        ],
         "system_stats.layout_vertical": [
             .german: "Vertikal (Balken rechts)",
             .english: "Vertical (Bar right)",
@@ -2477,6 +2507,186 @@ public final class LocalizationManager: ObservableObject {
             .english: "Kill process '%@' immediately",
             .spanish: "Finalizar proceso '%@' de inmediato",
             .french: "Arrêter immédiatement le processus '%@'"
+        ],
+        "finder_cut.title": [
+            .german: "Finder Ausschneiden (⌘X)",
+            .english: "Finder Cut (⌘X)",
+            .spanish: "Cortar en Finder (⌘X)",
+            .french: "Couper dans le Finder (⌘X)"
+        ],
+        "finder_cut.subtitle": [
+            .german: "Dateien und Ordner im Finder wie unter Windows mit ⌘X ausschneiden und mit ⌘V verschieben.",
+            .english: "Cut files and folders in Finder with ⌘X and move them with ⌘V, just like on Windows.",
+            .spanish: "Corta archivos y carpetas en Finder con ⌘X y muévelos con ⌘V, como en Windows.",
+            .french: "Coupez des fichiers et dossiers dans le Finder avec ⌘X et déplacez-les avec ⌘V, comme sous Windows."
+        ],
+        "finder_cut.permission_required": [
+            .german: "Bedienungshilfen-Berechtigung erforderlich",
+            .english: "Accessibility Permission Required",
+            .spanish: "Se requiere permiso de accesibilidad",
+            .french: "Autorisation d'accessibilité requise"
+        ],
+        "finder_cut.permission_description": [
+            .german: "Damit Yeoman ⌘X und ⌘V ausschließlich im Finder umwandeln kann, wird die Bedienungshilfen-Freigabe benötigt.",
+            .english: "Yeoman needs Accessibility permission to intercept ⌘X and ⌘V shortcuts strictly inside Finder.",
+            .spanish: "Yeoman necesita permiso de accesibilidad para interceptar ⌘X y ⌘V únicamente en Finder.",
+            .french: "Yeoman a besoin de l'autorisation d'accessibilité pour intercepter ⌘X et ⌘V uniquement dans le Finder."
+        ],
+        "finder_cut.how_it_works": [
+            .german: "Tastenkürzel im Finder",
+            .english: "Finder Shortcuts",
+            .spanish: "Atajos en Finder",
+            .french: "Raccourcis dans le Finder"
+        ],
+        "finder_cut.shortcut_cut": [
+            .german: "Markierte Dateien oder Ordner zum Verschieben vormerken",
+            .english: "Mark selected files or folders for moving",
+            .spanish: "Marcar archivos o carpetas seleccionados para mover",
+            .french: "Marquer les fichiers ou dossiers sélectionnés pour le déplacement"
+        ],
+        "finder_cut.shortcut_paste": [
+            .german: "Vorgemerkte Objekte direkt in den Zielordner verschieben (⌘⌥V)",
+            .english: "Move cut items natively into the target folder (⌘⌥V)",
+            .spanish: "Mover los elementos cortados directamente a la carpeta de destino (⌘⌥V)",
+            .french: "Déplacer les éléments coupés vers le dossier cible (⌘⌥V)"
+        ],
+        "finder_cut.shortcut_cancel": [
+            .german: "Ausgeschnitten-Markierung sicher verwerfen",
+            .english: "Cancel the pending cut state safely",
+            .spanish: "Cancelar el estado de corte pendiente de forma segura",
+            .french: "Annuler l'état de coupe en attente en toute sécurité"
+        ],
+        "finder_cut.text_safe_note": [
+            .german: "Beim Umbenennen von Dateien oder in Such-/Textfeldern bleibt ⌘X normales Text-Ausschneiden.",
+            .english: "When renaming files or typing in search/text fields, ⌘X continues to act as normal text cut.",
+            .spanish: "Al renombrar archivos o escribir en campos de texto o búsqueda, ⌘X sigue funcionando como corte de texto normal.",
+            .french: "Lors du renommage de fichiers ou dans les champs texte/recherche, ⌘X reste un couper de texte normal."
+        ],
+        "finder_cut.options_header": [
+            .german: "Optionen",
+            .english: "Options",
+            .spanish: "Opciones",
+            .french: "Options"
+        ],
+        "finder_cut.play_sound": [
+            .german: "Dezentes Klick-Feedback beim Ausschneiden",
+            .english: "Play subtle sound when cutting files",
+            .spanish: "Reproducir un sonido sutil al cortar archivos",
+            .french: "Jouer un son discret lors de la coupe"
+        ],
+        "finder_cut.play_sound_tooltip": [
+            .german: "Spielt einen kurzen Systemton ab, sobald der Finder die Dateien zum Ausschneiden übernommen hat.",
+            .english: "Plays a subtle system sound once Finder confirms the selected files are staged for moving.",
+            .spanish: "Reproduce un breve sonido del sistema cuando Finder confirma los archivos listos para mover.",
+            .french: "Joue un bref son système dès que le Finder confirme les fichiers prêts à être déplacés."
+        ],
+        "finder_cut.cancel_on_escape": [
+            .german: "Mit Esc-Taste Ausschneiden abbrechen",
+            .english: "Cancel pending cut with Escape key",
+            .spanish: "Cancelar el corte pendiente con la tecla Esc",
+            .french: "Annuler la coupe en attente avec la touche Échap"
+        ],
+        "finder_cut.cancel_on_escape_tooltip": [
+            .german: "Setzt ein vorgemerktes Ausschneiden im Finder zurück, wenn Escape gedrückt wird.",
+            .english: "Clears the pending Finder cut state when pressing Escape.",
+            .spanish: "Limpia el estado de corte pendiente en Finder al pulsar Escape.",
+            .french: "Réinitialise l'état de coupe dans le Finder lorsque vous appuyez sur Échap."
+        ],
+        "finder_cut.menubar_toggle": [
+            .german: "Symbol in der Menüleiste anzeigen",
+            .english: "Show icon in the menu bar",
+            .spanish: "Mostrar icono en la barra de menús",
+            .french: "Afficher l'icône dans la barre des menus"
+        ],
+        "finder_cut.menubar_tooltip": [
+            .german: "Zeigt eine Schere in der Menüleiste für Schnellstatus und Abbruch eines aktiven Ausschneidens.",
+            .english: "Shows a scissors icon in the menu bar for quick status and cancelling an active cut.",
+            .spanish: "Muestra unas tijeras en la barra de menús para ver el estado rápido y cancelar un corte activo.",
+            .french: "Affiche une icône de ciseaux dans la barre des menus pour voir l'état et annuler une coupe active."
+        ],
+        "finder_cut.status": [
+            .german: "Status",
+            .english: "Status",
+            .spanish: "Estado",
+            .french: "État"
+        ],
+        "finder_cut.status_active": [
+            .german: "Aktiv (Finder-Überwachung)",
+            .english: "Active (Finder active monitor)",
+            .spanish: "Activo (monitor de Finder)",
+            .french: "Actif (surveillance du Finder)"
+        ],
+        "finder_cut.status_paused": [
+            .german: "Pausiert",
+            .english: "Paused",
+            .spanish: "En pausa",
+            .french: "En pause"
+        ],
+        "finder_cut.pending_active": [
+            .german: "Ausschneiden aktiv – mit ⌘V im Zielordner verschieben",
+            .english: "Cut pending – press ⌘V in destination folder to move",
+            .spanish: "Corte pendiente: pulsa ⌘V en la carpeta de destino para mover",
+            .french: "Coupe en attente – appuyez sur ⌘V dans le dossier cible pour déplacer"
+        ],
+        "finder_cut.pending_count_format": [
+            .german: "%d Objekt(e) zum Verschieben vorgemerkt (⌘V)",
+            .english: "%d item(s) ready to move (⌘V)",
+            .spanish: "%d elemento(s) listo(s) para mover (⌘V)",
+            .french: "%d élément(s) prêt(s) à déplacer (⌘V)"
+        ],
+        "finder_cut.cancel_pending": [
+            .german: "Ausschneiden verwerfen",
+            .english: "Cancel Cut",
+            .spanish: "Cancelar corte",
+            .french: "Annuler la coupe"
+        ],
+        "finder_cut.prompt_window_title": [
+            .german: "Bedienungshilfen erforderlich",
+            .english: "Accessibility Permission Required",
+            .spanish: "Permiso de accesibilidad requerido",
+            .french: "Autorisation d'accessibilité requise"
+        ],
+        "finder_cut.prompt_title": [
+            .german: "Finder Ausschneiden (⌘X) benötigt Berechtigung",
+            .english: "Finder Cut (⌘X) Needs Accessibility Permission",
+            .spanish: "Cortar en Finder (⌘X) necesita permiso de accesibilidad",
+            .french: "Couper dans le Finder (⌘X) nécessite l'accessibilité"
+        ],
+        "finder_cut.prompt_message": [
+            .german: "Du hast gerade ⌘X im Finder gedrückt, aber macOS blockiert aktuell den Zugriff auf Bedienungshilfen für Yeoman.",
+            .english: "You just pressed ⌘X in Finder, but macOS is currently blocking Accessibility access for Yeoman.",
+            .spanish: "Acabas de pulsar ⌘X en Finder, pero macOS está bloqueando actualmente el acceso de accesibilidad para Yeoman.",
+            .french: "Vous venez d'appuyer sur ⌘X dans le Finder, mais macOS bloque actuellement l'accès d'accessibilité pour Yeoman."
+        ],
+        "finder_cut.prompt_steps": [
+            .german: "Öffne Systemeinstellungen → Datenschutz & Sicherheit → Bedienungshilfen und aktiviere den Schalter neben Yeoman. Danach funktioniert ⌘X → ⌘V im Finder sofort.",
+            .english: "Open System Settings → Privacy & Security → Accessibility and enable the toggle next to Yeoman. Afterwards, ⌘X → ⌘V in Finder works immediately.",
+            .spanish: "Abre Ajustes del Sistema → Privacidad y seguridad → Accesibilidad y activa el interruptor junto a Yeoman. Después, ⌘X → ⌘V funcionará de inmediato.",
+            .french: "Ouvrez Réglages Système → Confidentialité et sécurité → Accessibilité et activez Yeoman. Ensuite, ⌘X → ⌘V fonctionnera immédiatement."
+        ],
+        "finder_cut.prompt_disable": [
+            .german: "Modul deaktivieren",
+            .english: "Disable Module",
+            .spanish: "Desactivar módulo",
+            .french: "Désactiver le module"
+        ],
+        "finder_cut.prompt_later": [
+            .german: "Später",
+            .english: "Later",
+            .spanish: "Más tarde",
+            .french: "Plus tard"
+        ],
+        "finder_cut.show_hud": [
+            .german: "Ausgeschnittene Dateien im Finder markieren",
+            .english: "Highlight cut files in Finder",
+            .spanish: "Resaltar archivos cortados en Finder",
+            .french: "Surligner les fichiers coupés dans le Finder"
+        ],
+        "finder_cut.show_hud_tooltip": [
+            .german: "Zeigt einen gestrichelten Rahmen direkt um ausgeschnittene Dateien im Finder an, bis sie eingefügt oder abgebrochen werden.",
+            .english: "Draws a dashed pill outline directly around cut items in Finder until they are moved or cancelled.",
+            .spanish: "Muestra un borde discontinuo alrededor de los archivos cortados en Finder hasta que se muevan o cancelen.",
+            .french: "Affiche un contour en pointillés autour des fichiers coupés dans le Finder jusqu'à leur déplacement ou annulation."
         ]
     ]
 }

@@ -1,6 +1,7 @@
 import SwiftUI
 import AppKit
 import WebKit
+import Network
 
 public enum WebUserAgentMode: String, CaseIterable, Identifiable, Codable {
     case auto = "Automatisch (nach Größe)"
@@ -234,6 +235,13 @@ public final class WebPanelModule: NSObject, CustomizerModule, ObservableObject 
     private let storage: WidgetStorage
     private var didLoadWidgets = false
     private let widgetsStorageKey = "web_panel_widgets_list_json"
+    private var pathMonitor: NWPathMonitor?
+    private let pathMonitorQueue = DispatchQueue(label: "de.trst.Yeoman.webpanel.network")
+    private var lastPathStatus: NWPath.Status?
+    private var lastInterfaceKey: String?
+    private var networkRecoveryWorkItem: DispatchWorkItem?
+    private var wakeRecoveryWorkItem: DispatchWorkItem?
+    private var wakeObserver: NSObjectProtocol?
 
     public init(storage: WidgetStorage = WidgetStorage()) {
         self.storage = storage
@@ -245,16 +253,87 @@ public final class WebPanelModule: NSObject, CustomizerModule, ObservableObject 
         loadWidgets()
     }
 
+    deinit {
+        stopSystemMonitoring()
+    }
+
     public func start() {
         guard isEnabled else { return }
+        startSystemMonitoring()
         syncAllInstances()
     }
 
     public func stop() {
+        stopSystemMonitoring()
         for controller in instanceControllers.values {
             controller.cleanup()
         }
         instanceControllers.removeAll()
+    }
+
+    private func startSystemMonitoring() {
+        if pathMonitor == nil {
+            let monitor = NWPathMonitor()
+            monitor.pathUpdateHandler = { [weak self] path in
+                let status = path.status
+                let interfaceKey = path.availableInterfaces.map(\.name).sorted().joined(separator: ",")
+                DispatchQueue.main.async { [weak self] in
+                    guard let self, self.isEnabled, self.pathMonitor === monitor else { return }
+                    let becameSatisfied = status == .satisfied && (self.lastPathStatus != .satisfied || self.lastInterfaceKey != interfaceKey)
+                    self.lastPathStatus = status
+                    self.lastInterfaceKey = interfaceKey
+                    guard becameSatisfied else { return }
+
+                    self.networkRecoveryWorkItem?.cancel()
+                    let workItem = DispatchWorkItem { [weak self] in
+                        guard let self, self.isEnabled else { return }
+                        for controller in self.instanceControllers.values {
+                            controller.webController.handleNetworkBecameAvailable()
+                        }
+                    }
+                    self.networkRecoveryWorkItem = workItem
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5, execute: workItem)
+                }
+            }
+            pathMonitor = monitor
+            monitor.start(queue: pathMonitorQueue)
+        }
+
+        if wakeObserver == nil {
+            wakeObserver = NSWorkspace.shared.notificationCenter.addObserver(
+                forName: NSWorkspace.didWakeNotification,
+                object: nil,
+                queue: .main
+            ) { [weak self] _ in
+                guard let self, self.isEnabled else { return }
+                self.wakeRecoveryWorkItem?.cancel()
+                let workItem = DispatchWorkItem { [weak self] in
+                    guard let self, self.isEnabled else { return }
+                    for controller in self.instanceControllers.values {
+                        controller.webController.handleSystemWake()
+                    }
+                }
+                self.wakeRecoveryWorkItem = workItem
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1.5, execute: workItem)
+            }
+        }
+    }
+
+    private func stopSystemMonitoring() {
+        networkRecoveryWorkItem?.cancel()
+        networkRecoveryWorkItem = nil
+        wakeRecoveryWorkItem?.cancel()
+        wakeRecoveryWorkItem = nil
+        if let monitor = pathMonitor {
+            monitor.cancel()
+            pathMonitor = nil
+        }
+        lastPathStatus = nil
+        lastInterfaceKey = nil
+        if let observer = wakeObserver {
+            NSWorkspace.shared.notificationCenter.removeObserver(observer)
+            wakeObserver = nil
+        }
     }
 
     public func updateStatusItemVisibility() {

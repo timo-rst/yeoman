@@ -56,7 +56,7 @@ Displays websites inside floating panels accessible directly from menu bar icons
 - **Configurable Dimensions:** Freeform width and height sliders or presets (320×400, 375×667, 500×700).
 - **User Agent Modes:** Auto, forced mobile (iPhone), or forced desktop.
 - **Window Pinning:** Optional pin mode to keep windows open when clicking outside.
-- **Lifecycle:** Website content is preloaded for immediate opening. Closed panels release their popover and rendering hierarchy while retaining the live page; autoplay is blocked, media is suspended, and volatile caches are purged. Widgets keep separate persistent website-data containers. WebKit may retain page memory until the widget or app is closed.
+- **Lifecycle:** Website content is preloaded for immediate opening and automatically recovers from boot/login, sleep-wake, or temporary network drops via `NWPathMonitor`, wake notifications, bounded retries, and presentation-time reload. Closed panels release their popover and rendering hierarchy while retaining the live page; autoplay is blocked, media is suspended, and volatile caches are purged. Widgets keep separate persistent website-data containers. WebKit may retain page memory until the widget or app is closed.
 
 <p align="center">
   <img src="Resources/Mockups/yeoman_web_widgets.png" alt="Yeoman Web Widgets" width="92%" />
@@ -96,6 +96,13 @@ Shows hardware usage in the menu bar.
 - **Metrics:** CPU utilization, memory allocation, and battery status.
 - **Process List:** Inspects running processes with sorting by CPU, memory, and name. Process sampling runs only while the task-manager popover is open, and app icons are cached in memory (`NSCache`).
 - **Pinned task manager:** Keep the task-manager popover open from module settings or its footer pin.
+
+### 6. Finder Cut (`⌘X`)
+Brings Windows-style Cut & Paste (`⌘X` → `⌘V`) for files and folders to macOS Finder without touching Finder's filesystem logic.
+- **Finder-Only Scope:** Processes `.keyDown` events exclusively while `com.apple.finder` is the frontmost application; all other apps pass through untouched with zero keystroke logging or persistence.
+- **Native Delegation:** Translates `⌘X` to Finder's native Copy (`⌘C`) and the matching `⌘V` to Finder's native Move Item Here (`⌘⌥V`) via Accessibility menu actions with `.privateState` fallback, preserving full Finder undo (`⌘Z`) and conflict prompts.
+- **Live Cut Highlight:** Optionally draws a click-through dashed pill outline directly around cut items in Finder, merging contiguous selections into one outer border, clipping below column headers, preserving horizontal overflow, and tracking window resizing at 120Hz via WindowServer bounds with zero background load when idle or outside Finder.
+- **Permission Prompt & Text-Input Safety:** Inspects Finder's focused Accessibility element role on `⌘X`/`⌘V` so renaming files or editing search/text fields keeps standard text cut behavior, and offers a Finder-only fallback prompt if Accessibility permission has not been granted yet.
 
 ---
 

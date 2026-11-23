@@ -6,6 +6,7 @@ public enum SettingsTab: String, CaseIterable, Identifiable {
     case scrollReverser = "scrollReverser"
     case webPanel = "webPanel"
     case clipboard = "clipboard"
+    case finderCut = "finderCut"
     case systemStats = "systemStats"
     case about = "about"
     
@@ -18,6 +19,7 @@ public enum SettingsTab: String, CaseIterable, Identifiable {
         case .scrollReverser: return "tab.scrollReverser"
         case .webPanel: return "tab.webPanel"
         case .clipboard: return "tab.clipboard"
+        case .finderCut: return "tab.finderCut"
         case .systemStats: return "tab.systemStats"
         case .about: return "tab.about"
         }
@@ -34,6 +36,7 @@ public enum SettingsTab: String, CaseIterable, Identifiable {
         case .scrollReverser: return "computermouse"
         case .webPanel: return "globe"
         case .clipboard: return "doc.on.clipboard"
+        case .finderCut: return "scissors"
         case .systemStats: return "gauge.with.needle"
         case .about: return "info.circle"
         }
@@ -140,11 +143,15 @@ public struct SettingsView: View {
                         }
                     }
                     
-                    // 6. System Stats
+                    // 6. Finder Cut
+                    SidebarStandardRow(icon: "scissors", title: l10n.localized("tab.finderCut"), isSelected: selectedTab == .finderCut)
+                        .tag(SettingsTab.finderCut)
+
+                    // 7. System Stats
                     SidebarStandardRow(icon: "gauge.with.needle", title: l10n.localized("tab.systemStats"), isSelected: selectedTab == .systemStats)
                         .tag(SettingsTab.systemStats)
                     
-                    // 7. About
+                    // 8. About
                     SidebarStandardRow(icon: "info.circle", title: l10n.localized("tab.about"), isSelected: selectedTab == .about)
                         .tag(SettingsTab.about)
                 }
@@ -171,6 +178,8 @@ public struct SettingsView: View {
                     moduleManager.webPanelModule.settingsView()
                 case .clipboard:
                     moduleManager.clipboardModule.settingsView()
+                case .finderCut:
+                    moduleManager.finderCutModule.settingsView()
                 case .systemStats:
                     moduleManager.systemStatsModule.settingsView()
                 case .about:
@@ -298,6 +307,7 @@ struct GeneralSettingsView: View {
     @ObservedObject private var clipboard = ModuleManager.shared.clipboardModule
     @ObservedObject private var stats = ModuleManager.shared.systemStatsModule
     @ObservedObject private var scrollReverser = ModuleManager.shared.scrollReverserModule
+    @ObservedObject private var finderCut = ModuleManager.shared.finderCutModule
     @ObservedObject private var menuBar = ModuleManager.shared.menuBarModule
     @ObservedObject private var statusController = StatusItemController.shared
     @ObservedObject private var faviconManager = WebFaviconManager.shared
@@ -490,6 +500,20 @@ struct GeneralSettingsView: View {
                                 set: { mm.toggleModule(id: stats.id, enabled: $0) }
                             ),
                             onOpen: { onSelectModule(.systemStats) }
+                        )
+
+                        Divider()
+
+                        // 6. Finder Cut
+                        ModuleToggleRow(
+                            title: l10n.localized("general.finder_cut_title"),
+                            subtitle: l10n.localized("general.finder_cut_sub"),
+                            icon: "scissors",
+                            isOn: Binding(
+                                get: { finderCut.isEnabled },
+                                set: { mm.toggleModule(id: finderCut.id, enabled: $0) }
+                            ),
+                            onOpen: { onSelectModule(.finderCut) }
                         )
                     }
                     .padding()

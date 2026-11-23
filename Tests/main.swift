@@ -12,6 +12,7 @@ runSecurityTests()
 runPopoverFocusCoordinatorTests()
 runSingleInstanceGuardTests()
 runSystemStatsTests()
+runFinderCutTests()
 removeTestDefaults()
 
 let exitCode = TestHarness.shared.printSummary()

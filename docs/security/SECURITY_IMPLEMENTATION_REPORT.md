@@ -1,6 +1,6 @@
 # Security Implementation Report
 
-As of: 18 November 2026
+As of: 23 November 2026
 Audit Baseline: `c3c8e75`  
 Platform: macOS 14+, Swift/AppKit/SwiftUI  
 Status: v0.2.1 independently audited; YEA-01 through YEA-06 remediated for v0.2.2.
@@ -37,9 +37,10 @@ Per explicit user direction, Apple Developer ID signing and notarization are not
 | SEC-20 | Task-manager termination uses exact PID verification (`pid_t(exactly:)`), PID + UID + start time binding, libproc re-verification, a single signal pathway, and protection of self and system processes | PID recycling, UID checks, self-termination protection, signal handling | Darwin kernel offers no atomic check-and-signal syscall; residual race window is minimized |
 | SEC-21 | Centralized bounds for URLs, strings, widget counts/IDs, width, height, user zoom, auto-fit zoom, scroll multipliers, menu spacing; overflow-safe arithmetic | Negative/extreme/NaN/infinite inputs, duplicates, integer overflows | Direct operating system memory exhaustion follows standard error paths |
 | SEC-22 | Event tap mask strictly `scrollWheel`; tail placement after macOS acceleration/momentum processing; dedicated user-interactive thread and run loop isolated from UI work; event type validation; pure tap state machine; periodic TCC re-verification; direct timeout recovery; native device settings bypass delta processing; no callback diagnostics | Permission revocation, failed creation, idempotent start/stop, non-scroll events, mouse/trackpad no-op routing, and ThreadSanitizer suite | Real TCC state reset and physical scroll latency are not measured in automated tests |
-| SEC-23 | Closed web widgets release their SwiftUI/AppKit rendering hierarchy without discarding live page state; autoplay requires user interaction and each widget retains its distinct persistent `WKWebsiteDataStore` | Data-store separation, autoplay policy, and rendering detachment tests | Public WebKit APIs do not guarantee reclamation of a live page's DOM or JavaScript heap |
+| SEC-23 | Closed web widgets release their SwiftUI/AppKit rendering hierarchy without discarding live page state; autoplay requires user interaction, each widget retains its distinct persistent `WKWebsiteDataStore`, and transient boot/wake/network load failures recover via `NWPathMonitor`, wake observers, bounded retries, and presentation-time reload with cancellation on disposal | Data-store separation, autoplay policy, rendering detachment, wake/network/provisional-failure recovery, and timer-disposal tests | Public WebKit APIs do not guarantee reclamation of a live page's DOM or JavaScript heap |
 | SEC-24 | The settings window is explicitly classified as a normal managed macOS window that participates in Mission Control, fullscreen mode, and window cycling until closed or minimized | Window-policy regression test verifies every collection-behavior flag | Standard macOS WindowServer behavior controls Mission Control layout and minimized-window presentation |
 | SEC-25 | Clipboard and task-manager popovers use one persisted pin preference per module; pinned state maps to native `applicationDefined` behavior and the footer/settings controls share the same observable state. The clipboard non-modal image preview panel follows the same pin state for outside-click and app-deactivation dismissal, and the full-image window decodes bounded image data strictly in memory | Isolated-defaults persistence, native popover-behavior, pin-aware dismissal-policy, and bounded initial window-sizing regression tests | Pinned popovers and their child preview panels remain user-controlled foreground UI until explicitly closed or unpinned |
+| SEC-26 | `FinderCutManager` monitors `.keyDown` events only while `com.apple.finder` is frontmost, excludes focused Accessibility text-input roles (`AXTextField`, `AXTextArea`, `AXSearchField`, `AXComboBox`, `AXWebArea`), validates pasteboard `changeCount` consistency, delegates file operations natively via Finder `AXMenuBar` press (`.privateState` synthetic fallback) without touching disk paths, stores zero keystrokes, uses `TapLifecycle` for TCC revocation, and bounds missing-permission fallback hotkeys to Finder with mute/cooldown controls. `FinderCutItemOverlayController` uses a click-through `.nonactivatingPanel` active only when Finder is frontmost with a pending cut, bounds AX element/depth scanning, and projects live WindowServer single-window bounds (`CGWindowListCopyWindowInfo`) during resize drags with zero polling when idle or outside Finder | Event-mask, shortcut classification, non-Finder pass-through, AX text-field exclusion, state-machine, pasteboard-mismatch, fallback-hotkey cooldown, header-clipping, adjacent-merge, and geometry-projection tests | Requires user-granted Accessibility permission; Finder retains full ownership of file moves, conflict resolution, and window visual ordering |
 
 ## Audit Remediation (Findings from SECURITY_REVIEW.md)
 
@@ -70,15 +71,15 @@ Per explicit user direction, Apple Developer ID signing and notarization are not
 ## Verification Results
 
 - `swift build`: Successful.
-- `swift run YeomanTests`: **90/90 tests passed**.
-- `swift run --sanitize thread YeomanTests`: **90/90 tests passed**, 0 ThreadSanitizer warnings.
+- `swift run YeomanTests`: **107/107 tests passed**.
+- `swift run --sanitize thread YeomanTests`: **107/107 tests passed**, 0 ThreadSanitizer warnings.
 - `swift test`: unavailable with Command Line Tools; the repository's native executable test harness remains the supported entry point.
 - `Scripts/capture_real_screenshots.swift`: typechecks cleanly with `YeomanCore` using public API methods.
 - `./Scripts/build_app.sh release`: Successful; app bundle and nested `YeomanInstaller` signed with ad-hoc signatures.
-- Release candidate `0.2.8 (10)`: `arm64` application and helper; ZIP integrity and DMG checksum verification successful.
-- `Yeoman.zip` SHA-256: `dd5226fc00cadc23defb5b825fd644ca878c08586a6a5ea8533ef7097c8300f9`.
-- `Yeoman.dmg` SHA-256: `259d09d8e7e2e5a0b96f79bc529a09d9a98f2b85c24bff846347d201eba7ac19`.
+- Release candidate `0.2.9 (11)`: `arm64` application and helper; ZIP integrity and DMG checksum verification successful.
+- `Yeoman.zip` SHA-256: `e803d561bc4c6582ea2842dc981c549a411434b11900b7e5eef392e0cf709083`.
+- `Yeoman.dmg` SHA-256: `0245ab22d6109c309781c353528674aa1cb2791e390ee0689ff940493655631e`.
 - `codesign --verify --deep --strict dist/Yeoman.app`: Valid.
-- `./Scripts/package_release.sh`: Successful for v0.2.8 using external `0600` release key; produced `dist/Yeoman.dmg`, `dist/Yeoman.zip`, and signed `dist/Yeoman.update.json`.
-- Signed manifest verification: Successful; Ed25519 signature, version `0.2.8`, archive size `3892763`, and archive SHA-256 (`dd5226fc00cadc23defb5b825fd644ca878c08586a6a5ea8533ef7097c8300f9`) all match.
+- `./Scripts/package_release.sh`: Successful for v0.2.9 using external `0600` release key; produced `dist/Yeoman.dmg`, `dist/Yeoman.zip`, and signed `dist/Yeoman.update.json`.
+- Signed manifest verification: Successful; Ed25519 signature, version `0.2.9`, archive size `4247043`, and archive SHA-256 (`e803d561bc4c6582ea2842dc981c549a411434b11900b7e5eef392e0cf709083`) all match.
 - `git diff --check`: Clean; no whitespace or syntax errors.

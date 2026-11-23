@@ -9,6 +9,9 @@ public final class WebPanelController: NSObject, ObservableObject, WKNavigationD
     @Published public var canGoForward: Bool = false
     @Published public var zoomScale: Double = 1.0
     @Published public var isPopoverVisible: Bool = false
+    @Published public private(set) var hasCompletedLoad: Bool = false
+    @Published public private(set) var needsReload: Bool = false
+    @Published public private(set) var lastLoadError: String? = nil
 
     public let widgetID: UUID?
     public var userAgentMode: WebUserAgentMode
@@ -22,6 +25,38 @@ public final class WebPanelController: NSObject, ObservableObject, WKNavigationD
     private var hasPreloaded = false
     private var isDisposed = false
     private var popoverGeneration: Int = 0
+    private var loadGeneration: Int = 0
+    private var retryWorkItem: DispatchWorkItem?
+    private var automaticRetryCount: Int = 0
+    private static let automaticRetryDelays: [TimeInterval] = [2.0, 5.0, 10.0]
+    private var terminationRecoveryCount: Int = 0
+    private static let maxTerminationRecoveries = 2
+
+    public static func shouldIgnoreNavigationError(_ error: Error) -> Bool {
+        let nsError = error as NSError
+        if nsError.domain == NSURLErrorDomain && nsError.code == NSURLErrorCancelled {
+            return true
+        }
+        if nsError.domain == "WebKitErrorDomain" && nsError.code == 102 {
+            return true
+        }
+        return false
+    }
+
+    public static func shouldLoadOnPresentation(
+        hasPreloaded: Bool,
+        hasCompletedLoad: Bool,
+        needsReload: Bool,
+        isLoading: Bool,
+        hasCommittedURL: Bool
+    ) -> Bool {
+        needsReload || !hasPreloaded || (!isLoading && (!hasCompletedLoad || !hasCommittedURL))
+    }
+
+    public static func retryDelay(forAttempt attempt: Int) -> TimeInterval? {
+        guard attempt >= 0 && attempt < automaticRetryDelays.count else { return nil }
+        return automaticRetryDelays[attempt]
+    }
 
     // User Agents
     public static let iPhoneUserAgent = "Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1"
@@ -109,16 +144,68 @@ public final class WebPanelController: NSObject, ObservableObject, WKNavigationD
     }
 
     public func loadURL(_ urlString: String? = nil) {
+        performLoad(urlString, resetRetryBudget: true)
+    }
+
+    private func performLoad(_ urlString: String?, resetRetryBudget: Bool) {
+        guard !isDisposed else { return }
         let str = urlString ?? currentURL
         guard let url = SecurityPolicy.webURL(str) else { return }
-        currentURL = url.absoluteString
+        loadGeneration += 1
+        cancelPendingRetry()
+        hasPreloaded = true
+        if resetRetryBudget {
+            automaticRetryCount = 0
+            terminationRecoveryCount = 0
+        }
+        performOnMain { [weak self] in
+            guard let self, !self.isDisposed else { return }
+            self.currentURL = url.absoluteString
+            self.needsReload = false
+            self.lastLoadError = nil
+            self.isLoading = true
+        }
         var request = URLRequest(url: url, cachePolicy: .useProtocolCachePolicy, timeoutInterval: 30.0)
         request.attribution = .developer
         webView?.load(request)
     }
 
     public func reload() {
-        webView?.reload()
+        guard !isDisposed, let webView else { return }
+        cancelPendingRetry()
+        automaticRetryCount = 0
+        terminationRecoveryCount = 0
+        if webView.url == nil || needsReload || !hasCompletedLoad {
+            let target = currentURL.isEmpty ? homeURL : currentURL
+            performLoad(target, resetRetryBudget: true)
+        } else {
+            loadGeneration += 1
+            performOnMain { [weak self] in
+                guard let self, !self.isDisposed else { return }
+                self.needsReload = false
+                self.lastLoadError = nil
+                self.isLoading = true
+            }
+            webView.reload()
+        }
+    }
+
+    public func handleNetworkBecameAvailable() {
+        guard !isDisposed else { return }
+        guard needsReload || !hasPreloaded || !hasCompletedLoad || webView?.url == nil else { return }
+        let target = currentURL.isEmpty ? homeURL : currentURL
+        guard SecurityPolicy.webURL(target) != nil else { return }
+        cancelPendingRetry()
+        automaticRetryCount = 0
+        webView?.stopLoading()
+        performLoad(target, resetRetryBudget: false)
+    }
+
+    public func handleSystemWake() {
+        guard !isDisposed else { return }
+        if needsReload || (!hasCompletedLoad && !isLoading) || webView?.url == nil {
+            handleNetworkBecameAvailable()
+        }
     }
 
     public func goBack() {
@@ -147,6 +234,8 @@ public final class WebPanelController: NSObject, ObservableObject, WKNavigationD
     public func dispose() {
         isDisposed = true
         popoverGeneration += 1
+        loadGeneration += 1
+        cancelPendingRetry()
         webView?.stopLoading()
         webView?.navigationDelegate = nil
         webView?.uiDelegate = nil
@@ -154,6 +243,22 @@ public final class WebPanelController: NSObject, ObservableObject, WKNavigationD
         webView = nil
         lastKnownPID = nil
         hasPreloaded = false
+        hasCompletedLoad = false
+        needsReload = false
+        isLoading = false
+    }
+
+    private func cancelPendingRetry() {
+        retryWorkItem?.cancel()
+        retryWorkItem = nil
+    }
+
+    private func performOnMain(_ work: @escaping () -> Void) {
+        if Thread.isMainThread {
+            work()
+        } else {
+            DispatchQueue.main.async(execute: work)
+        }
     }
 
     public func resolvedUserAgent() -> String {
@@ -197,13 +302,20 @@ public final class WebPanelController: NSObject, ObservableObject, WKNavigationD
     }
 
     public func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
+        guard !isDisposed else { return }
+        cancelPendingRetry()
         if let url = webView.url { currentURL = url.absoluteString }
         if let num = webView.value(forKey: "_webProcessIdentifier") as? NSNumber, num.int32Value > 0 {
             self.lastKnownPID = num.int32Value
         }
-        DispatchQueue.main.async { [weak self] in
-            guard let self = self else { return }
+        performOnMain { [weak self] in
+            guard let self = self, !self.isDisposed else { return }
             self.isLoading = false
+            self.hasCompletedLoad = true
+            self.needsReload = false
+            self.lastLoadError = nil
+            self.automaticRetryCount = 0
+            self.terminationRecoveryCount = 0
             self.canGoBack = webView.canGoBack
             self.canGoForward = webView.canGoForward
             if let url = webView.url?.absoluteString {
@@ -226,10 +338,22 @@ public final class WebPanelController: NSObject, ObservableObject, WKNavigationD
     // MARK: - Memory & Background Lifecycle Optimization
 
     public func onPopoverOpened() {
+        guard !isDisposed else { return }
         isPopoverVisible = true
         webView?.setAllMediaPlaybackSuspended(false)
         let js = "if (document.hidden !== undefined) { Object.defineProperty(document, 'hidden', {value: false, configurable: true}); Object.defineProperty(document, 'visibilityState', {value: 'visible', configurable: true}); document.dispatchEvent(new Event('visibilitychange')); }"
         webView?.evaluateJavaScript(js, completionHandler: nil)
+
+        let target = currentURL.isEmpty ? homeURL : currentURL
+        if Self.shouldLoadOnPresentation(
+            hasPreloaded: hasPreloaded,
+            hasCompletedLoad: hasCompletedLoad,
+            needsReload: needsReload,
+            isLoading: isLoading,
+            hasCommittedURL: webView?.url != nil
+        ), SecurityPolicy.webURL(target) != nil {
+            loadURL(target)
+        }
     }
 
     public func onPopoverClosed() {
@@ -265,20 +389,72 @@ public final class WebPanelController: NSObject, ObservableObject, WKNavigationD
     }
 
     public func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) {
-        DispatchQueue.main.async { [weak self] in
-            self?.isLoading = false
-        }
+        handleNavigationFailure(error, isProvisional: false)
     }
 
     public func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) {
-        DispatchQueue.main.async { [weak self] in
-            self?.isLoading = false
+        handleNavigationFailure(error, isProvisional: true)
+    }
+
+    private func handleNavigationFailure(_ error: Error, isProvisional: Bool) {
+        guard !isDisposed else { return }
+        if Self.shouldIgnoreNavigationError(error) {
+            performOnMain { [weak self] in
+                guard let self, !self.isDisposed else { return }
+                if !(self.webView?.isLoading ?? false) {
+                    self.isLoading = false
+                }
+            }
+            return
+        }
+
+        let message = error.localizedDescription
+        performOnMain { [weak self] in
+            guard let self, !self.isDisposed else { return }
+            self.isLoading = false
+            self.needsReload = true
+            self.lastLoadError = message
+            if isProvisional || !self.hasCompletedLoad {
+                self.scheduleAutomaticRetry()
+            }
         }
     }
 
+    private func scheduleAutomaticRetry() {
+        guard !isDisposed, let delay = Self.retryDelay(forAttempt: automaticRetryCount) else { return }
+        let target = currentURL.isEmpty ? homeURL : currentURL
+        guard SecurityPolicy.webURL(target) != nil else { return }
+
+        automaticRetryCount += 1
+        cancelPendingRetry()
+        let expectedGeneration = loadGeneration
+        let item = DispatchWorkItem { [weak self] in
+            guard let self,
+                  !self.isDisposed,
+                  self.loadGeneration == expectedGeneration,
+                  self.needsReload || !self.hasCompletedLoad else { return }
+            self.performLoad(target, resetRetryBudget: false)
+        }
+        retryWorkItem = item
+        DispatchQueue.main.asyncAfter(deadline: .now() + delay, execute: item)
+    }
+
     public func webViewWebContentProcessDidTerminate(_ webView: WKWebView) {
-        lastKnownPID = nil
-        hasPreloaded = false
+        guard !isDisposed else { return }
+        performOnMain { [weak self] in
+            guard let self, !self.isDisposed else { return }
+            self.cancelPendingRetry()
+            self.lastKnownPID = nil
+            self.hasPreloaded = false
+            self.hasCompletedLoad = false
+            self.needsReload = true
+            self.isLoading = false
+            if self.isPopoverVisible && self.terminationRecoveryCount < Self.maxTerminationRecoveries {
+                self.terminationRecoveryCount += 1
+                let target = self.currentURL.isEmpty ? self.homeURL : self.currentURL
+                self.performLoad(target, resetRetryBudget: false)
+            }
+        }
     }
 
     // MARK: - WKNavigationDelegate Security & Policy
@@ -452,6 +628,41 @@ public struct WebPanelView: View {
                         Spacer()
                     }
                     .padding(.top, 10)
+                } else if !controller.hasCompletedLoad && controller.lastLoadError != nil {
+                    VStack(spacing: 10) {
+                        Image(systemName: "wifi.exclamationmark")
+                            .font(.system(size: 24, weight: .medium))
+                            .foregroundColor(.secondary)
+
+                        Text(l10n("web_panel.load_failed_title"))
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundColor(.primary)
+                            .multilineTextAlignment(.center)
+
+                        let originText = SecurityPolicy.origin(URL(string: controller.currentURL.isEmpty ? item.url : controller.currentURL))
+                        if !originText.isEmpty {
+                            Text(originText)
+                                .font(.caption2)
+                                .foregroundColor(.secondary)
+                                .lineLimit(1)
+                        }
+
+                        Button(action: { controller.reload() }) {
+                            Label(l10n("web_panel.retry_load"), systemImage: "arrow.clockwise")
+                                .font(.system(size: 11, weight: .medium))
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 5)
+                                .background(RoundedRectangle(cornerRadius: 6).fill(Color.accentColor))
+                                .foregroundColor(.white)
+                                .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
+                        .focusable(false)
+                        .focusEffectDisabled()
+                    }
+                    .padding(16)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .background(Color(nsColor: .windowBackgroundColor).opacity(0.95))
                 }
 
                 // Subtle floating button when toolbar is hidden to temporarily reveal it
