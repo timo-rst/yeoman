@@ -1,6 +1,6 @@
 # Security Implementation Report
 
-As of: 23 November 2026
+As of: 26 November 2026
 Audit Baseline: `c3c8e75`  
 Platform: macOS 14+, Swift/AppKit/SwiftUI  
 Status: v0.2.1 independently audited; YEA-01 through YEA-06 remediated for v0.2.2.
@@ -41,6 +41,7 @@ Per explicit user direction, Apple Developer ID signing and notarization are not
 | SEC-24 | The settings window is explicitly classified as a normal managed macOS window that participates in Mission Control, fullscreen mode, and window cycling until closed or minimized | Window-policy regression test verifies every collection-behavior flag | Standard macOS WindowServer behavior controls Mission Control layout and minimized-window presentation |
 | SEC-25 | Clipboard and task-manager popovers use one persisted pin preference per module; pinned state maps to native `applicationDefined` behavior and the footer/settings controls share the same observable state. The clipboard non-modal image preview panel follows the same pin state for outside-click and app-deactivation dismissal, and the full-image window decodes bounded image data strictly in memory | Isolated-defaults persistence, native popover-behavior, pin-aware dismissal-policy, and bounded initial window-sizing regression tests | Pinned popovers and their child preview panels remain user-controlled foreground UI until explicitly closed or unpinned |
 | SEC-26 | `FinderCutManager` monitors `.keyDown` events only while `com.apple.finder` is frontmost, excludes focused Accessibility text-input roles (`AXTextField`, `AXTextArea`, `AXSearchField`, `AXComboBox`, `AXWebArea`), validates pasteboard `changeCount` consistency, delegates file operations natively via Finder `AXMenuBar` press (`.privateState` synthetic fallback) without touching disk paths, stores zero keystrokes, uses `TapLifecycle` for TCC revocation, and bounds missing-permission fallback hotkeys to Finder with mute/cooldown controls. `FinderCutItemOverlayController` uses a click-through `.nonactivatingPanel` active only when Finder is frontmost with a pending cut, bounds AX element/depth scanning, and projects live WindowServer single-window bounds (`CGWindowListCopyWindowInfo`) during resize drags with zero polling when idle or outside Finder | Event-mask, shortcut classification, non-Finder pass-through, AX text-field exclusion, state-machine, pasteboard-mismatch, fallback-hotkey cooldown, header-clipping, adjacent-merge, and geometry-projection tests | Requires user-granted Accessibility permission; Finder retains full ownership of file moves, conflict resolution, and window visual ordering |
+| SEC-27 | `TerminalSaverMediaStore` isolates config and imported media under `SecureDirectory` (`0700`/`0600`) with UUID filenames, rejects symlinks/non-regular imports, enforces byte (`25 MiB` image / `40 MiB` video), pixel (`16 MP`), frame (`300`), duration (`30 s`), library (`64`), and decode-time (`15 s`) / cutout (`25 s`) limits in `TerminalSaverMediaDecoder`. `YeomanTermSaver` enforces TTY-only raw mode, signal-safe `termios` and Alternate Screen restoration, `50 ms` / `64-byte` escape-sequence assembly, bounded Auto-Advance loop/cutoff handling, and zero background daemon polling. `TerminalSaverShellIntegrator` rejects symlinks/FIFOs/foreign-owned rc files, preserves one-time backups, and uses delimited idempotent managed blocks | Filigree edge/ramp/color tests, synthetic GIF/PNG/MP4 decode & symlink/corrupt rejection tests, config sanitization tests, random-mode/ASCII-transition/auto-advance-cutoff regressions, and isolated temp-home shell install/uninstall/symlink-rejection tests | Prompt-idle shell hooks (`zsh`/`bash`/`fish`) do not activate while an editor or foreground command owns the TTY unless run inside `tmux` |
 
 ## Audit Remediation (Findings from SECURITY_REVIEW.md)
 
@@ -83,3 +84,148 @@ Per explicit user direction, Apple Developer ID signing and notarization are not
 - `./Scripts/package_release.sh`: Successful for v0.2.9 using external `0600` release key; produced `dist/Yeoman.dmg`, `dist/Yeoman.zip`, and signed `dist/Yeoman.update.json`.
 - Signed manifest verification: Successful; Ed25519 signature, version `0.2.9`, archive size `4247043`, and archive SHA-256 (`e803d561bc4c6582ea2842dc981c549a411434b11900b7e5eef392e0cf709083`) all match.
 - `git diff --check`: Clean; no whitespace or syntax errors.
+
+## Built-in Terminal Saver scene settings
+
+Scene speed, palette, and the optional 3D Donut shading style use the existing descriptor-relative configuration file and its 512 KiB read/write limit. Configurations saved before these options were added retain the original colors, glyphs, and 1.0× speed. The config store clamps scene speeds to 0.1×–2.0×, falls back to 1.0× for non-finite values before saving, and discards style overrides for scenes with fixed glyphs.
+
+The isolated config-store regression covers legacy defaults, independent scene overrides, and speed bounds. The renderer regression checks speed and color across all eight scenes and verifies that alternate Donut styles preserve the visible cell positions.
+
+Local verification on macOS 26.7.3 (arm64):
+
+- `swift build` and `git diff --check` passed. Untracked source and test files passed a separate whitespace check.
+- `swift run YeomanTests` and `swift run --sanitize thread YeomanTests` each passed 135/135 tests. ThreadSanitizer reported no findings.
+- The debug `YeomanTermSaver` loaded a synthetic per-scene config in an isolated pseudo-terminal, rendered the saved Amber palette and Strokes style, and exited on a wake key.
+- `./Scripts/build_app.sh development` and `codesign --verify --deep --strict dist/Yeoman.app` passed in a temporary workspace. The development executable SHA-256 hashes were:
+  - `Yeoman` — `01c4c665b3242c3d857bccba8d1afd039559a92f7f462b9d2ff20c58817fb216`
+  - `YeomanTermSaver` — `429fff2d513aa83d96afe7d54699909cb473ce5d5ac7e5ddb1bb134b9c5e603b`
+  - `YeomanInstaller` — `372dd5c431c0e8b7948677930055002132b6f5852a13f0037e3ab1ace8a5fd8c`
+
+## Bouncing DVD Logo preset
+
+The DVD preset draws a local ASCII logo at a reflected position within the existing bounded grid and advances the original palette on each impact. The former `moonlitRain` identifier decodes as `bouncingDVD` in saved selections, rotation state, scene settings, and CLI scene arguments. New saves use `bouncingDVD`.
+
+On macOS 26.7.3 (arm64), `swift build` and `git diff --check` passed. Both `swift run YeomanTests` and `swift run --sanitize thread YeomanTests` passed 137/137 tests, including saved-scene compatibility and reflection against both grid edges. ThreadSanitizer reported no findings. In an isolated pseudo-terminal, both CLI identifiers rendered the DVD logo, changed colors, and exited on input.
+
+`./Scripts/build_app.sh development` and `codesign --verify --deep --strict` passed for the locally installed bundle. Its executable SHA-256 hashes are:
+
+- `Yeoman` — `e594ec618146ba6905c9ea91e4632a3e198d16ca3a37691a87ba3c4369b2ac7c`
+- `YeomanTermSaver` — `d483545f651d5ad4e006379fda2d07630f69cce7846406bc854dd8a309ca989e`
+- `YeomanInstaller` — `595b135ded38ee53aacf96bbd3e4e865568e101efd58921a98c2cd146b4c0b4f`
+
+
+## Buffered terminal navigation
+
+The helper assembles split key sequences across multiple reads within a monotonic 50 ms deadline and 64-byte cap. Terminal focus notifications and legacy status replies remain non-waking inputs. Frame pacing for buffered terminals uses a monotonic schedule without terminal status queries. One pending navigation action can carry across a scene transition while a wake key still interrupts immediately.
+
+On macOS 26.7.3 (arm64), `swift build`, `git diff --check`, `./Scripts/build_app.sh development`, and strict deep signature verification passed. `swift run YeomanTests` and `swift run --sanitize thread YeomanTests` each passed 138/138 tests. The added regression uses separate socket datagrams to exercise multi-read arrows and Page Down along with expiration of a bare Escape.
+
+The pre-fix helper exited on a Right Arrow split across three pseudo-terminal reads. The installed helper was exercised through an isolated pseudo-terminal paired with the headless xterm package (6.1.0-beta.213) bundled in VS Code 1.121.0. The test verified entry animation, transition frames in both directions, queued navigation, continued playback after switching, and return to the normal screen with the original terminal attributes restored. It did not exercise the graphical VS Code renderer.
+
+Installed development executable SHA-256 hashes:
+
+- `Yeoman` — `f9a889dd80d866d7aa2807afc9f6bcfdcaf53cdf3c2ec9212a72a9ae2c4fdbb7`
+- `YeomanTermSaver` — `7ede165ce5d0a6bb625de2041ae058bf90e1537f40603fc52ded93590db23e28`
+- `YeomanInstaller` — `147867a06b13a60a27ed4a9bddf478b25aa1fe188c1b5e2b72924a5feb102ad6`
+
+## Repeating Terminal Saver scene order
+
+The bounded rotation file retains a full permutation of the active sources and its remaining suffix. Navigation wraps in either direction and each activation resumes from the persisted cursor. Legacy saves retain their known unplayed suffix. Removing a source filters it from the order, while adding a source generates a new permutation. The store serializes rotation mutations using the existing private directory descriptor and rejects cursor writes from sessions whose saved snapshot has since changed.
+
+On macOS 26.7.3 (arm64), `swift build`, `git diff --check`, and `./Scripts/build_app.sh development` passed. Both `swift run YeomanTests` and `swift run --sanitize thread YeomanTests` passed 140/140 tests. The installed helper kept one three-scene permutation through 17 forward/backward changes and six reactivations in an isolated pseudo-terminal. The development helper also passed the buffered xterm transition regression. `codesign --verify --deep --strict` passed on the installed bundle.
+
+Installed development executable SHA-256 hashes:
+
+- `Yeoman` — `dc247f78ac774fada030f40fa3bd8c18cd2595ad756877887ae02f6f0ce2188d`
+- `YeomanTermSaver` — `bd3036a9b1c8c5c4e37bc777874ed00f6317fad511203e48addaec19c52b7c31`
+- `YeomanInstaller` — `d24207f006ac2e7bb4d5b91b3e5da5c37c05aeb90a8cb2594af5abf5aa9ec18e`
+
+## Terminal Saver settings retention
+
+The module flushes pending settings during shutdown while preserving the saved activation flag for the shell helper. The manager distinguishes the last committed configuration from unsaved edits, keeps failed writes available for retry, and reports configuration and managed-hook write failures. An unreadable configuration disables manager writes for that app session and stays on disk for recovery.
+
+On macOS 26.7.3 (arm64), `swift build`, `git diff --check`, and `./Scripts/build_app.sh development` passed. Both `swift run YeomanTests` and `swift run --sanitize thread YeomanTests` passed 143/143 tests. An isolated module shutdown test verified the full configuration, original imported GIF bytes and the updated managed zsh timeout after reloading. Negative tests preserved unreadable bytes and verified that a failed save could be retried. With a synthetic enabled config, the signed helper ran through repeated activations in a pseudo-terminal using `--run`. `codesign --verify --deep --strict` passed on the installed app.
+
+Installed development executable SHA-256 hashes:
+
+- `Yeoman` — `138f87cb5a1ec7b76b392cbfa63aeafae412ba57218170add7b13b072f98effc`
+- `YeomanTermSaver` — `6b46f34cafdcbca3128dd83de36df61f08651355e444eaa00eee94a6b77368b5`
+- `YeomanInstaller` — `49b6ab2a2381b332a4e5af28052c9de422794dba91bd41a654059731f97337b4`
+
+## Terminal Saver color output and resize handling
+
+Integrated IDE terminals now use the xterm 256-color palette for all frames to limit the number of glyph and color combinations the renderer caches. Native terminal color detection remains in effect. A resize invalidates the incremental frame baseline, interrupts animations tied to the old grid and coalesces resize bursts before a full redraw. Playback waits for a drawable size if the window is smaller than the supported grid.
+
+An isolated pseudo-terminal reproduced old-grid writes during the entry animation in the prior helper. The updated helper passed resize checks during playback, entry, scene transitions and wake, including recovery from a window below the minimum size. In a 1.5-second Bonfire sample with the VS Code environment, the prior helper emitted 338 RGB colors and the updated helper emitted seven indexed colors. Pipes also used indexed colors. A Ghostty environment retained TrueColor and synchronized output. The headless xterm parser bundled with VS Code 1.121.0 decoded the expected Bonfire glyphs from both versions. The graphical IDE renderer and macOS 14 were outside this verification.
+
+On macOS 26.7.3 (arm64), `swift build`, `git diff --check`, `./Scripts/build_app.sh development` and `codesign --verify --deep --strict dist/Yeoman.app` passed. Both `swift run YeomanTests` and `swift run --sanitize thread YeomanTests` passed 143/143 tests. ThreadSanitizer reported no findings.
+
+Development bundle executable SHA-256 hashes
+
+- `Yeoman` — `210a12c9dddf889045b2c11176570711d558e830b71a1d5a1c555d93e00a2030`
+- `YeomanTermSaver` — `1d948fca6e221e5327a873bda7f24da7df0e946879c98a2eb8743fbfabfb8934`
+- `YeomanInstaller` — `cc9e735d3451890c5d760b3f15cb12f39a915741c76015775663e9897a74a92d`
+
+## Terminal Saver forward and reverse loops
+
+The optional loop setting is stored per animated item in the existing bounded configuration. Older configurations default to forward playback. Preview and terminal playback share the same frame cursor and reuse the decoded frames. The cursor displays each turning frame once and leaves the imported media and cutout cache formats intact. The video decoder orders its bounded samples by their requested times before playback.
+
+An isolated pseudo-terminal played a synthetic MP4 and GIF in both modes. Each reversed loop followed the frame order `0, 1, 2, 3, 2, 1, 0, 1` and preserved the original media bytes. An isolated live preview played the GIF in both modes and applied a setting change without reopening the preview. The configuration tests verified legacy defaults, per-item persistence and settings retention on shutdown.
+
+On macOS 26.7.3 (arm64), `swift build`, `git diff --check`, `./Scripts/build_app.sh development` and `codesign --verify --deep --strict dist/Yeoman.app` passed. Both `swift run YeomanTests` and `swift run --sanitize thread YeomanTests` passed 144/144 tests. ThreadSanitizer reported no findings. Verification covered the local arm64 development bundle on macOS 26.7.3.
+
+Development bundle executable SHA-256 hashes
+
+- `Yeoman` — `0febd94907c6785a3eb0e780a3e38b75cc75b3f616eb2534193d2ca821360324`
+- `YeomanInstaller` — `085b099fa2863b542ce83f75cd98c7b297149e2ee10462a64fc4d5d263bd7524`
+- `YeomanTermSaver` — `e2de00ce37a9f17a4b98dd6b9d735974f2d02ffc9989c2037357e11368563618`
+
+## Terminal Saver automatic scene advancement
+
+The existing bounded settings document now stores the automatic advancement mode, duration and repetition count. Saved configurations predating the setting default to off. The helper counts complete media cycles, including the return leg of a forward and reverse loop. Built-in scenes and stills use the duration in repetition mode. Timed changes use the monotonic clock. Automatic and manual changes use the same navigation and rotation persistence path. The timer and repetition count restart on each source change.
+
+An isolated pseudo-terminal exercised a right-arrow switch before the timer expired, a fresh five-second interval on the next source, automatic advancement and a subsequent left-arrow switch. Synthetic GIFs advanced after two forward or forward-and-reverse cycles, and a built-in scene advanced on the fallback duration. Off mode, a single active source and a forced-source session each suppressed automatic advancement.
+
+On macOS 26.7.3 (arm64), `swift build`, `git diff --check`, `./Scripts/build_app.sh development` and `codesign --verify --deep --strict dist/Yeoman.app` passed. Both `swift run YeomanTests` and `swift run --sanitize thread YeomanTests` passed 146/146 tests. ThreadSanitizer reported no findings. Verification covered the local arm64 development bundle on macOS 26.7.3.
+
+Development bundle executable SHA-256 hashes
+
+- `Yeoman` — `171b1cf47207b6b442a9eb70f4b1b6201c4ce7b61e6fc5cd73aec23ec2219fb5`
+- `YeomanTermSaver` — `deabb2cf0865e0c4fed38c936e57cd3b97f28cd33dcecff4d03bae8459b39c96`
+- `YeomanInstaller` — `b084725fd49bedc2347bfae20b20a375b9849d072183dc6da7121500c3c41e1f`
+
+## Terminal Saver timed advancement at loop boundaries
+
+Timed advancement supersedes the earlier repetition mode. A saved repetition preference becomes timed advancement and retains its saved duration. Automatic changes wait for the current animated-media cycle to finish, including the reverse leg when enabled. Built-in scenes and still images advance on the timer. Automatic changes use a dissolve when the selected transition is instant. Manual navigation continues to use the selected transition.
+
+An isolated pseudo-terminal expired a five-second timer during a synthetic forward loop and a forward-and-reverse loop. The helper played the rest of each loop before beginning a blended transition. A manual arrow press during the pending reverse leg switched immediately. A still image with the legacy repetition preference began its transition at the migrated deadline.
+
+On macOS 26.7.3 (arm64), `swift build`, `git diff --check`, `./Scripts/build_app.sh development` and `codesign --verify --deep --strict dist/Yeoman.app` passed. Both `swift run YeomanTests` and `swift run --sanitize thread YeomanTests` passed 146/146 tests. ThreadSanitizer reported no findings.
+
+Development bundle executable SHA-256 hashes
+
+- `Yeoman` — `f3e3453946985ae82691cee2e0ee69fa42ac8c89b5f0ff098084e0ad4d92bc86`
+- `YeomanTermSaver` — `2de414ef11ae5b1b0b442a762f321bc5b9328e96fd5ba11392464c1aec2c570b`
+- `YeomanInstaller` — `174a67e5a9634c215372e0d7793bb728b27c89283a5290e9751a45db3458210c`
+
+
+## Release 0.3.0 (12) Packaging & Verification
+
+Verification executed on macOS 26.7.3 (`arm64`) for release `0.3.0 (12)`:
+
+- `swift build`: Successful.
+- `swift run YeomanTests`: **152/152 tests passed**.
+- `swift run --sanitize thread YeomanTests`: **152/152 tests passed**, 0 ThreadSanitizer warnings.
+- `Scripts/capture_real_screenshots.swift` and `Scripts/generate_tool_graphics.swift`: Compiled cleanly against `YeomanCore` without weakening access control and rendered updated module graphics in `Resources/Mockups/`.
+- `./Scripts/package_release.sh`: Passed `YeomanTests` (`152/152`), `./Scripts/build_app.sh release` (`YeomanReleaseSign --check-trust`), and external-key signing; produced `dist/Yeoman.dmg`, `dist/Yeoman.zip`, and signed `dist/Yeoman.update.json`.
+- Independent Ed25519 manifest verification (`dist/Yeoman.update.json` vs `UpdateTrust.publicKeyBase64`): Passed (`product=de.trst.Yeoman`, `version=0.3.0`, `archive=Yeoman.zip`, `size=7986112`, `sha256=57810a6b754e7535c955abd071f5011d503cea3f0f1ab3b7d741a43e093f0957`).
+- `codesign --verify --deep --strict`: Passed for `dist/Yeoman.app`, `dist/Yeoman.app/Contents/Helpers/YeomanTermSaver`, `dist/Yeoman.app/Contents/Helpers/YeomanInstaller`, and `/Applications/Yeoman.app`.
+- `git diff --check`: Clean; zero emojis detected across `README.md`, `RELEASE_NOTES.md`, `Scripts/capture_real_screenshots.swift`, and `Scripts/generate_tool_graphics.swift`.
+- `Yeoman.zip` (`7986112` bytes) SHA-256: `57810a6b754e7535c955abd071f5011d503cea3f0f1ab3b7d741a43e093f0957`.
+- `Yeoman.dmg` (`9969288` bytes) SHA-256: `b1c14da977b65060a8075d956d909633fe62d9a8514b225c92d9c16e625c7408`.
+
+Release bundle executable SHA-256 hashes (`0.3.0 (12)`):
+
+- `Yeoman` — `540320e9cdce04d989d2cc3e97d76f25d562efaf437bc58d6614f40b5dff754c`
+- `YeomanInstaller` — `2fa4ef12df0ad90a2d1793e22f31c46a56172f1596fb5c017129518c8a5a3267`
+- `YeomanTermSaver` — `73d842d8907494915bc9a037a4741543f53178e46a67e151f40c3f760e6b3fe9`

@@ -12,6 +12,7 @@ public final class ModuleManager: ObservableObject {
     public lazy var systemStatsModule = SystemStatsModule()
     public lazy var scrollReverserModule = ScrollReverserModule()
     public lazy var finderCutModule = FinderCutModule()
+    public lazy var terminalSaverModule = TerminalSaverModule()
     
     public init(modules: [any CustomizerModule]? = nil) {
         if let modules { self.modules = modules }
@@ -25,7 +26,8 @@ public final class ModuleManager: ObservableObject {
             clipboardModule,
             systemStatsModule,
             scrollReverserModule,
-            finderCutModule
+            finderCutModule,
+            terminalSaverModule
         ]
     }
     
@@ -61,6 +63,7 @@ public final class ModuleManager: ObservableObject {
         webPanelModule.updateStatusItemVisibility()
         scrollReverserModule.updateStatusItemVisibility()
         finderCutModule.updateStatusItemVisibility()
+        terminalSaverModule.updateStatusItemVisibility()
         StatusItemController.shared.updateStatusItemVisibility()
     }
     
@@ -71,6 +74,7 @@ public final class ModuleManager: ObservableObject {
             self.systemStatsModule.removeStatusItem()
             self.scrollReverserModule.removeStatusItem()
             self.finderCutModule.removeStatusItem()
+            self.terminalSaverModule.removeStatusItem()
             self.clipboardModule.removeStatusItem()
             self.webPanelModule.removeAllStatusItems()
             self.menuBarModule.removeStatusItem()
@@ -83,6 +87,8 @@ public final class ModuleManager: ObservableObject {
             self.scrollReverserModule.setupStatusItem()
             // Next: Finder Cut
             self.finderCutModule.setupStatusItem()
+            // Next: Terminal Saver
+            self.terminalSaverModule.setupStatusItem()
             // Next: Clipboard
             self.clipboardModule.setupStatusItem()
             // Next: Web Widgets

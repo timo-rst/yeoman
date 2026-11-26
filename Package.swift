@@ -29,6 +29,11 @@ let package = Package(
             path: "Sources/YeomanInstaller"
         ),
         .executableTarget(
+            name: "YeomanTermSaver",
+            dependencies: ["YeomanCore"],
+            path: "Sources/YeomanTermSaver"
+        ),
+        .executableTarget(
             name: "Yeoman",
             dependencies: ["YeomanCore"],
             path: "Sources/Yeoman/App"

@@ -79,7 +79,10 @@ public struct ClipboardSettingsView: View {
                         VStack(alignment: .leading, spacing: 14) {
                             Toggle(l10n("clipboard.pause_recording"), isOn: $monitor.isPaused)
                             Toggle(l10n("common.keep_window_pinned"), isOn: $popoverPin.isPinned)
-                            TextField(l10n("clipboard.excluded_bundle_ids"), text: $monitor.excludedBundleIDs)
+                            HStack(spacing: 6) {
+                                TextField(l10n("clipboard.excluded_bundle_ids"), text: $monitor.excludedBundleIDs)
+                                InfoTooltip(text: l10n("clipboard.excluded_bundle_ids_tooltip"))
+                            }
                             Toggle(l10n("clipboard.save_encrypted"), isOn: Binding(get: { store.isPersistent }, set: { store.setPersistent($0) }))
                             if let error = store.storageError { Text(error).foregroundColor(.red).font(.caption) }
                             Text(l10n("clipboard.options_monitoring_title"))

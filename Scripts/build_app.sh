@@ -9,12 +9,12 @@ if [[ "$MODE" != "development" && "$MODE" != "release" ]]; then
     echo "Usage: $0 [development|release]" >&2
     exit 1
 fi
-VERSION="${YEOMAN_VERSION:-0.2.9}"
+VERSION="${YEOMAN_VERSION:-0.3.0}"
 if [[ ! "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
     echo "Invalid YEOMAN_VERSION" >&2
     exit 1
 fi
-BUILD_VERSION="${YEOMAN_BUILD_VERSION:-11}"
+BUILD_VERSION="${YEOMAN_BUILD_VERSION:-12}"
 if [[ ! "$BUILD_VERSION" =~ ^[1-9][0-9]*$ ]]; then
     echo "Invalid YEOMAN_BUILD_VERSION" >&2
     exit 1
@@ -40,6 +40,8 @@ mkdir -p "$RESOURCES_DIR" "$CONTENTS_DIR/Helpers"
 cp "$BUILD_BIN" "$MACOS_DIR/$APP_NAME"
 chmod +x "$MACOS_DIR/$APP_NAME"
 cp .build/release/YeomanInstaller "$CONTENTS_DIR/Helpers/YeomanInstaller"
+cp .build/release/YeomanTermSaver "$CONTENTS_DIR/Helpers/YeomanTermSaver"
+chmod +x "$CONTENTS_DIR/Helpers/YeomanTermSaver"
 
 if [ -f "Resources/AppIcon.icns" ]; then
     cp "Resources/AppIcon.icns" "$RESOURCES_DIR/AppIcon.icns"
@@ -84,6 +86,7 @@ EOF
 # authentication is provided by the pinned Ed25519 key and signed ZIP manifest.
 echo "==> Signing helper and application for integrity..."
 codesign --force --sign - --options runtime "$CONTENTS_DIR/Helpers/YeomanInstaller"
+codesign --force --sign - --options runtime "$CONTENTS_DIR/Helpers/YeomanTermSaver"
 codesign --force --sign - --options runtime "$APP_BUNDLE"
 codesign --verify --deep --strict "$APP_BUNDLE"
 echo "==> Created $APP_BUNDLE ($MODE)"

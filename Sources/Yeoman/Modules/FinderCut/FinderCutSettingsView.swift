@@ -86,6 +86,7 @@ public struct FinderCutSettingsView: View {
                                     .foregroundColor(.accentColor)
                                 Text(l10n("finder_cut.how_it_works"))
                                     .font(.headline)
+                                InfoTooltip(text: l10n("finder_cut.text_safe_note"))
                             }
 
                             Divider()
@@ -93,16 +94,6 @@ public struct FinderCutSettingsView: View {
                             ShortcutRow(keys: "⌘X", description: l10n("finder_cut.shortcut_cut"))
                             ShortcutRow(keys: "⌘V", description: l10n("finder_cut.shortcut_paste"))
                             ShortcutRow(keys: "⌘C / Esc", description: l10n("finder_cut.shortcut_cancel"))
-
-                            HStack(alignment: .top, spacing: 6) {
-                                Image(systemName: "checkmark.shield")
-                                    .font(.caption)
-                                    .foregroundColor(.green)
-                                Text(l10n("finder_cut.text_safe_note"))
-                                    .font(.caption)
-                                    .foregroundColor(.secondary)
-                            }
-                            .padding(.top, 2)
                         }
                         .padding()
                         .background(RoundedRectangle(cornerRadius: 12).fill(Color(nsColor: .controlBackgroundColor)))

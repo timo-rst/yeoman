@@ -409,10 +409,10 @@ public final class LocalizationManager: ObservableObject {
             .french: "Ouvrir automatiquement au démarrage du Mac"
         ],
         "general.launch_at_login_tooltip": [
-            .german: "Startet Yeoman automatisch beim Hochfahren deines Macs (Launch at Login).",
-            .english: "Starts Yeoman automatically when your Mac boots up (Launch at Login).",
-            .spanish: "Inicia Yeoman automáticamente cuando tu Mac se enciende (Launch at Login).",
-            .french: "Lance Yeoman automatiquement au démarrage de votre Mac (Launch at Login)."
+            .german: "Startet Yeoman automatisch beim Hochfahren deines Macs.",
+            .english: "Starts Yeoman automatically when your Mac boots up.",
+            .spanish: "Inicia Yeoman automáticamente cuando tu Mac se enciende.",
+            .french: "Lance Yeoman automatiquement au démarrage de votre Mac."
         ],
         "general.show_dock_icon": [
             .german: "Dock-Symbol anzeigen",
@@ -433,8 +433,8 @@ public final class LocalizationManager: ObservableObject {
             .french: "Afficher l'icône principale dans la barre des menus"
         ],
         "general.show_main_status_item_tooltip": [
-            .german: "Zeigt das Yeoman Hauptsymbol (Launcher) in der Menüleiste an, über das du schnellen Zugriff auf alle Module hast.",
-            .english: "Shows the Yeoman main launcher icon in the menu bar for quick access to all modules.",
+            .german: "Zeigt das Hauptsymbol von Yeoman in der Menüleiste an, über das du schnellen Zugriff auf alle Module hast.",
+            .english: "Shows the main Yeoman icon in the menu bar for quick access to all modules.",
             .spanish: "Muestra el icono principal de Yeoman en la barra de menús para acceder rápidamente a todos los módulos.",
             .french: "Affiche l'icône principale de Yeoman dans la barre des menus pour un accès rapide à tous les modules."
         ],
@@ -457,10 +457,10 @@ public final class LocalizationManager: ObservableObject {
             .french: "Espacement des icônes et configuration de la barre des menus"
         ],
         "general.scroll_reverser_title": [
-            .german: "Scroll-Richtung (Maus)",
-            .english: "Scroll Direction (Mouse)",
-            .spanish: "Dirección de desplazamiento (Ratón)",
-            .french: "Sens de défilement (Souris)"
+            .german: "Scroll-Richtung",
+            .english: "Scroll Direction",
+            .spanish: "Desplazamiento",
+            .french: "Défilement"
         ],
         "general.scroll_reverser_sub": [
             .german: "Kehrt die Scrollrichtung der Maus um, während das Trackpad unverändert bleibt",
@@ -469,22 +469,22 @@ public final class LocalizationManager: ObservableObject {
             .french: "Inverse le sens de défilement de la souris tout en conservant le trackpad naturel"
         ],
         "general.finder_cut_title": [
-            .german: "Finder Ausschneiden (⌘X)",
-            .english: "Finder Cut (⌘X)",
-            .spanish: "Cortar en Finder (⌘X)",
-            .french: "Couper dans le Finder (⌘X)"
+            .german: "Finder Ausschneiden",
+            .english: "Finder Cut",
+            .spanish: "Cortar en Finder",
+            .french: "Couper dans le Finder"
         ],
         "general.finder_cut_sub": [
-            .german: "Ermöglicht echtes Ausschneiden (⌘X) und Einfügen (⌘V) von Dateien im Finder wie unter Windows",
-            .english: "Enables Windows-style Cut (⌘X) and Paste (⌘V) for files and folders in Finder",
-            .spanish: "Permite cortar (⌘X) y pegar (⌘V) archivos y carpetas en Finder como en Windows",
-            .french: "Permet de couper (⌘X) et coller (⌘V) des fichiers et dossiers dans le Finder comme sous Windows"
+            .german: "Dateien im Finder mit ⌘X ausschneiden und mit ⌘V verschieben",
+            .english: "Cut files in Finder with ⌘X and move them with ⌘V",
+            .spanish: "Corta archivos en Finder con ⌘X y muévelos con ⌘V",
+            .french: "Coupez des fichiers dans le Finder avec ⌘X et déplacez-les avec ⌘V"
         ],
         "general.web_panel_title": [
-            .german: "Web-Widgets (Popups)",
-            .english: "Web Widgets (Popups)",
-            .spanish: "Widgets web (Ventanas emergentes)",
-            .french: "Widgets Web (Popups)"
+            .german: "Web-Widgets",
+            .english: "Web Widgets",
+            .spanish: "Widgets web",
+            .french: "Widgets Web"
         ],
         "general.web_panel_sub": [
             .german: "Schnellzugriff auf Webseiten wie Kalender oder Notizen direkt aus der Menüleiste",
@@ -665,7 +665,7 @@ public final class LocalizationManager: ObservableObject {
             .french: "Téléchargement de la mise à jour..."
         ],
         "updates.release_notes": [
-            .german: "Änderungsprotokoll (Release Notes):",
+            .german: "Änderungsprotokoll:",
             .english: "Release Notes:",
             .spanish: "Notas de la versión:",
             .french: "Notes de version :"
@@ -763,16 +763,16 @@ public final class LocalizationManager: ObservableObject {
             .french: "Ajuster l'espacement de la barre des menus"
         ],
         "menubar.spacing_slider": [
-            .german: "Symbol-Abstand (NSStatusItemSpacing)",
-            .english: "Icon Spacing (NSStatusItemSpacing)",
-            .spanish: "Espaciado de iconos (NSStatusItemSpacing)",
-            .french: "Espacement des icônes (NSStatusItemSpacing)"
+            .german: "Symbol-Abstand",
+            .english: "Icon Spacing",
+            .spanish: "Espaciado de iconos",
+            .french: "Espacement des icônes"
         ],
         "menubar.padding_slider": [
-            .german: "Auswahl-Polsterung (NSStatusItemSelectionPadding)",
-            .english: "Selection Padding (NSStatusItemSelectionPadding)",
-            .spanish: "Relleno de selección (NSStatusItemSelectionPadding)",
-            .french: "Rembourrage de sélection (NSStatusItemSelectionPadding)"
+            .german: "Klickbereich",
+            .english: "Click Area",
+            .spanish: "Área de clic",
+            .french: "Zone de clic"
         ],
         "menubar.preset_standard": [
             .german: "Standard",
@@ -1121,10 +1121,10 @@ public final class LocalizationManager: ObservableObject {
 
         // Scroll Reverser
         "scroll_reverser.title": [
-            .german: "Scroll-Richtung (Maus)",
-            .english: "Scroll Direction (Mouse)",
-            .spanish: "Dirección de desplazamiento (Ratón)",
-            .french: "Sens de défilement (Souris)"
+            .german: "Scroll-Richtung",
+            .english: "Scroll Direction",
+            .spanish: "Desplazamiento",
+            .french: "Défilement"
         ],
         "scroll_reverser.subtitle": [
             .german: "Kehrt die Scrollrichtung der Maus um, während das Trackpad unverändert bleibt.",
@@ -1133,10 +1133,10 @@ public final class LocalizationManager: ObservableObject {
             .french: "Inverse le sens de défilement de la souris tout en conservant le trackpad naturel."
         ],
         "scroll_reverser.mouse_header": [
-            .german: "Maus (Klassisches Scrollrad)",
-            .english: "Mouse (Classic Scroll Wheel)",
-            .spanish: "Ratón (Rueda de desplazamiento clásica)",
-            .french: "Souris (Molette de défilement classique)"
+            .german: "Maus",
+            .english: "Mouse",
+            .spanish: "Ratón",
+            .french: "Souris"
         ],
         "scroll_reverser.mouse_tooltip": [
             .german: "Gilt für herkömmliche USB-, Funk- und Bluetooth-Mäuse mit physischem Scrollrad.",
@@ -1197,10 +1197,10 @@ public final class LocalizationManager: ObservableObject {
             .french: "Utilisez des applications Web directement comme icônes de barre de menus avec fenêtre dynamique."
         ],
         "web_panel.status_count": [
-            .german: "%d Web-Widget(s) eingerichtet • %d aktiv in der Menüleiste",
-            .english: "%d web widget(s) configured • %d active in menu bar",
-            .spanish: "%d widget(s) web configurado(s) • %d activo(s) en la barra de menús",
-            .french: "%d widget(s) Web configuré(s) • %d actif(s) dans la barre des menus"
+            .german: "%d eingerichtet • %d aktiv",
+            .english: "%d configured • %d active",
+            .spanish: "%d configurados • %d activos",
+            .french: "%d configurés • %d actifs"
         ],
         "web_panel.add_button": [
             .german: "Neues Web-Widget hinzufügen",
@@ -1359,10 +1359,10 @@ public final class LocalizationManager: ObservableObject {
             .french: "Personnalisez le nom, l'URL, l'icône et la taille de la fenêtre."
         ],
         "web_panel.editor_sec1": [
-            .german: "Name & Ziel-Webseite (URL)",
-            .english: "Name & Target Website (URL)",
-            .spanish: "Nombre y sitio web de destino (URL)",
-            .french: "Nom et site Web cible (URL)"
+            .german: "Name & Adresse",
+            .english: "Name & Address",
+            .spanish: "Nombre y dirección",
+            .french: "Nom et adresse"
         ],
         "web_panel.editor_name_label": [
             .german: "Name des Web-Widgets:",
@@ -1377,10 +1377,10 @@ public final class LocalizationManager: ObservableObject {
             .french: "ex. Calendrier Proton"
         ],
         "web_panel.editor_url_label": [
-            .german: "Website-Adresse (URL):",
-            .english: "Website Address (URL):",
-            .spanish: "Dirección del sitio web (URL):",
-            .french: "Adresse du site Web (URL) :"
+            .german: "Adresse:",
+            .english: "Address:",
+            .spanish: "Dirección:",
+            .french: "Adresse :"
         ],
         "web_panel.editor_templates": [
             .german: "Schnellvorlagen:",
@@ -1419,10 +1419,10 @@ public final class LocalizationManager: ObservableObject {
             .french: "Hauteur :"
         ],
         "web_panel.editor_zoom": [
-            .german: "Seiten-Skalierung (Zoom):",
-            .english: "Page Scale (Zoom):",
-            .spanish: "Escala de página (Zoom):",
-            .french: "Mise à l'échelle (Zoom) :"
+            .german: "Zoom:",
+            .english: "Zoom:",
+            .spanish: "Zoom:",
+            .french: "Zoom :"
         ],
         "web_panel.editor_appearance": [
             .german: "Darstellung:",
@@ -1437,9 +1437,9 @@ public final class LocalizationManager: ObservableObject {
             .french: "Options supplémentaires"
         ],
         "web_panel.editor_pin": [
-            .german: "Fenster anheften (Pin)",
+            .german: "Fenster anpinnen",
             .english: "Pin Window",
-            .spanish: "Fijar ventana (Pin)",
+            .spanish: "Fijar ventana",
             .french: "Épingler la fenêtre"
         ],
         "web_panel.editor_pin_tooltip": [
@@ -1535,10 +1535,16 @@ public final class LocalizationManager: ObservableObject {
             .french: "Application en cours..."
         ],
         "menubar.fine_tuning": [
-            .german: "Feinabstimmung (Pixel-genau)",
-            .english: "Fine Tuning (Pixel-precise)",
-            .spanish: "Ajuste fino (precisión de píxel)",
-            .french: "Réglage fin (au pixel près)"
+            .german: "Feinabstimmung",
+            .english: "Fine Tuning",
+            .spanish: "Ajuste fino",
+            .french: "Réglage fin"
+        ],
+        "menubar.fine_tuning_tooltip": [
+            .german: "Passt Symbol-Abstand und Klickbereich punktgenau an.",
+            .english: "Adjusts icon spacing and click area down to the point.",
+            .spanish: "Ajusta el espaciado y el área de clic con precisión.",
+            .french: "Ajuste l'espacement et la zone de clic au point près."
         ],
         "menubar.preset_generous": [
             .german: "Großzügig",
@@ -1585,10 +1591,10 @@ public final class LocalizationManager: ObservableObject {
             .french: "Surveillance et sécurité"
         ],
         "clipboard.options_max_items": [
-            .german: "Maximale Anzahl gespeicherter Elemente:",
-            .english: "Maximum number of saved items:",
-            .spanish: "Número máximo de elementos guardados:",
-            .french: "Nombre maximal d'éléments enregistrés :"
+            .german: "Verlaufsgröße:",
+            .english: "History Limit:",
+            .spanish: "Límite:",
+            .french: "Limite :"
         ],
         "clipboard.options_items_count_format": [
             .german: "%d Einträge",
@@ -1671,10 +1677,16 @@ public final class LocalizationManager: ObservableObject {
             .french: "Mettre en pause l'enregistrement"
         ],
         "clipboard.excluded_bundle_ids": [
-            .german: "Ausgeschlossene Bundle-IDs, durch Kommas getrennt",
-            .english: "Excluded Bundle IDs, comma separated",
-            .spanish: "IDs de bundle excluidos, separados por comas",
-            .french: "Identifiants de paquet exclus, séparés par des virgules"
+            .german: "Ausgeschlossene Apps",
+            .english: "Excluded Apps",
+            .spanish: "Apps excluidas",
+            .french: "Apps exclues"
+        ],
+        "clipboard.excluded_bundle_ids_tooltip": [
+            .german: "Kommagetrennte Bundle-IDs von Apps, deren Kopien nicht gespeichert werden.",
+            .english: "Comma-separated bundle IDs of apps whose copies are ignored.",
+            .spanish: "IDs de bundle separados por comas de apps cuyas copias se ignoran.",
+            .french: "Identifiants de paquet séparés par des virgules dont les copies sont ignorées."
         ],
         "clipboard.save_encrypted": [
             .german: "Verlauf verschlüsselt auf diesem Mac speichern",
@@ -1801,10 +1813,10 @@ public final class LocalizationManager: ObservableObject {
             .french: "Remarque : Si Yeoman est déjà activé dans les Réglages Système, veuillez le **désactiver puis le réactiver** (ou le supprimer avec '-' et le réajouter) pour que macOS applique la nouvelle signature."
         ],
         "scroll_reverser.step_multiplier": [
-            .german: "Scrollrad-Schrittmultiplikator:",
-            .english: "Scroll wheel step multiplier:",
-            .spanish: "Multiplicador de pasos de la rueda:",
-            .french: "Multiplicateur de pas de la molette :"
+            .german: "Scroll-Tempo:",
+            .english: "Scroll Speed:",
+            .spanish: "Velocidad:",
+            .french: "Vitesse :"
         ],
         "scroll_reverser.step_multiplier_tooltip": [
             .german: "Erhöht die Scroll-Geschwindigkeit pro Mausrad-Rasterung.",
@@ -1813,22 +1825,22 @@ public final class LocalizationManager: ObservableObject {
             .french: "Augmente la vitesse de défilement par cran de la molette."
         ],
         "scroll_reverser.step_standard": [
-            .german: "1x (Standard)",
-            .english: "1x (Standard)",
-            .spanish: "1x (Estándar)",
-            .french: "1x (Standard)"
+            .german: "1×",
+            .english: "1×",
+            .spanish: "1×",
+            .french: "1×"
         ],
         "scroll_reverser.step_faster": [
-            .german: "2x (Schneller)",
-            .english: "2x (Faster)",
-            .spanish: "2x (Más rápido)",
-            .french: "2x (Plus rapide)"
+            .german: "2×",
+            .english: "2×",
+            .spanish: "2×",
+            .french: "2×"
         ],
         "scroll_reverser.step_max": [
-            .german: "5x (Maximum)",
-            .english: "5x (Maximum)",
-            .spanish: "5x (Máximo)",
-            .french: "5x (Maximum)"
+            .german: "5×",
+            .english: "5×",
+            .spanish: "5×",
+            .french: "5×"
         ],
         "scroll_reverser.menubar_integration": [
             .german: "Menüleisten-Integration",
@@ -1923,28 +1935,40 @@ public final class LocalizationManager: ObservableObject {
             .french: "Options d'affichage :"
         ],
         "system_stats.opt_show_labels": [
-            .german: "Text-Bezeichnung anzeigen (z.B. „CPU“, „RAM“, „GPU“)",
-            .english: "Show text label (e.g. 'CPU', 'RAM', 'GPU')",
-            .spanish: "Mostrar etiqueta de texto (ej. 'CPU', 'RAM', 'GPU')",
-            .french: "Afficher le libellé texte (ex. « CPU », « RAM », « GPU »)"
+            .german: "Bezeichnungen anzeigen",
+            .english: "Show labels",
+            .spanish: "Mostrar etiquetas",
+            .french: "Afficher les libellés"
+        ],
+        "system_stats.opt_show_labels_tooltip": [
+            .german: "Zeigt kurze Namen wie CPU, RAM und GPU in der Menüleiste an.",
+            .english: "Shows short labels like CPU, RAM, and GPU in the menu bar.",
+            .spanish: "Muestra etiquetas como CPU, RAM y GPU en la barra de menús.",
+            .french: "Affiche les libellés CPU, RAM et GPU dans la barre des menus."
         ],
         "system_stats.opt_show_percentage": [
-            .german: "Prozentwert als Text anzeigen (z.B. „10%“, „61%“)",
-            .english: "Show percentage as text (e.g. '10%', '61%')",
-            .spanish: "Mostrar porcentaje como texto (ej. '10%', '61%')",
-            .french: "Afficher le pourcentage sous forme de texte (ex. « 10 % », « 61 % »)"
+            .german: "Prozentwerte anzeigen",
+            .english: "Show percentages",
+            .spanish: "Mostrar porcentajes",
+            .french: "Afficher les pourcentages"
         ],
         "system_stats.opt_show_graphs": [
-            .german: "Mini-Graphen & Balken anzeigen",
-            .english: "Show mini graphs & bars",
-            .spanish: "Mostrar minigráficos y barras",
-            .french: "Afficher les mini-graphiques et barres"
+            .german: "Graphen anzeigen",
+            .english: "Show graphs",
+            .spanish: "Mostrar gráficos",
+            .french: "Afficher les graphiques"
         ],
         "system_stats.opt_subtle_background": [
-            .german: "Dezenter Kapsel-Hintergrund (Pill)",
-            .english: "Subtle pill background",
-            .spanish: "Fondo de cápsula sutil",
-            .french: "Arrière-plan capsule discret"
+            .german: "Dezenter Hintergrund",
+            .english: "Subtle background",
+            .spanish: "Fondo sutil",
+            .french: "Arrière-plan discret"
+        ],
+        "system_stats.opt_subtle_background_tooltip": [
+            .german: "Legt eine dezente abgerundete Fläche hinter die Anzeige in der Menüleiste.",
+            .english: "Adds a subtle rounded backdrop behind the menu bar indicator.",
+            .spanish: "Añade un fondo redondeado sutil detrás del indicador.",
+            .french: "Ajoute un léger fond arrondi derrière l'indicateur."
         ],
         "system_stats.current_usage": [
             .german: "Aktuelle System-Auslastung",
@@ -2095,10 +2119,10 @@ public final class LocalizationManager: ObservableObject {
             .french: "Supprime automatiquement les zones blanches des logos carrés."
         ],
         "web_panel.logo_picker_fallback_symbol": [
-            .german: "Ersatz-Symbol (Fallback):",
+            .german: "Ersatz-Symbol:",
             .english: "Fallback Symbol:",
-            .spanish: "Icono de respaldo (Fallback):",
-            .french: "Symbole de secours (Fallback) :"
+            .spanish: "Icono de respaldo:",
+            .french: "Symbole de secours :"
         ],
         "web_panel.logo_picker_select_symbol": [
             .german: "Symbol auswählen:",
@@ -2227,40 +2251,40 @@ public final class LocalizationManager: ObservableObject {
             .french: "Personnalisé"
         ],
         "web_panel.preset_widget": [
-            .german: "320 × 400 (Widget)",
-            .english: "320 × 400 (Widget)",
-            .spanish: "320 × 400 (Widget)",
-            .french: "320 × 400 (Widget)"
+            .german: "Kompakt · 320 × 400",
+            .english: "Compact · 320 × 400",
+            .spanish: "Compacto · 320 × 400",
+            .french: "Compact · 320 × 400"
         ],
         "web_panel.preset_smartphone": [
-            .german: "375 × 667 (Smartphone)",
-            .english: "375 × 667 (Smartphone)",
-            .spanish: "375 × 667 (Smartphone)",
-            .french: "375 × 667 (Smartphone)"
+            .german: "Mobil · 375 × 667",
+            .english: "Mobile · 375 × 667",
+            .spanish: "Móvil · 375 × 667",
+            .french: "Mobile · 375 × 667"
         ],
         "web_panel.preset_large": [
-            .german: "500 × 700 (Großes Fenster)",
-            .english: "500 × 700 (Large Window)",
-            .spanish: "500 × 700 (Ventana grande)",
-            .french: "500 × 700 (Grande fenêtre)"
+            .german: "Groß · 500 × 700",
+            .english: "Large · 500 × 700",
+            .spanish: "Grande · 500 × 700",
+            .french: "Grand · 500 × 700"
         ],
         "web_panel.ua_auto": [
-            .german: "Automatisch (nach Größe)",
-            .english: "Automatic (by size)",
-            .spanish: "Automático (por tamaño)",
-            .french: "Automatique (selon taille)"
+            .german: "Automatisch",
+            .english: "Automatic",
+            .spanish: "Automático",
+            .french: "Automatique"
         ],
         "web_panel.ua_mobile": [
-            .german: "Immer Mobil (iPhone)",
-            .english: "Always Mobile (iPhone)",
-            .spanish: "Siempre Móvil (iPhone)",
-            .french: "Toujours Mobile (iPhone)"
+            .german: "Mobil",
+            .english: "Mobile",
+            .spanish: "Móvil",
+            .french: "Mobile"
         ],
         "web_panel.ua_desktop": [
-            .german: "Immer Desktop",
-            .english: "Always Desktop",
-            .spanish: "Siempre Escritorio",
-            .french: "Toujours Bureau"
+            .german: "Desktop",
+            .english: "Desktop",
+            .spanish: "Escritorio",
+            .french: "Bureau"
         ],
         "web_panel.editor_zoom_tooltip": [
             .german: "Skaliert Webseiten herunter, damit sie im Widget optimal ohne horizontales Scrollen lesbar sind.",
@@ -2335,10 +2359,10 @@ public final class LocalizationManager: ObservableObject {
             .french: "Taille de fenêtre"
         ],
         "web_panel.popup_user_agent": [
-            .german: "User Agent (Smartphone / Desktop)",
-            .english: "User Agent (Smartphone / Desktop)",
-            .spanish: "User Agent (Smartphone / Escritorio)",
-            .french: "User Agent (Smartphone / Bureau)"
+            .german: "Darstellung",
+            .english: "View Mode",
+            .spanish: "Modo de vista",
+            .french: "Mode d'affichage"
         ],
         "web_panel.popup_hide_toolbar_default": [
             .german: "Navigationsleiste standardmäßig ausblenden",
@@ -2389,10 +2413,10 @@ public final class LocalizationManager: ObservableObject {
             .french: "Configuré : %d × %d pt (automatiquement ajusté à l'écran)"
         ],
         "web_panel.popup_zoom_section": [
-            .german: "Seiten-Skalierung (Zoom)",
-            .english: "Page Scaling (Zoom)",
-            .spanish: "Escala de página (Zoom)",
-            .french: "Mise à l'échelle (Zoom)"
+            .german: "Zoom",
+            .english: "Zoom",
+            .spanish: "Zoom",
+            .french: "Zoom"
         ],
         "web_panel.popup_edit_url": [
             .german: "URL bearbeiten",
@@ -2407,10 +2431,10 @@ public final class LocalizationManager: ObservableObject {
             .french: "Détacher la fenêtre"
         ],
         "web_panel.popup_pin": [
-            .german: "Fenster anheften (offen halten)",
-            .english: "Pin window (keep open)",
-            .spanish: "Anclar ventana (mantener abierta)",
-            .french: "Épingler la fenêtre (garder ouverte)"
+            .german: "Fenster anpinnen",
+            .english: "Pin window",
+            .spanish: "Fijar ventana",
+            .french: "Épingler la fenêtre"
         ],
         "web_panel.popup_open_default_browser": [
             .german: "Im Standard-Browser öffnen",
@@ -2431,22 +2455,22 @@ public final class LocalizationManager: ObservableObject {
             .french: "Recharger"
         ],
         "system_stats.layout_vertical": [
-            .german: "Vertikal (Balken rechts)",
-            .english: "Vertical (Bar right)",
-            .spanish: "Vertical (Barra derecha)",
-            .french: "Vertical (Barre à droite)"
+            .german: "Balken rechts",
+            .english: "Bar Right",
+            .spanish: "Barra derecha",
+            .french: "Barre à droite"
         ],
         "system_stats.layout_vertical_bar_bottom": [
-            .german: "Vertikal (Balken unten)",
-            .english: "Vertical (Bar below)",
-            .spanish: "Vertical (Barra abajo)",
-            .french: "Vertical (Barre en bas)"
+            .german: "Balken unten",
+            .english: "Bar Below",
+            .spanish: "Barra abajo",
+            .french: "Barre en bas"
         ],
         "system_stats.layout_horizontal": [
-            .german: "Horizontal nebeneinander",
-            .english: "Horizontally side by side",
-            .spanish: "Horizontal uno al lado del otro",
-            .french: "Horizontalement côte à côte"
+            .german: "Nebeneinander",
+            .english: "Side by Side",
+            .spanish: "En línea",
+            .french: "Côte à côte"
         ],
         "system_stats.graph_minibar": [
             .german: "Füllbalken",
@@ -2485,16 +2509,16 @@ public final class LocalizationManager: ObservableObject {
             .french: "Nom"
         ],
         "system_stats.metric_ram_label": [
-            .german: "RAM (Speicher)",
-            .english: "RAM (Memory)",
-            .spanish: "RAM (Memoria)",
-            .french: "RAM (Mémoire)"
+            .german: "RAM",
+            .english: "RAM",
+            .spanish: "RAM",
+            .french: "RAM"
         ],
         "system_stats.metric_gpu_label": [
-            .german: "GPU (Grafik)",
-            .english: "GPU (Graphics)",
-            .spanish: "GPU (Gráficos)",
-            .french: "GPU (Graphiques)"
+            .german: "GPU",
+            .english: "GPU",
+            .spanish: "GPU",
+            .french: "GPU"
         ],
         "system_stats.search_tooltip": [
             .german: "Nach Prozessen suchen",
@@ -2509,10 +2533,10 @@ public final class LocalizationManager: ObservableObject {
             .french: "Arrêter immédiatement le processus '%@'"
         ],
         "finder_cut.title": [
-            .german: "Finder Ausschneiden (⌘X)",
-            .english: "Finder Cut (⌘X)",
-            .spanish: "Cortar en Finder (⌘X)",
-            .french: "Couper dans le Finder (⌘X)"
+            .german: "Finder Ausschneiden",
+            .english: "Finder Cut",
+            .spanish: "Cortar en Finder",
+            .french: "Couper dans le Finder"
         ],
         "finder_cut.subtitle": [
             .german: "Dateien und Ordner im Finder wie unter Windows mit ⌘X ausschneiden und mit ⌘V verschieben.",
@@ -2545,10 +2569,10 @@ public final class LocalizationManager: ObservableObject {
             .french: "Marquer les fichiers ou dossiers sélectionnés pour le déplacement"
         ],
         "finder_cut.shortcut_paste": [
-            .german: "Vorgemerkte Objekte direkt in den Zielordner verschieben (⌘⌥V)",
-            .english: "Move cut items natively into the target folder (⌘⌥V)",
-            .spanish: "Mover los elementos cortados directamente a la carpeta de destino (⌘⌥V)",
-            .french: "Déplacer les éléments coupés vers le dossier cible (⌘⌥V)"
+            .german: "Ausgeschnittene Objekte im Zielordner einfügen",
+            .english: "Move cut items into the target folder",
+            .spanish: "Mover los elementos cortados a la carpeta de destino",
+            .french: "Déplacer les éléments coupés vers le dossier cible"
         ],
         "finder_cut.shortcut_cancel": [
             .german: "Ausgeschnitten-Markierung sicher verwerfen",
@@ -2611,10 +2635,10 @@ public final class LocalizationManager: ObservableObject {
             .french: "État"
         ],
         "finder_cut.status_active": [
-            .german: "Aktiv (Finder-Überwachung)",
-            .english: "Active (Finder active monitor)",
-            .spanish: "Activo (monitor de Finder)",
-            .french: "Actif (surveillance du Finder)"
+            .german: "Aktiv",
+            .english: "Active",
+            .spanish: "Activo",
+            .french: "Actif"
         ],
         "finder_cut.status_paused": [
             .german: "Pausiert",
@@ -2629,10 +2653,10 @@ public final class LocalizationManager: ObservableObject {
             .french: "Coupe en attente – appuyez sur ⌘V dans le dossier cible pour déplacer"
         ],
         "finder_cut.pending_count_format": [
-            .german: "%d Objekt(e) zum Verschieben vorgemerkt (⌘V)",
-            .english: "%d item(s) ready to move (⌘V)",
-            .spanish: "%d elemento(s) listo(s) para mover (⌘V)",
-            .french: "%d élément(s) prêt(s) à déplacer (⌘V)"
+            .german: "%d Objekte zum Verschieben bereit",
+            .english: "%d items ready to move",
+            .spanish: "%d elementos listos para mover",
+            .french: "%d éléments prêts à déplacer"
         ],
         "finder_cut.cancel_pending": [
             .german: "Ausschneiden verwerfen",
@@ -2647,10 +2671,10 @@ public final class LocalizationManager: ObservableObject {
             .french: "Autorisation d'accessibilité requise"
         ],
         "finder_cut.prompt_title": [
-            .german: "Finder Ausschneiden (⌘X) benötigt Berechtigung",
-            .english: "Finder Cut (⌘X) Needs Accessibility Permission",
-            .spanish: "Cortar en Finder (⌘X) necesita permiso de accesibilidad",
-            .french: "Couper dans le Finder (⌘X) nécessite l'accessibilité"
+            .german: "Finder Ausschneiden benötigt Berechtigung",
+            .english: "Finder Cut Needs Permission",
+            .spanish: "Cortar en Finder necesita permiso",
+            .french: "Couper dans le Finder nécessite une autorisation"
         ],
         "finder_cut.prompt_message": [
             .german: "Du hast gerade ⌘X im Finder gedrückt, aber macOS blockiert aktuell den Zugriff auf Bedienungshilfen für Yeoman.",
@@ -2687,6 +2711,516 @@ public final class LocalizationManager: ObservableObject {
             .english: "Draws a dashed pill outline directly around cut items in Finder until they are moved or cancelled.",
             .spanish: "Muestra un borde discontinuo alrededor de los archivos cortados en Finder hasta que se muevan o cancelen.",
             .french: "Affiche un contour en pointillés autour des fichiers coupés dans le Finder jusqu'à leur déplacement ou annulation."
+        ],
+        "general.terminal_saver_sub": [
+            .german: "ASCII-Animationen im Terminal nach Inaktivität",
+            .english: "ASCII animations in your terminal when idle",
+            .spanish: "Animaciones ASCII en tu terminal al estar inactivo",
+            .french: "Animations ASCII dans le terminal après inactivité"
+        ],
+        "terminal_saver.title": [
+            .english: "Terminal Saver"
+        ],
+        "terminal_saver.subtitle": [
+            .german: "Zeigt bei Inaktivität ASCII-Animationen im Terminal.",
+            .english: "Displays ASCII animations in your terminal when idle.",
+            .spanish: "Muestra animaciones ASCII en el terminal al estar inactivo.",
+            .french: "Affiche des animations ASCII dans le terminal inactif."
+        ],
+        "terminal_saver.preview_header": [
+            .german: "Live-Vorschau",
+            .english: "Live Preview",
+            .spanish: "Vista previa",
+            .french: "Aperçu en direct"
+        ],
+        "terminal_saver.copy_test_command": [
+            .german: "Test-Befehl kopieren",
+            .english: "Copy Test Command",
+            .spanish: "Copiar comando",
+            .french: "Copier la commande"
+        ],
+        "terminal_saver.copied": [
+            .german: "Kopiert!",
+            .english: "Copied!",
+            .spanish: "¡Copiado!",
+            .french: "Copié !"
+        ],
+        "terminal_saver.media_header": [
+            .german: "Szenen & Medien",
+            .english: "Scenes & Media",
+            .spanish: "Escenas y medios",
+            .french: "Scènes et médias"
+        ],
+        "terminal_saver.shuffle_active_badge": [
+            .german: "Zufällig · %d",
+            .english: "Shuffle · %d",
+            .spanish: "Aleatorio · %d",
+            .french: "Aléatoire · %d"
+        ],
+        "terminal_saver.builtin_scenes": [
+            .german: "Szenen",
+            .english: "Scenes",
+            .spanish: "Escenas",
+            .french: "Scènes"
+        ],
+        "terminal_saver.scene_bonfire": [
+            .german: "Lagerfeuer",
+            .english: "Bonfire",
+            .spanish: "Hoguera",
+            .french: "Feu de camp"
+        ],
+        "terminal_saver.scene_bouncing_dvd": [
+            .german: "Springendes DVD-Logo",
+            .english: "Bouncing DVD Logo",
+            .spanish: "Logo de DVD rebotante",
+            .french: "Logo DVD rebondissant"
+        ],
+        "terminal_saver.scene_starfield": [
+            .german: "Sternenhimmel",
+            .english: "Starfield",
+            .spanish: "Estrellas",
+            .french: "Étoiles"
+        ],
+        "terminal_saver.scene_wind_meadow": [
+            .german: "Gras im Wind",
+            .english: "Wind Meadow",
+            .spanish: "Pradera",
+            .french: "Prairie"
+        ],
+        "terminal_saver.scene_matrix": [
+            .german: "Matrix",
+            .english: "Matrix",
+            .spanish: "Matrix",
+            .french: "Matrix"
+        ],
+        "terminal_saver.scene_game_of_life": [
+            .german: "Game of Life",
+            .english: "Game of Life",
+            .spanish: "Juego de la vida",
+            .french: "Jeu de la vie"
+        ],
+        "terminal_saver.scene_pipes": [
+            .german: "Rohre",
+            .english: "Pipes",
+            .spanish: "Tuberías",
+            .french: "Tuyaux"
+        ],
+        "terminal_saver.scene_spinning_donut": [
+            .german: "3D-Donut",
+            .english: "3D Donut",
+            .spanish: "Donut 3D",
+            .french: "Donut 3D"
+        ],
+        "terminal_saver.custom_media": [
+            .german: "Eigene Medien",
+            .english: "Custom Media",
+            .spanish: "Medios propios",
+            .french: "Médias"
+        ],
+        "terminal_saver.custom_media_tooltip": [
+            .german: "Unterstützt GIF, PNG, JPG, WebP, HEIC sowie kurze MP4- und MOV-Clips.",
+            .english: "Supports GIF, PNG, JPG, WebP, HEIC, and short MP4 or MOV clips.",
+            .spanish: "Compatible con GIF, PNG, JPG, WebP, HEIC y clips MP4 o MOV cortos.",
+            .french: "Prend en charge GIF, PNG, JPG, WebP, HEIC et les courts clips MP4 ou MOV."
+        ],
+        "terminal_saver.add_media": [
+            .german: "Hinzufügen",
+            .english: "Add Media",
+            .spanish: "Añadir",
+            .french: "Ajouter"
+        ],
+        "terminal_saver.no_media_hint": [
+            .german: "Noch keine Dateien hinzugefügt.",
+            .english: "No files added yet.",
+            .spanish: "Aún no hay archivos.",
+            .french: "Aucun fichier ajouté."
+        ],
+        "terminal_saver.general_header": [
+            .german: "Allgemein",
+            .english: "General",
+            .spanish: "General",
+            .french: "Général"
+        ],
+        "terminal_saver.fit_mode": [
+            .german: "Anpassung",
+            .english: "Fit",
+            .spanish: "Ajuste",
+            .french: "Ajustement"
+        ],
+        "terminal_saver.fit_contain": [
+            .german: "Einpassen",
+            .english: "Contain",
+            .spanish: "Ajustar",
+            .french: "Contenir"
+        ],
+        "terminal_saver.fit_cover": [
+            .german: "Ausfüllen",
+            .english: "Fill",
+            .spanish: "Rellenar",
+            .french: "Remplir"
+        ],
+        "terminal_saver.idle_timeout": [
+            .german: "Wartezeit",
+            .english: "Idle Time",
+            .spanish: "Espera",
+            .french: "Délai"
+        ],
+        "terminal_saver.idle_timeout_tooltip": [
+            .german: "Startet Terminal Saver, wenn das Terminal so lange inaktiv war.",
+            .english: "Starts Terminal Saver after this period of inactivity in your terminal.",
+            .spanish: "Inicia Terminal Saver tras este tiempo de inactividad en el terminal.",
+            .french: "Lance Terminal Saver après cette durée d'inactivité dans le terminal."
+        ],
+        "terminal_saver.render_style": [
+            .german: "Stil",
+            .english: "Style",
+            .spanish: "Estilo",
+            .french: "Style"
+        ],
+        "terminal_saver.style_filigree": [
+            .german: "Filigran",
+            .english: "Filigree",
+            .spanish: "Filigrana",
+            .french: "Filigrane"
+        ],
+        "terminal_saver.style_ultrafine": [
+            .german: "Fein",
+            .english: "Fine",
+            .spanish: "Fino",
+            .french: "Fin"
+        ],
+        "terminal_saver.style_dense": [
+            .german: "Dicht",
+            .english: "Dense",
+            .spanish: "Denso",
+            .french: "Dense"
+        ],
+        "terminal_saver.style_unicode": [
+            .german: "Striche",
+            .english: "Strokes",
+            .spanish: "Trazos",
+            .french: "Traits"
+        ],
+        "terminal_saver.color_preset": [
+            .german: "Farben",
+            .english: "Colors",
+            .spanish: "Colores",
+            .french: "Couleurs"
+        ],
+        "terminal_saver.color_original": [
+            .german: "Original",
+            .english: "Original",
+            .spanish: "Original",
+            .french: "Original"
+        ],
+        "terminal_saver.color_phosphor": [
+            .german: "Phosphor",
+            .english: "Phosphor",
+            .spanish: "Fósforo",
+            .french: "Phosphore"
+        ],
+        "terminal_saver.color_amber": [
+            .german: "Bernstein",
+            .english: "Amber",
+            .spanish: "Ámbar",
+            .french: "Ambre"
+        ],
+        "terminal_saver.color_moonlit": [
+            .german: "Cyan",
+            .english: "Cyan",
+            .spanish: "Cian",
+            .french: "Cyan"
+        ],
+        "terminal_saver.color_bloodmoon": [
+            .german: "Rot",
+            .english: "Crimson",
+            .spanish: "Rojo",
+            .french: "Rouge"
+        ],
+        "terminal_saver.wake_animation": [
+            .german: "End-Animation",
+            .english: "End Animation",
+            .spanish: "Animación final",
+            .french: "Animation de sortie"
+        ],
+        "terminal_saver.wake_dissolve": [
+            .german: "Auflösen",
+            .english: "Dissolve",
+            .spanish: "Disolver",
+            .french: "Fondu"
+        ],
+        "terminal_saver.wake_curtain": [
+            .german: "Vorhang",
+            .english: "Curtain",
+            .spanish: "Cortina",
+            .french: "Rideau"
+        ],
+        "terminal_saver.wake_cascade": [
+            .german: "Kaskade",
+            .english: "Cascade",
+            .spanish: "Cascada",
+            .french: "Cascade"
+        ],
+        "terminal_saver.wake_glitch": [
+            .german: "Glitch",
+            .english: "Glitch",
+            .spanish: "Glitch",
+            .french: "Glitch"
+        ],
+        "terminal_saver.wake_iris": [
+            .german: "Blende",
+            .english: "Iris",
+            .spanish: "Iris",
+            .french: "Iris"
+        ],
+        "terminal_saver.wake_instant": [
+            .german: "Keine",
+            .english: "None",
+            .spanish: "Ninguna",
+            .french: "Aucune"
+        ],
+        "terminal_saver.shells_header": [
+            .german: "Terminal-Integration",
+            .english: "Terminal Integration",
+            .spanish: "Integración de terminal",
+            .french: "Intégration terminal"
+        ],
+        "terminal_saver.shells_subtitle": [
+            .german: "Funktioniert in Terminal.app, iTerm2, Ghostty, Kitty, Alacritty, WezTerm, Warp und integrierten IDE-Terminals.",
+            .english: "Works across Terminal.app, iTerm2, Ghostty, Kitty, Alacritty, WezTerm, Warp, and integrated IDE terminals.",
+            .spanish: "Funciona en Terminal.app, iTerm2, Ghostty, Kitty, Alacritty, WezTerm, Warp y terminales de IDE.",
+            .french: "Fonctionne dans Terminal.app, iTerm2, Ghostty, Kitty, Alacritty, WezTerm, Warp et terminaux d'IDE."
+        ],
+        "terminal_saver.menubar_toggle": [
+            .german: "In Menüleiste anzeigen",
+            .english: "Show in Menu Bar",
+            .spanish: "Mostrar en la barra de menús",
+            .french: "Afficher dans la barre des menus"
+        ],
+        "terminal_saver.timeout_format": [
+            .german: "Timeout: %d Sekunden",
+            .english: "Timeout: %d seconds",
+            .spanish: "Espera: %d segundos",
+            .french: "Délai : %d secondes"
+        ],
+        "terminal_saver.loading_preview": [
+            .german: "Vorschau wird vorbereitet…",
+            .english: "Preparing preview…",
+            .spanish: "Preparando vista previa…",
+            .french: "Préparation de l'aperçu…"
+        ],
+        "terminal_saver.scene_settings_format": [
+            .german: "Einstellungen für %@",
+            .english: "Settings for %@",
+            .spanish: "Ajustes de %@",
+            .french: "Réglages de %@"
+        ],
+        "terminal_saver.playback_speed": [
+            .german: "Geschwindigkeit",
+            .english: "Speed",
+            .spanish: "Velocidad",
+            .french: "Vitesse"
+        ],
+        "terminal_saver.ping_pong_loop": [
+            .german: "Vorwärts-rückwärts-Schleife",
+            .english: "Forward and Reverse Loop",
+            .spanish: "Bucle de ida y vuelta",
+            .french: "Boucle aller-retour"
+        ],
+        "terminal_saver.ping_pong_loop_tooltip": [
+            .german: "Spielt den Clip abwechselnd vorwärts und rückwärts ab.",
+            .english: "Alternates between playing the clip forward and backward.",
+            .spanish: "Reproduce el clip hacia delante y hacia atrás de forma alternada.",
+            .french: "Lit le clip alternativement à l’endroit et à l’envers."
+        ],
+        "terminal_saver.start_animation": [
+            .german: "Start-Animation",
+            .english: "Start Animation",
+            .spanish: "Animación inicial",
+            .french: "Animation d'entrée"
+        ],
+        "terminal_saver.start_instant": [
+            .german: "Keine",
+            .english: "None",
+            .spanish: "Ninguna",
+            .french: "Aucune"
+        ],
+        "terminal_saver.remove_background": [
+            .german: "Hintergrund entfernen",
+            .english: "Remove Background",
+            .spanish: "Quitar fondo",
+            .french: "Retirer l'arrière-plan"
+        ],
+        "terminal_saver.remove_background_tooltip": [
+            .german: "Stellt das Hauptmotiv lokal auf diesem Mac frei, sodass der Hintergrund leer bleibt.",
+            .english: "Separates the foreground subject on-device so the background stays blank.",
+            .spanish: "Separa el sujeto localmente en este Mac para dejar el fondo limpio.",
+            .french: "Isole le sujet localement sur ce Mac pour laisser l'arrière-plan vide."
+        ],
+        "terminal_saver.animation_speed_tooltip": [
+            .german: "Animationsgeschwindigkeit",
+            .english: "Animation Speed",
+            .spanish: "Velocidad de animación",
+            .french: "Vitesse d'animation"
+        ],
+        "terminal_saver.animation_random": [
+            .german: "Zufällig",
+            .english: "Random",
+            .spanish: "Aleatorio",
+            .french: "Aléatoire"
+        ],
+        "terminal_saver.transition_animation": [
+            .german: "Wechsel-Animation",
+            .english: "Switch Animation",
+            .spanish: "Animación de cambio",
+            .french: "Transition"
+        ],
+        "terminal_saver.transition_slide": [
+            .german: "Schieben",
+            .english: "Slide",
+            .spanish: "Deslizar",
+            .french: "Glisser"
+        ],
+        "terminal_saver.transition_dissolve": [
+            .german: "Überblenden",
+            .english: "Crossfade",
+            .spanish: "Fundido",
+            .french: "Fondu"
+        ],
+        "terminal_saver.transition_wipe": [
+            .german: "Wischen",
+            .english: "Wipe",
+            .spanish: "Barrido",
+            .french: "Balayage"
+        ],
+        "terminal_saver.transition_glitch": [
+            .german: "Glitch",
+            .english: "Glitch",
+            .spanish: "Glitch",
+            .french: "Glitch"
+        ],
+        "terminal_saver.transition_swarm": [
+            .german: "Schwarm",
+            .english: "Swarm",
+            .spanish: "Enjambre",
+            .french: "Essaim"
+        ],
+        "terminal_saver.transition_decode": [
+            .german: "Entschlüsseln",
+            .english: "Decode",
+            .spanish: "Descifrar",
+            .french: "Déchiffrer"
+        ],
+        "terminal_saver.transition_morph": [
+            .german: "Morph",
+            .english: "Morph",
+            .spanish: "Transformar",
+            .french: "Morph"
+        ],
+        "terminal_saver.transition_shatter": [
+            .german: "Zerfall",
+            .english: "Shatter",
+            .spanish: "Fragmentar",
+            .french: "Éclat"
+        ],
+        "terminal_saver.transition_rain": [
+            .german: "Zeichenregen",
+            .english: "ASCII Rain",
+            .spanish: "Lluvia ASCII",
+            .french: "Pluie ASCII"
+        ],
+        "terminal_saver.transition_ripple": [
+            .german: "Schockwelle",
+            .english: "Shockwave",
+            .spanish: "Onda",
+            .french: "Onde"
+        ],
+        "terminal_saver.transition_instant": [
+            .german: "Keine",
+            .english: "None",
+            .spanish: "Ninguna",
+            .french: "Aucune"
+        ],
+        "terminal_saver.auto_advance": [
+            .german: "Automatisch weiterschalten",
+            .english: "Auto-Advance",
+            .spanish: "Avance automático",
+            .french: "Avance automatique"
+        ],
+        "terminal_saver.auto_advance_tooltip": [
+            .german: "Schaltet im Terminal ab der eingestellten Dauer weiter, wenn mindestens zwei Quellen aktiv sind. Wahlweise wird zuerst die laufende Schleife beendet oder sofort gewechselt.",
+            .english: "Advances in the terminal after the set time when at least two sources are active. Either finishes the current loop first or cuts immediately.",
+            .spanish: "Pasa a la siguiente fuente en el terminal tras el tiempo indicado si hay al menos dos activas. Puede terminar el bucle actual o cambiar de inmediato.",
+            .french: "Passe à la source suivante dans le terminal après le délai choisi si au moins deux sources sont actives. Termine la boucle en cours ou coupe immédiatement."
+        ],
+        "terminal_saver.auto_advance_duration": [
+            .german: "Dauer pro Animation", .english: "Time per Animation", .spanish: "Tiempo por animación", .french: "Durée par animation"
+        ],
+        "terminal_saver.auto_advance_cutoff": [
+            .german: "Bei Zeitablauf",
+            .english: "At Time Limit",
+            .spanish: "Al cumplirse el tiempo",
+            .french: "À la fin du délai"
+        ],
+        "terminal_saver.auto_advance_finish_loop": [
+            .german: "Loop beenden",
+            .english: "Finish Loop",
+            .spanish: "Terminar bucle",
+            .french: "Finir la boucle"
+        ],
+        "terminal_saver.auto_advance_hard_cut": [
+            .german: "Harter Schnitt",
+            .english: "Hard Cut",
+            .spanish: "Corte directo",
+            .french: "Coupure nette"
+        ],
+        "terminal_saver.navigation_keys": [
+            .german: "Navigation",
+            .english: "Navigation",
+            .spanish: "Navegación",
+            .french: "Navigation"
+        ],
+        "terminal_saver.navigation_keys_tooltip": [
+            .german: "Wechselt in Terminal Saver zur nächsten oder vorherigen Animation. Klicke auf eine Taste, um sie zu ändern.",
+            .english: "Moves to the next or previous animation in Terminal Saver. Click a key to change it.",
+            .spanish: "Cambia a la animación siguiente o anterior en Terminal Saver. Haz clic en una tecla para cambiarla.",
+            .french: "Passe à l’animation suivante ou précédente dans Terminal Saver. Cliquez sur une touche pour la modifier."
+        ],
+        "terminal_saver.nav_previous": [
+            .german: "Zurück",
+            .english: "Previous",
+            .spanish: "Anterior",
+            .french: "Précédent"
+        ],
+        "terminal_saver.nav_next": [
+            .german: "Weiter",
+            .english: "Next",
+            .spanish: "Siguiente",
+            .french: "Suivant"
+        ],
+        "terminal_saver.press_key": [
+            .german: "Taste…",
+            .english: "Key…",
+            .spanish: "Tecla…",
+            .french: "Touche…"
+        ],
+        "terminal_saver.search_media": [
+            .german: "Clips suchen…",
+            .english: "Search clips…",
+            .spanish: "Buscar clips…",
+            .french: "Rechercher…"
+        ],
+        "terminal_saver.no_search_results": [
+            .german: "Keine passenden Clips gefunden.",
+            .english: "No matching clips found.",
+            .spanish: "No se encontraron clips.",
+            .french: "Aucun clip correspondant."
+        ],
+        "terminal_saver.rename_clip_placeholder": [
+            .german: "Clip-Name",
+            .english: "Clip Name",
+            .spanish: "Nombre del clip",
+            .french: "Nom du clip"
         ]
     ]
 }

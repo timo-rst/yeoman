@@ -542,10 +542,16 @@ public struct SystemStatsSettingsView: View {
                             .fontWeight(.medium)
                         
                         VStack(alignment: .leading, spacing: 10) {
-                            Toggle(l10n("system_stats.opt_show_labels"), isOn: $module.showLabels)
+                            HStack(spacing: 6) {
+                                Toggle(l10n("system_stats.opt_show_labels"), isOn: $module.showLabels)
+                                InfoTooltip(text: l10n("system_stats.opt_show_labels_tooltip"))
+                            }
                             Toggle(l10n("system_stats.opt_show_percentage"), isOn: $module.showPercentage)
                             Toggle(l10n("system_stats.opt_show_graphs"), isOn: $module.showGraphs)
-                            Toggle(l10n("system_stats.opt_subtle_background"), isOn: $module.useSubtleBackground)
+                            HStack(spacing: 6) {
+                                Toggle(l10n("system_stats.opt_subtle_background"), isOn: $module.useSubtleBackground)
+                                InfoTooltip(text: l10n("system_stats.opt_subtle_background_tooltip"))
+                            }
                         }
                     }
                     .padding()

@@ -112,8 +112,8 @@ public struct ScrollReverserSettingsView: View {
                             Picker("", selection: $manager.mouseStepMultiplier) {
                                 Text(l10n("scroll_reverser.step_standard")).tag(1)
                                 Text(l10n("scroll_reverser.step_faster")).tag(2)
-                                Text("3x").tag(3)
-                                Text("4x").tag(4)
+                                Text("3×").tag(3)
+                                Text("4×").tag(4)
                                 Text(l10n("scroll_reverser.step_max")).tag(5)
                             }
                             .frame(width: 150)

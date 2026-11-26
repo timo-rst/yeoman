@@ -127,8 +127,11 @@ public struct MenuBarSpacingSectionView: View {
                 
                 // Manual Fine-Tuning Slider
                 VStack(alignment: .leading, spacing: 14) {
-                    Text(l10n("menubar.fine_tuning"))
-                        .font(.headline)
+                    HStack(spacing: 6) {
+                        Text(l10n("menubar.fine_tuning"))
+                            .font(.headline)
+                        InfoTooltip(text: l10n("menubar.fine_tuning_tooltip"))
+                    }
                     
                     VStack(alignment: .leading, spacing: 6) {
                         HStack {
