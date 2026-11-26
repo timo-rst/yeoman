@@ -34,6 +34,49 @@ struct GenerateToolGraphics {
             height: 170,
             to: outputDir.appendingPathComponent("yeoman_scroll_reverser.png")
         )
+
+        let args = CommandLine.arguments
+        if let srcIdx = args.firstIndex(of: "--media-source"), srcIdx + 1 < args.count,
+           let cutIdx = args.firstIndex(of: "--media-cutout"), cutIdx + 1 < args.count {
+            let requestedFrame: Int = {
+                if let fIdx = args.firstIndex(of: "--media-frame"), fIdx + 1 < args.count,
+                   let parsed = Int(args[fIdx + 1]) {
+                    return parsed
+                }
+                return 6
+            }()
+            do {
+                let sourceURL = URL(fileURLWithPath: args[srcIdx + 1])
+                let cutoutURL = URL(fileURLWithPath: args[cutIdx + 1])
+                let sourceData = try Data(contentsOf: sourceURL)
+                let cutoutData = try Data(contentsOf: cutoutURL)
+                let sourceDecoded = try TerminalSaverMediaDecoder.decodeImage(data: sourceData)
+                let cutoutDecoded = try TerminalSaverMediaDecoder.decodeImage(data: cutoutData)
+                guard !sourceDecoded.frames.isEmpty, !cutoutDecoded.frames.isEmpty else {
+                    print("Skipped custom media graphic: decoded frame list is empty")
+                    return
+                }
+                let frameIndex = max(0, min(requestedFrame, min(sourceDecoded.frames.count, cutoutDecoded.frames.count) - 1))
+                let sourceCG = sourceDecoded.frames[frameIndex].image
+                let cutoutCG = cutoutDecoded.frames[frameIndex].image
+                let settings = ASCIIRenderSettings(style: .filigree, colorPreset: .original, fitMode: .contain)
+                let fullASCII = ASCIIRenderEngine.render(image: sourceCG, columns: 56, rows: 18, settings: settings)
+                let cutoutASCII = ASCIIRenderEngine.render(image: cutoutCG, columns: 56, rows: 18, settings: settings)
+
+                capture(
+                    view: CustomMediaDemoGraphic(
+                        sourceCG: sourceCG,
+                        fullASCII: fullASCII,
+                        cutoutASCII: cutoutASCII
+                    ).preferredColorScheme(.dark),
+                    width: 960,
+                    height: 236,
+                    to: outputDir.appendingPathComponent("yeoman_terminal_saver_media.png")
+                )
+            } catch {
+                print("Failed custom media graphic: \(error)")
+            }
+        }
     }
 
     @MainActor
@@ -102,7 +145,7 @@ private struct TerminalSaverShowcaseGraphic: View {
         height: 158
     )
     private let donutImage = renderASCIIToImage(
-        TerminalSaverProceduralScenes.frame(scene: .spinningDonut, columns: 48, rows: 12, time: 2.3),
+        TerminalSaverProceduralScenes.frame(scene: .spinningDonut, columns: 56, rows: 16, time: 1.15),
         width: 452,
         height: 158
     )
@@ -490,5 +533,93 @@ private struct ScrollDeviceCard: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(RoundedRectangle(cornerRadius: 11).fill(Color(red: 0.11, green: 0.12, blue: 0.14)))
         .overlay(RoundedRectangle(cornerRadius: 11).stroke(Color.white.opacity(0.12), lineWidth: 1))
+    }
+}
+
+// MARK: - 4. Compact Custom Media & Cutout Pipeline
+
+private struct CustomMediaDemoGraphic: View {
+    let sourceImage: NSImage
+    let fullASCIIImage: NSImage
+    let cutoutASCIIImage: NSImage
+
+    init(sourceCG: CGImage, fullASCII: ASCIIFrame, cutoutASCII: ASCIIFrame) {
+        self.sourceImage = NSImage(cgImage: sourceCG, size: NSSize(width: sourceCG.width, height: sourceCG.height))
+        self.fullASCIIImage = renderASCIIToImage(fullASCII, width: 280, height: 164)
+        self.cutoutASCIIImage = renderASCIIToImage(cutoutASCII, width: 280, height: 164)
+    }
+
+    var body: some View {
+        ZStack {
+            canvasBackground
+
+            HStack(spacing: 12) {
+                MediaStageCard(title: "Source Media") {
+                    Image(nsImage: sourceImage)
+                        .resizable()
+                        .aspectRatio(contentMode: .fit)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        .padding(8)
+                        .background(Color(red: 0.04, green: 0.05, blue: 0.06))
+                }
+
+                Image(systemName: "arrow.right")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundColor(.white.opacity(0.45))
+
+                MediaStageCard(title: "zsh — Filigree ASCII") {
+                    Image(nsImage: fullASCIIImage)
+                        .resizable()
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                }
+
+                Image(systemName: "arrow.right")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundColor(.white.opacity(0.45))
+
+                MediaStageCard(title: "zsh — Remove Background") {
+                    Image(nsImage: cutoutASCIIImage)
+                        .resizable()
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                }
+            }
+            .padding(16)
+        }
+    }
+}
+
+private struct MediaStageCard<Content: View>: View {
+    let title: String
+    @ViewBuilder let content: () -> Content
+
+    var body: some View {
+        VStack(spacing: 0) {
+            HStack(spacing: 7) {
+                HStack(spacing: 4.5) {
+                    Circle().fill(Color(red: 1.0, green: 0.36, blue: 0.33)).frame(width: 7.5, height: 7.5)
+                    Circle().fill(Color(red: 1.0, green: 0.76, blue: 0.18)).frame(width: 7.5, height: 7.5)
+                    Circle().fill(Color(red: 0.16, green: 0.79, blue: 0.28)).frame(width: 7.5, height: 7.5)
+                }
+                Text(title)
+                    .font(.system(size: 10.5, weight: .semibold))
+                    .foregroundColor(.white.opacity(0.85))
+                Spacer()
+            }
+            .padding(.horizontal, 10)
+            .frame(height: 25)
+            .background(Color(red: 0.13, green: 0.14, blue: 0.17))
+
+            Divider().background(Color.white.opacity(0.1))
+
+            content()
+                .frame(maxWidth: .infinity)
+                .frame(height: 164)
+        }
+        .background(Color(red: 0.04, green: 0.05, blue: 0.06))
+        .clipShape(RoundedRectangle(cornerRadius: 10))
+        .overlay(
+            RoundedRectangle(cornerRadius: 10)
+                .stroke(Color.white.opacity(0.14), lineWidth: 1)
+        )
     }
 }

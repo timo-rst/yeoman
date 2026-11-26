@@ -66,6 +66,10 @@ Displays multicolor, edge-aware filigree ASCII art in any terminal emulator (`Te
 - **Shell & tmux Integration:** Bundles a standalone `YeomanTermSaver` CLI helper managed via idempotent delimited blocks in `~/.zshrc`, `~/.bashrc`, `~/.config/fish/conf.d/`, and `~/.tmux.conf` with zero background daemon polling.
 
 <p align="center">
+  <img src="Resources/Mockups/yeoman_terminal_saver_media.png" alt="Custom Media Pipeline: Source Frame, Filigree ASCII, and On-Device Background Cutout" width="96%" />
+</p>
+
+<p align="center">
   <img src="Resources/Mockups/yeoman_terminal_saver.png" alt="Terminal Saver Settings and 16:9 Live Preview" width="96%" />
 </p>
 
