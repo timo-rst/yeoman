@@ -2,16 +2,23 @@ import SwiftUI
 import AppKit
 
 public struct TaskManagerPopoverView: View {
-    @ObservedObject var provider = SystemMetricsProvider.shared
+    @ObservedObject var provider: SystemMetricsProvider
     @ObservedObject var l10nObj = LocalizationManager.shared
     @State private var hoveredPid: Int?
     @State private var killedPid: Int?
     @State private var isSearchExpanded: Bool = false
     @FocusState private var isSearchFocused: Bool
     private let pinPreference: PopoverPinPreference?
-    
-    public init(pinPreference: PopoverPinPreference? = nil) {
+    private let autoPollProcesses: Bool
+
+    public init(
+        provider: SystemMetricsProvider = .shared,
+        pinPreference: PopoverPinPreference? = nil,
+        autoPollProcesses: Bool = true
+    ) {
+        self.provider = provider
         self.pinPreference = pinPreference
+        self.autoPollProcesses = autoPollProcesses
     }
     
     public var body: some View {
@@ -235,10 +242,14 @@ public struct TaskManagerPopoverView: View {
         .environment(\.controlActiveState, .active)
         .focusEffectDisabled()
         .onAppear {
-            provider.startProcessPolling()
+            if autoPollProcesses {
+                provider.startProcessPolling()
+            }
         }
         .onDisappear {
-            provider.stopProcessPolling()
+            if autoPollProcesses {
+                provider.stopProcessPolling()
+            }
         }
     }
 }

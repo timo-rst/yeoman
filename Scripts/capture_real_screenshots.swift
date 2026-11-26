@@ -204,7 +204,44 @@ struct CaptureRealScreenshots {
             to: outputDir.appendingPathComponent("yeoman_menubar_spacing.png")
         )
 
-        print("All 5 real screenshots captured cleanly in Resources/Mockups/.")
+        // ----------------------------------------------------
+        // 6. System Monitor & Task Manager Popover (TaskManagerPopoverView)
+        // ----------------------------------------------------
+        let sampleProvider = SystemMetricsProvider(autoRefresh: false)
+        let samplePin = PopoverPinPreference(storageKey: "capture_stats_pin", defaults: sandboxDefaults)
+        sampleProvider.cpuUsagePercent = 24
+        sampleProvider.memoryUsagePercent = 58
+        sampleProvider.memoryUsedGB = 18.6
+        sampleProvider.memoryTotalGB = 32.0
+        sampleProvider.gpuUsagePercent = 14
+        sampleProvider.cpuHistory = [14, 16, 15, 19, 22, 20, 26, 28, 25, 21, 18, 20, 23, 27, 29, 25, 22, 23, 25, 24]
+        sampleProvider.ramHistory = [52, 53, 53, 54, 54, 55, 55, 56, 56, 57, 57, 57, 58, 58, 57, 58, 58, 58, 58, 58]
+        sampleProvider.gpuHistory = [8, 9, 11, 10, 14, 18, 16, 15, 12, 11, 10, 13, 15, 17, 16, 13, 12, 14, 13, 14]
+        sampleProvider.processes = [
+            ProcessTaskItem(id: 4120, pid: 4120, name: "swift-frontend", cpuPercent: 18.4, memoryMB: 1420, isUserApp: false, bundleIdentifier: nil, icon: NSImage(systemSymbolName: "hammer", accessibilityDescription: nil)),
+            ProcessTaskItem(id: 1842, pid: 1842, name: "Safari Web Content", cpuPercent: 6.2, memoryMB: 940, isUserApp: true, bundleIdentifier: "com.apple.Safari", icon: NSImage(systemSymbolName: "safari", accessibilityDescription: nil)),
+            ProcessTaskItem(id: 2104, pid: 2104, name: "Terminal", cpuPercent: 2.1, memoryMB: 215, isUserApp: true, bundleIdentifier: "com.apple.Terminal", icon: NSImage(systemSymbolName: "apple.terminal", accessibilityDescription: nil)),
+            ProcessTaskItem(id: 904, pid: 904, name: "Finder", cpuPercent: 1.4, memoryMB: 186, isUserApp: true, bundleIdentifier: "com.apple.finder", icon: NSImage(systemSymbolName: "folder", accessibilityDescription: nil)),
+            ProcessTaskItem(id: 342, pid: 342, name: "WindowServer", cpuPercent: 1.1, memoryMB: 412, isUserApp: false, bundleIdentifier: nil, icon: NSImage(systemSymbolName: "macwindow", accessibilityDescription: nil)),
+            ProcessTaskItem(id: 1480, pid: 1480, name: "Mail", cpuPercent: 0.6, memoryMB: 164, isUserApp: true, bundleIdentifier: "com.apple.mail", icon: NSImage(systemSymbolName: "envelope", accessibilityDescription: nil)),
+            ProcessTaskItem(id: 3110, pid: 3110, name: "Yeoman", cpuPercent: 0.4, memoryMB: 92, isUserApp: true, bundleIdentifier: "de.trst.Yeoman", icon: NSImage(systemSymbolName: "menubar.rectangle", accessibilityDescription: nil))
+        ]
+
+        let statsWidth: CGFloat = 460
+        let statsHeight: CGFloat = 495
+        let statsChrome = PopoverChrome(contentWidth: statsWidth, contentHeight: statsHeight) {
+            TaskManagerPopoverView(provider: sampleProvider, pinPreference: samplePin, autoPollProcesses: false)
+        }
+        .preferredColorScheme(.dark)
+
+        capture(
+            view: statsChrome,
+            width: statsWidth + 48,
+            height: statsHeight + 48,
+            to: outputDir.appendingPathComponent("yeoman_system_stats.png")
+        )
+
+        print("All 6 real screenshots captured cleanly in Resources/Mockups/.")
     }
 
     private static func syntheticClipboardPreviewPNG(width: Int, height: Int) -> Data? {

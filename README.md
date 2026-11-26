@@ -124,7 +124,7 @@ Tightens macOS status item padding across displays to prevent menu bar icons fro
 Displays compact CPU, memory, and GPU telemetry directly in the macOS menu bar and opens an interactive Task Manager popover on demand.
 
 <p align="center">
-  <img src="Resources/Mockups/yeoman_system_stats.png" alt="System Monitor and Task Manager" width="96%" />
+  <img src="Resources/Mockups/yeoman_system_stats.png" alt="System Monitor and Task Manager Popover" width="58%" />
 </p>
 
 - **On-Demand Process Sampling:** Process sampling runs only while the Task Manager popover is open, sorting processes by CPU usage, memory consumption, or name.
