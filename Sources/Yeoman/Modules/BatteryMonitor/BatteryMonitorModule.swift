@@ -42,8 +42,9 @@ public final class BatteryMonitorModule: NSObject, CustomizerModule, ObservableO
 
     public let popoverPin = PopoverPinPreference(storageKey: "battery_monitor_popover_pinned")
     private var statusItem: NSStatusItem?
-    private var popover: NSPopover?
+    private var statusHostingView: NSHostingView<AnyView>?
     private var cancellables = Set<AnyCancellable>()
+    private var popover: NSPopover?
     private var pinCancellable: AnyCancellable?
 
     public override init() {
@@ -106,17 +107,19 @@ public final class BatteryMonitorModule: NSObject, CustomizerModule, ObservableO
 
     public func calculatedStatusItemWidth() -> CGFloat {
         switch menuBarStyle {
-        case .iconOnly: return 32.0
-        case .percentOnly: return 40.0
-        case .iconAndPercent: return 68.0
-        case .iconPercentWatts: return 110.0
+        case .iconOnly: return 24.0
+        case .percentOnly: return 28.0
+        case .iconAndPercent: return 53.0
+        case .iconPercentWatts: return 86.0
         }
     }
 
     public func updateStatusItemLength() {
         guard let item = statusItem else { return }
-        let target = calculatedStatusItemWidth()
-        DispatchQueue.main.async {
+        DispatchQueue.main.async { [weak self] in
+            guard let self else { return }
+            let measured = self.statusHostingView.map { ceil($0.fittingSize.width) } ?? 0
+            let target = max(18.0, measured > 1 ? measured : self.calculatedStatusItemWidth())
             if abs(item.length - target) > 0.5 {
                 item.length = target
             }
@@ -133,7 +136,12 @@ public final class BatteryMonitorModule: NSObject, CustomizerModule, ObservableO
             removeStatusItem()
         }
 
-        let item = NSStatusBar.system.statusItem(withLength: calculatedStatusItemWidth())
+        let widgetView = AnyView(MenuBarBatteryWidgetView(module: self).allowsHitTesting(false))
+        let hosting = NSHostingView(rootView: widgetView)
+        let measured = ceil(hosting.fittingSize.width)
+        let initialWidth = max(18.0, measured > 1 ? measured : calculatedStatusItemWidth())
+
+        let item = NSStatusBar.system.statusItem(withLength: initialWidth)
         if let button = item.button {
             button.subviews.forEach { $0.removeFromSuperview() }
             button.target = self
@@ -141,16 +149,16 @@ public final class BatteryMonitorModule: NSObject, CustomizerModule, ObservableO
             button.sendAction(on: [.leftMouseUp, .rightMouseUp])
             button.toolTip = l10n("battery.menubar_tooltip")
 
-            let widgetView = MenuBarBatteryWidgetView(module: self).allowsHitTesting(false)
-            let hosting = NSHostingView(rootView: widgetView)
             hosting.frame = button.bounds
             hosting.autoresizingMask = [.width, .height]
             button.addSubview(hosting)
         }
+        self.statusHostingView = hosting
         self.statusItem = item
     }
 
     public func removeStatusItem() {
+        statusHostingView = nil
         if let item = statusItem {
             NSStatusBar.system.removeStatusItem(item)
             statusItem = nil
@@ -258,15 +266,15 @@ public struct MenuBarBatteryWidgetView: View {
 
     public var body: some View {
         let hw = provider.hardware
-        HStack(spacing: 4) {
+        HStack(spacing: 3) {
             if module.menuBarStyle != .percentOnly {
                 BatteryGlyphView(
                     chargePercent: hw.chargePercent,
                     isCharging: hw.isCharging,
                     isExternalConnected: hw.isExternalConnected,
                     isLowPowerMode: hw.isLowPowerMode,
-                    width: 24,
-                    height: 12
+                    width: 22,
+                    height: 11
                 )
             }
 
@@ -274,6 +282,8 @@ public struct MenuBarBatteryWidgetView: View {
                 Text(hw.hasBattery ? "\(hw.chargePercent)%" : "--%")
                     .font(.system(size: 11, weight: .semibold, design: .rounded))
                     .monospacedDigit()
+                    .lineLimit(1)
+                    .fixedSize()
             }
 
             if module.menuBarStyle == .iconPercentWatts && hw.hasBattery {
@@ -281,9 +291,11 @@ public struct MenuBarBatteryWidgetView: View {
                 Text(String(format: "%@%.0fW", sign, abs(hw.powerWatts)))
                     .font(.system(size: 10, weight: .medium, design: .monospaced))
                     .foregroundColor(hw.isCharging ? .green : .secondary)
+                    .lineLimit(1)
+                    .fixedSize()
             }
         }
-        .padding(.horizontal, 4)
+        .fixedSize(horizontal: true, vertical: false)
         .frame(height: 22)
     }
 }

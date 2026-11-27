@@ -227,4 +227,22 @@ func runBatteryMonitorTests() {
             assertTrue(oversizedRejected, "Oversized history file must fail closed")
         }
     }
+
+    harness.runSuite("Battery Monitor: Menu Bar Width") {
+        harness.test("calculatedStatusItemWidth stays compact without excessive outer padding") {
+            let module = BatteryMonitorModule()
+            module.menuBarStyle = .iconOnly
+            let iconOnlyW = module.calculatedStatusItemWidth()
+            module.menuBarStyle = .percentOnly
+            let percentW = module.calculatedStatusItemWidth()
+            module.menuBarStyle = .iconAndPercent
+            let iconPercentW = module.calculatedStatusItemWidth()
+            module.menuBarStyle = .iconPercentWatts
+            let wattsW = module.calculatedStatusItemWidth()
+
+            assertTrue(iconOnlyW > 0 && iconOnlyW < percentW)
+            assertTrue(percentW < iconPercentW && iconPercentW <= 56)
+            assertTrue(iconPercentW < wattsW && wattsW <= 92)
+        }
+    }
 }

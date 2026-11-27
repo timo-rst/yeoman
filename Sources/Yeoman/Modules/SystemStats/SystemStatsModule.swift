@@ -129,9 +129,11 @@ public final class SystemStatsModule: NSObject, CustomizerModule, ObservableObje
     public let popoverPin = PopoverPinPreference(storageKey: "system_stats_popover_pinned")
     
     private var statusItem: NSStatusItem?
+    private var statusHostingView: NSHostingView<AnyView>?
     private var popover: NSPopover?
     private var spacingCancellable: AnyCancellable?
     private var pinCancellable: AnyCancellable?
+    private var metricsCancellable: AnyCancellable?
     
     public override init() {
         self.isEnabled = UserDefaults.standard.object(forKey: "system_stats_is_enabled") as? Bool ?? true
@@ -173,6 +175,11 @@ public final class SystemStatsModule: NSObject, CustomizerModule, ObservableObje
                 guard let self else { return }
                 self.popover?.behavior = self.popoverPin.popoverBehavior
             }
+        self.metricsCancellable = SystemMetricsProvider.shared.objectWillChange
+            .receive(on: RunLoop.main)
+            .sink { [weak self] _ in
+                self?.updateStatusItemLength()
+            }
         
         // Listen for system / window / space changes to automatically recover status item if needed
         NotificationCenter.default.addObserver(self, selector: #selector(handleEnvironmentChange), name: NSApplication.didBecomeActiveNotification, object: nil)
@@ -210,23 +217,23 @@ public final class SystemStatsModule: NSObject, CustomizerModule, ObservableObje
         let activeMetricsCount = (showCPU ? 1 : 0) + (showRAM ? 1 : 0) + (showGPU ? 1 : 0)
         if activeMetricsCount == 0 {
             // When all individual metrics are toggled off, show the fallback icon & title
-            return showLabels ? 46.0 : 24.0
+            return showLabels ? 42.0 : 18.0
         }
         
         let interItemSpacing: CGFloat = CGFloat(max(2, MenuBarSpacingManager.shared.currentSpacing))
-        let paddingPerItem: CGFloat = useSubtleBackground ? 8.0 : 4.0
-        let outerPadding: CGFloat = 4.0
+        let paddingPerItem: CGFloat = useSubtleBackground ? 7.0 : 0.0
+        let outerPadding: CGFloat = 0.0
         
         switch layoutMode {
         case .vertical:
             // Vertical stacked layout (label top, percentage bottom, bar or sparkline right)
             var textW: CGFloat = 0
             if showLabels && showPercentage {
-                textW = 21.5
+                textW = 19.0
             } else if showPercentage {
-                textW = 21.5
+                textW = 19.0
             } else if showLabels {
-                textW = 17.5
+                textW = 16.0
             }
             
             var graphW: CGFloat = 0
@@ -281,11 +288,11 @@ public final class SystemStatsModule: NSObject, CustomizerModule, ObservableObje
             var componentsW: CGFloat = 0
             var count = 0
             if showLabels {
-                componentsW += 19.0
+                componentsW += 16.5
                 count += 1
             }
             if showPercentage {
-                componentsW += 21.5
+                componentsW += 19.0
                 count += 1
             }
             if showGraphs && graphStyle != .none {
@@ -302,8 +309,10 @@ public final class SystemStatsModule: NSObject, CustomizerModule, ObservableObje
     
     public func updateStatusItemLength() {
         guard let item = statusItem else { return }
-        let targetLength = calculatedStatusItemWidth()
-        DispatchQueue.main.async {
+        DispatchQueue.main.async { [weak self] in
+            guard let self else { return }
+            let measured = self.statusHostingView.map { ceil($0.fittingSize.width) } ?? 0
+            let targetLength = max(16.0, measured > 1 ? measured : self.calculatedStatusItemWidth())
             if abs(item.length - targetLength) > 0.5 {
                 item.length = targetLength
             }
@@ -339,7 +348,10 @@ public final class SystemStatsModule: NSObject, CustomizerModule, ObservableObje
             removeStatusItem()
         }
         
-        let initialWidth = calculatedStatusItemWidth()
+        let widgetView = AnyView(MenuBarStatsWidgetView(isLiveMenuBar: true).allowsHitTesting(false))
+        let hostingView = NSHostingView(rootView: widgetView)
+        let measured = ceil(hostingView.fittingSize.width)
+        let initialWidth = max(16.0, measured > 1 ? measured : calculatedStatusItemWidth())
         let item = NSStatusBar.system.statusItem(withLength: initialWidth)
         if let button = item.button {
             button.subviews.forEach { $0.removeFromSuperview() }
@@ -348,16 +360,16 @@ public final class SystemStatsModule: NSObject, CustomizerModule, ObservableObje
             button.sendAction(on: [.leftMouseUp, .rightMouseUp])
             button.toolTip = "System-Monitor (Klick zum Öffnen)"
             
-            let widgetView = MenuBarStatsWidgetView(isLiveMenuBar: true).allowsHitTesting(false)
-            let hostingView = NSHostingView(rootView: widgetView)
             hostingView.frame = button.bounds
             hostingView.autoresizingMask = [.width, .height]
             button.addSubview(hostingView)
         }
+        self.statusHostingView = hostingView
         self.statusItem = item
     }
     
     public func removeStatusItem() {
+        statusHostingView = nil
         if let item = statusItem {
             NSStatusBar.system.removeStatusItem(item)
             statusItem = nil

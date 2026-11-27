@@ -31,7 +31,7 @@ public struct MenuBarStatsWidgetView: View {
                             .foregroundColor(.secondary)
                     }
                 }
-                .padding(.horizontal, 4)
+                .fixedSize(horizontal: true, vertical: false)
                 .frame(height: 22)
             } else {
                 HStack(spacing: CGFloat(max(2, spacingManager.currentSpacing))) {
@@ -86,7 +86,7 @@ public struct MenuBarStatsWidgetView: View {
                         )
                     }
                 }
-                .padding(.horizontal, 2)
+                .fixedSize(horizontal: true, vertical: false)
                 .frame(height: 22)
             }
         }
@@ -117,8 +117,9 @@ struct CompactMetricItemView: View {
                 horizontalLayout
             }
         }
-        .padding(.horizontal, useBackground ? 4 : 2)
+        .padding(.horizontal, useBackground ? 3.5 : 0)
         .padding(.vertical, useBackground ? 1.5 : 0)
+        .fixedSize(horizontal: true, vertical: false)
         .background(
             Group {
                 if useBackground {
