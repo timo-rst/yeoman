@@ -210,6 +210,16 @@ public final class MenuBarItemScanner: ObservableObject {
                 isRunning: mm.systemStatsModule.isEnabled
             ),
             MenuBarAppItem(
+                id: "module_battery",
+                name: "Batterie-Monitor",
+                type: .internalModule,
+                bundleIdentifier: "de.trst.Yeoman.batterymonitor",
+                appPath: nil,
+                sfSymbol: "battery.75",
+                isVisibleInMenuBar: mm.batteryMonitorModule.isEnabled,
+                isRunning: mm.batteryMonitorModule.isEnabled
+            ),
+            MenuBarAppItem(
                 id: "module_spacing",
                 name: "Menüleisten-Abstände",
                 type: .internalModule,
@@ -290,6 +300,10 @@ public final class MenuBarItemScanner: ObservableObject {
                 items[idx].isVisibleInMenuBar = enable
             } else if id == "module_stats" {
                 mm.toggleModule(id: mm.systemStatsModule.id, enabled: enable)
+                items[idx].isVisibleInMenuBar = enable
+                items[idx].isRunning = enable
+            } else if id == "module_battery" {
+                mm.toggleModule(id: mm.batteryMonitorModule.id, enabled: enable)
                 items[idx].isVisibleInMenuBar = enable
                 items[idx].isRunning = enable
             } else if id == "module_spacing" {

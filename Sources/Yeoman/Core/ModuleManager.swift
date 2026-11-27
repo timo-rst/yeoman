@@ -10,6 +10,7 @@ public final class ModuleManager: ObservableObject {
     public lazy var webPanelModule = WebPanelModule()
     public lazy var clipboardModule = ClipboardModule()
     public lazy var systemStatsModule = SystemStatsModule()
+    public lazy var batteryMonitorModule = BatteryMonitorModule()
     public lazy var scrollReverserModule = ScrollReverserModule()
     public lazy var finderCutModule = FinderCutModule()
     public lazy var terminalSaverModule = TerminalSaverModule()
@@ -25,6 +26,7 @@ public final class ModuleManager: ObservableObject {
             webPanelModule,
             clipboardModule,
             systemStatsModule,
+            batteryMonitorModule,
             scrollReverserModule,
             finderCutModule,
             terminalSaverModule
@@ -58,6 +60,7 @@ public final class ModuleManager: ObservableObject {
     
     public func ensureAllStatusItemsVisible() {
         systemStatsModule.ensureStatusItemVisible()
+        batteryMonitorModule.updateStatusItemVisibility()
         clipboardModule.updateStatusItemVisibility()
         menuBarModule.updateStatusItemVisibility()
         webPanelModule.updateStatusItemVisibility()
@@ -71,6 +74,7 @@ public final class ModuleManager: ObservableObject {
         DispatchQueue.main.async { [weak self] in
             guard let self = self else { return }
             // 1. Remove all status items from menu bar
+            self.batteryMonitorModule.removeStatusItem()
             self.systemStatsModule.removeStatusItem()
             self.scrollReverserModule.removeStatusItem()
             self.finderCutModule.removeStatusItem()
@@ -81,7 +85,9 @@ public final class ModuleManager: ObservableObject {
             StatusItemController.shared.removeStatusItem()
             
             // 2. Recreate from right to left (macOS inserts each new status item to the left of existing ones)
-            // Far right: System Stats (CPU, RAM, GPU)
+            // Far right: Battery Monitor
+            self.batteryMonitorModule.setupStatusItem()
+            // Next: System Stats (CPU, RAM, GPU)
             self.systemStatsModule.setupStatusItem()
             // Next: Scroll Reverser
             self.scrollReverserModule.setupStatusItem()

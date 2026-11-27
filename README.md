@@ -32,7 +32,7 @@
 
 ## Overview
 
-Yeoman consolidates seven independent macOS productivity and system utilities into one lightweight AppKit / SwiftUI process. Every module can be toggled on or off individually, keeps zero external third-party Swift package dependencies, and runs with local-only state unless you configure Web Widgets or automatic release checks.
+Yeoman consolidates eight independent macOS productivity and system utilities into one lightweight AppKit / SwiftUI process. Every module can be toggled on or off individually, keeps zero external third-party Swift package dependencies, and runs with local-only state unless you configure Web Widgets or automatic release checks.
 
 The settings window is configured as a normal managed macOS window: it remains accessible in Mission Control, App Expose, and standard window cycling until closed or minimized.
 
@@ -44,7 +44,8 @@ The settings window is configured as a normal managed macOS window: it remains a
 | [4. Clipboard History](#4-clipboard-history) | Local text and image history with pin-aware preview, search, filters, and optional AES-GCM encryption | None |
 | [5. Menu Bar Optimizer](#5-menu-bar-spacing--items) | Adjust macOS menu bar icon spacing (0-32 pt) to reclaim notch clearance and scan status bar items | Accessibility (scanner labels only) |
 | [6. System Monitor](#6-system-monitor--task-manager) | Live CPU, RAM, and GPU menu bar telemetry plus on-demand sortable Task Manager popover | None |
-| [7. Scroll Reverser](#7-independent-scroll-reverser) | Separate scroll direction between mouse wheels and trackpads without touching macOS trackpad settings | Accessibility |
+| [7. Independent Scroll Reverser](#7-independent-scroll-reverser) | Separate scroll direction between mouse wheels and trackpads without touching macOS trackpad settings | Accessibility |
+| [8. Battery & Energy Monitor](#8-battery--energy-monitor) | 24h battery charge & screen-on charts plus per-app energy breakdown over time using Apple Silicon energy counters | None |
 
 ---
 
@@ -143,6 +144,14 @@ Separates scroll direction handling for external mouse wheels and built-in track
 </p>
 
 - **Dedicated Tail Event Tap:** Runs a scroll-wheel-only `CGEventTap` on an isolated user-interactive thread at the tail of macOS scroll acceleration, skipping trackpads via a zero-work pass-through path and handling TCC permission revocation gracefully.
+
+### 8. Battery & Energy Monitor
+
+Tracks macOS battery state, 24-hour charge and screen-on usage history, and per-app energy consumption over time directly from a menu bar popover.
+
+- **24-Hour Level & Screen-On Charts:** Bootstraps the trailing 24 hours from `/usr/bin/pmset -g log` and continuously appends 15-minute charge, charging-span, and screen-on duration buckets with interactive slot inspection.
+- **Per-App Energy Breakdown Over Time:** Samples `proc_pid_rusage` (`ri_energy_nj`), CPU time, and process start-time identities across **Live** (`W`), **1h**, **6h**, **24h**, and **Since Launch**, rolling helper and renderer child processes into their parent `.app` bundle.
+- **Hardware Diagnostics & Menu Bar Styles:** Reads live `AppleSmartBattery` charge, health percentage, cycle count, temperature, and live power flow in Watts, with configurable menu bar styles.
 
 ---
 

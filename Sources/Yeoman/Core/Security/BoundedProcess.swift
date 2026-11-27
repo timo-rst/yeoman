@@ -51,6 +51,94 @@ public enum BoundedProcess {
         guard !timedOut, !exceeded else { throw SecurityFailure.rejected("Subprozess hat Zeit- oder Ausgabegrenze überschritten.") }
         return ProcessOutput(data: output, status: child.terminationStatus)
     }
+
+    /// Runs a fixed executable and preserves only the trailing `tailLimit` bytes of stdout
+    /// while concurrently draining stdout/stderr and bounding total bytes read.
+    public static func runTail(
+        _ executable: String,
+        _ arguments: [String],
+        timeout: TimeInterval = 8,
+        tailLimit: Int = 4 * 1_048_576,
+        totalReadLimit: Int = 64 * 1_048_576,
+        currentDirectory: URL? = nil
+    ) throws -> ProcessOutput {
+        guard timeout > 0, tailLimit > 0, totalReadLimit >= tailLimit else {
+            throw SecurityFailure.rejected("Ungültige Prozess-Grenzwerte.")
+        }
+        let child = Process(), out = Pipe(), err = Pipe()
+        child.executableURL = URL(fileURLWithPath: executable)
+        child.arguments = arguments
+        child.currentDirectoryURL = currentDirectory
+        child.environment = ["PATH": "/usr/bin:/bin:/usr/sbin:/sbin", "LC_ALL": "C"]
+        child.standardOutput = out; child.standardError = err
+        let lock = NSLock(), done = DispatchSemaphore(value: 0), readers = DispatchGroup()
+        var chunks: [Data] = []
+        var keptBytes = 0
+        var totalRead = 0
+        var exceeded = false
+        child.terminationHandler = { _ in done.signal() }
+        try child.run()
+        for (pipe, captureTail) in [(out, true), (err, false)] {
+            readers.enter()
+            DispatchQueue.global(qos: .utility).async {
+                defer { readers.leave() }
+                while true {
+                    let data = pipe.fileHandleForReading.availableData
+                    if data.isEmpty { break }
+                    lock.lock()
+                    if data.count > totalReadLimit - totalRead {
+                        exceeded = true
+                    } else {
+                        totalRead += data.count
+                        if captureTail {
+                            if data.count >= tailLimit {
+                                let start = data.index(data.endIndex, offsetBy: -tailLimit)
+                                chunks = [Data(data[start...])]
+                                keptBytes = tailLimit
+                            } else {
+                                chunks.append(data)
+                                keptBytes += data.count
+                                while keptBytes > tailLimit, !chunks.isEmpty {
+                                    let excess = keptBytes - tailLimit
+                                    if chunks[0].count <= excess {
+                                        keptBytes -= chunks[0].count
+                                        chunks.removeFirst()
+                                    } else {
+                                        let first = chunks[0]
+                                        chunks[0] = Data(first[first.index(first.startIndex, offsetBy: excess)...])
+                                        keptBytes -= excess
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    let stop = exceeded
+                    lock.unlock()
+                    if stop && child.isRunning { child.terminate() }
+                }
+            }
+        }
+        let timedOut = done.wait(timeout: .now() + timeout) == .timedOut
+        if timedOut && child.isRunning {
+            child.terminate()
+            if done.wait(timeout: .now() + 0.25) == .timedOut && child.isRunning {
+                Darwin.kill(child.processIdentifier, SIGKILL)
+                _ = done.wait(timeout: .now() + 2)
+            }
+        }
+        guard readers.wait(timeout: .now() + 2) == .success else {
+            throw SecurityFailure.rejected("Subprozess-Ausgabe nicht geschlossen.")
+        }
+        lock.lock()
+        let finalExceeded = exceeded
+        var output = Data(capacity: keptBytes)
+        for chunk in chunks { output.append(chunk) }
+        lock.unlock()
+        guard !timedOut, !finalExceeded else {
+            throw SecurityFailure.rejected("Subprozess hat Zeit- oder Ausgabegrenze überschritten.")
+        }
+        return ProcessOutput(data: output, status: child.terminationStatus)
+    }
 }
 
 public struct ProcessIdentity: Codable, Equatable {

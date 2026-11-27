@@ -3221,6 +3221,284 @@ public final class LocalizationManager: ObservableObject {
             .english: "Clip Name",
             .spanish: "Nombre del clip",
             .french: "Nom du clip"
+        ],
+
+        // Battery Monitor
+        "tab.batteryMonitor": [
+            .german: "Batterie & Energie",
+            .english: "Battery & Energy",
+            .spanish: "Batería y Energía",
+            .french: "Batterie & Énergie"
+        ],
+        "general.battery_monitor_title": [
+            .german: "Batterie & Energie",
+            .english: "Battery & Energy",
+            .spanish: "Batería y Energía",
+            .french: "Batterie & Énergie"
+        ],
+        "general.battery_monitor_sub": [
+            .german: "24h-Akkuverlauf, Bildschirmzeit und App-Stromverbrauch in der Menüleiste.",
+            .english: "24h battery level history, screen-on usage, and per-app energy tracking.",
+            .spanish: "Historial de batería 24h, uso de pantalla y consumo por app.",
+            .french: "Historique batterie 24h, temps d'écran et consommation par app."
+        ],
+        "battery.settings_subtitle": [
+            .german: "Akkuverlauf über 24 Stunden und Energieverbrauch nach App",
+            .english: "24-hour battery history and per-app energy breakdown",
+            .spanish: "Historial de 24 horas y consumo energético por app",
+            .french: "Historique 24 heures et consommation d'énergie par application"
+        ],
+        "battery.menubar_tooltip": [
+            .german: "Batterie & Energieverbrauch (Klick für 24h-Übersicht)",
+            .english: "Battery & Energy Usage (Click for 24h overview)",
+            .spanish: "Batería y consumo energético",
+            .french: "Batterie et consommation d'énergie"
+        ],
+        "battery.menu_open_overview": [
+            .german: "Batterie-Übersicht öffnen",
+            .english: "Open Battery Overview",
+            .spanish: "Abrir resumen de batería",
+            .french: "Ouvrir l'aperçu batterie"
+        ],
+        "battery.menubar_display": [
+            .german: "Menüleisten-Anzeige",
+            .english: "Menu Bar Display",
+            .spanish: "Visualización en barra de menús",
+            .french: "Affichage dans la barre des menus"
+        ],
+        "battery.style_icon_percent": [
+            .german: "Batterie-Symbol + Prozent (z. B. 74%)",
+            .english: "Battery Icon + Percentage (e.g. 74%)",
+            .spanish: "Icono + Porcentaje",
+            .french: "Icône + Pourcentage"
+        ],
+        "battery.style_icon_percent_watts": [
+            .german: "Symbol + Prozent + Leistung (z. B. 74% -12W)",
+            .english: "Icon + Percentage + Wattage (e.g. 74% -12W)",
+            .spanish: "Icono + Porcentaje + Vatios",
+            .french: "Icône + Pourcentage + Watts"
+        ],
+        "battery.style_icon_only": [
+            .german: "Nur Batterie-Symbol",
+            .english: "Battery Icon Only",
+            .spanish: "Solo icono de batería",
+            .french: "Icône uniquement"
+        ],
+        "battery.style_percent_only": [
+            .german: "Nur Prozentzahl",
+            .english: "Percentage Only",
+            .spanish: "Solo porcentaje",
+            .french: "Pourcentage uniquement"
+        ],
+        "battery.hardware_diagnostics": [
+            .german: "Akku-Zustand & Leistung",
+            .english: "Battery Health & Power",
+            .spanish: "Salud y potencia",
+            .french: "État et puissance"
+        ],
+        "battery.history_storage": [
+            .german: "Verlauf & Aufzeichnung",
+            .english: "History & Recording",
+            .spanish: "Historial y registro",
+            .french: "Historique et enregistrement"
+        ],
+        "battery.history_storage_desc": [
+            .german: "Der Batteriestatus der letzten 24 Stunden wird aus macOS-Energieprotokollen ergänzt und ab App-Start zusammen mit dem Energieverbrauch jeder App lokal gespeichert.",
+            .english: "24-hour battery charge and screen-on history are bootstrapped from macOS power logs and saved locally alongside per-app energy measurements.",
+            .spanish: "El historial de 24h y el consumo por app se almacenan localmente.",
+            .french: "L'historique 24h et la consommation par app sont enregistrés localement."
+        ],
+        "battery.clear_history": [
+            .german: "Verlauf zurücksetzen",
+            .english: "Clear History",
+            .spanish: "Borrar historial",
+            .french: "Effacer l'historique"
+        ],
+        "battery.range_live": [
+            .german: "Live",
+            .english: "Live",
+            .spanish: "En vivo",
+            .french: "En direct"
+        ],
+        "battery.range_1h": [
+            .german: "1 Std.",
+            .english: "1h",
+            .spanish: "1 h",
+            .french: "1 h"
+        ],
+        "battery.range_6h": [
+            .german: "6 Std.",
+            .english: "6h",
+            .spanish: "6 h",
+            .french: "6 h"
+        ],
+        "battery.range_24h": [
+            .german: "24 Std.",
+            .english: "24h",
+            .spanish: "24 h",
+            .french: "24 h"
+        ],
+        "battery.range_since_launch": [
+            .german: "Seit Start",
+            .english: "Since Launch",
+            .spanish: "Desde inicio",
+            .french: "Depuis lancement"
+        ],
+        "battery.low_power_mode": [
+            .german: "Energiesparmodus",
+            .english: "Low Power Mode",
+            .spanish: "Bajo consumo",
+            .french: "Économie d'énergie"
+        ],
+        "battery.no_battery": [
+            .german: "Kein interner Akku erkannt (Netzbetrieb)",
+            .english: "No internal battery detected (AC power)",
+            .spanish: "Sin batería interna",
+            .french: "Aucune batterie détectée"
+        ],
+        "battery.refresh_tooltip": [
+            .german: "Messwerte jetzt aktualisieren",
+            .english: "Refresh readings now",
+            .spanish: "Actualizar ahora",
+            .french: "Actualiser maintenant"
+        ],
+        "battery.health": [
+            .german: "Kapazität",
+            .english: "Health",
+            .spanish: "Salud",
+            .french: "Santé"
+        ],
+        "battery.cycles": [
+            .german: "Zyklen",
+            .english: "Cycles",
+            .spanish: "Ciclos",
+            .french: "Cycles"
+        ],
+        "battery.temp": [
+            .german: "Temp.",
+            .english: "Temp",
+            .spanish: "Temp.",
+            .french: "Temp."
+        ],
+        "battery.capacity": [
+            .german: "Ladung",
+            .english: "Charge",
+            .spanish: "Carga",
+            .french: "Charge"
+        ],
+        "battery.power_flow": [
+            .german: "Leistung",
+            .english: "Power Flow",
+            .spanish: "Potencia",
+            .french: "Puissance"
+        ],
+        "battery.ac_only": [
+            .german: "Netzteil",
+            .english: "AC Power",
+            .spanish: "Corriente",
+            .french: "Secteur"
+        ],
+        "battery.charging": [
+            .german: "Lädt über Netzteil",
+            .english: "Charging on AC",
+            .spanish: "Cargando",
+            .french: "En charge"
+        ],
+        "battery.fully_charged": [
+            .german: "Vollständig geladen",
+            .english: "Fully Charged",
+            .spanish: "Carga completa",
+            .french: "Chargée"
+        ],
+        "battery.on_ac": [
+            .german: "Netzteil (Erhaltung)",
+            .english: "Power Adapter",
+            .spanish: "Adaptador",
+            .french: "Adaptateur secteur"
+        ],
+        "battery.on_battery": [
+            .german: "Stromversorgung: Batterie",
+            .english: "Power Source: Battery",
+            .spanish: "Fuente: Batería",
+            .french: "Source : Batterie"
+        ],
+        "battery.charging_short": [
+            .german: "Lädt",
+            .english: "Charging",
+            .spanish: "Cargando",
+            .french: "En charge"
+        ],
+        "battery.on_battery_short": [
+            .german: "Batterie",
+            .english: "Battery",
+            .spanish: "Batería",
+            .french: "Batterie"
+        ],
+        "battery.chart_status": [
+            .german: "Batteriestatus (24 Std.)",
+            .english: "Battery Level (24h)",
+            .spanish: "Nivel de batería (24h)",
+            .french: "Niveau de batterie (24h)"
+        ],
+        "battery.chart_screen_on": [
+            .german: "Nutzung bei eingeschaltetem Bildschirm",
+            .english: "Screen On Usage",
+            .spanish: "Uso con pantalla encendida",
+            .french: "Utilisation écran allumé"
+        ],
+        "battery.loading_history": [
+            .german: "Lade Verlauf…",
+            .english: "Loading history…",
+            .spanish: "Cargando historial…",
+            .french: "Chargement…"
+        ],
+        "battery.total_24h": [
+            .german: "Gesamt",
+            .english: "Total",
+            .spanish: "Total",
+            .french: "Total"
+        ],
+        "battery.app_usage_title": [
+            .german: "Energieverbrauch nach App",
+            .english: "Energy Usage by App",
+            .spanish: "Consumo por aplicación",
+            .french: "Consommation par app"
+        ],
+        "battery.no_app_samples_yet": [
+            .german: "Sammle Energie-Messwerte für aktive Apps — erste Ergebnisse erscheinen in wenigen Sekunden.",
+            .english: "Collecting per-app energy counters — initial readings appear in a few seconds.",
+            .spanish: "Recopilando datos de energía por app…",
+            .french: "Collecte des données d'énergie par app…"
+        ],
+        "battery.significant_badge": [
+            .german: "Erheblich",
+            .english: "Significant",
+            .spanish: "Significativo",
+            .french: "Élevée"
+        ],
+        "battery.share_short": [
+            .german: "Anteil",
+            .english: "share",
+            .spanish: "cuota",
+            .french: "part"
+        ],
+        "battery.open_macos_settings": [
+            .german: "Batterieeinstellungen…",
+            .english: "Battery Settings…",
+            .spanish: "Ajustes de batería…",
+            .french: "Réglages batterie…"
+        ],
+        "battery.yeoman_settings": [
+            .german: "Yeoman",
+            .english: "Yeoman",
+            .spanish: "Yeoman",
+            .french: "Yeoman"
+        ],
+        "battery.recording_since_format": [
+            .german: "Erfasst seit %@",
+            .english: "Tracking since %@",
+            .spanish: "Registrando desde %@",
+            .french: "Suivi depuis %@"
         ]
     ]
 }

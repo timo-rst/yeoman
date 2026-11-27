@@ -9,6 +9,7 @@ public enum SettingsTab: String, CaseIterable, Identifiable {
     case finderCut = "finderCut"
     case terminalSaver = "terminalSaver"
     case systemStats = "systemStats"
+    case batteryMonitor = "batteryMonitor"
     case about = "about"
     
     public var id: String { rawValue }
@@ -23,6 +24,7 @@ public enum SettingsTab: String, CaseIterable, Identifiable {
         case .finderCut: return "tab.finderCut"
         case .terminalSaver: return "terminal_saver.title"
         case .systemStats: return "tab.systemStats"
+        case .batteryMonitor: return "tab.batteryMonitor"
         case .about: return "tab.about"
         }
     }
@@ -41,6 +43,7 @@ public enum SettingsTab: String, CaseIterable, Identifiable {
         case .finderCut: return "scissors"
         case .terminalSaver: return "terminal"
         case .systemStats: return "gauge.with.needle"
+        case .batteryMonitor: return "battery.75"
         case .about: return "info.circle"
         }
     }
@@ -157,8 +160,12 @@ public struct SettingsView: View {
                     // 8. System Stats
                     SidebarStandardRow(icon: "gauge.with.needle", title: l10n.localized("tab.systemStats"), isSelected: selectedTab == .systemStats)
                         .tag(SettingsTab.systemStats)
+
+                    // 9. Battery & Energy
+                    SidebarStandardRow(icon: "battery.75", title: l10n.localized("tab.batteryMonitor"), isSelected: selectedTab == .batteryMonitor)
+                        .tag(SettingsTab.batteryMonitor)
                     
-                    // 8. About
+                    // 10. About
                     SidebarStandardRow(icon: "info.circle", title: l10n.localized("tab.about"), isSelected: selectedTab == .about)
                         .tag(SettingsTab.about)
                 }
@@ -191,6 +198,8 @@ public struct SettingsView: View {
                     moduleManager.terminalSaverModule.settingsView()
                 case .systemStats:
                     moduleManager.systemStatsModule.settingsView()
+                case .batteryMonitor:
+                    moduleManager.batteryMonitorModule.settingsView()
                 case .about:
                     AboutView()
                 }
@@ -315,6 +324,7 @@ struct GeneralSettingsView: View {
     @ObservedObject private var webPanel = ModuleManager.shared.webPanelModule
     @ObservedObject private var clipboard = ModuleManager.shared.clipboardModule
     @ObservedObject private var stats = ModuleManager.shared.systemStatsModule
+    @ObservedObject private var battery = ModuleManager.shared.batteryMonitorModule
     @ObservedObject private var scrollReverser = ModuleManager.shared.scrollReverserModule
     @ObservedObject private var finderCut = ModuleManager.shared.finderCutModule
     @ObservedObject private var terminalSaver = ModuleManager.shared.terminalSaverModule
@@ -510,6 +520,20 @@ struct GeneralSettingsView: View {
                                 set: { mm.toggleModule(id: stats.id, enabled: $0) }
                             ),
                             onOpen: { onSelectModule(.systemStats) }
+                        )
+
+                        Divider()
+
+                        // 6. Battery & Energy Monitor
+                        ModuleToggleRow(
+                            title: l10n.localized("general.battery_monitor_title"),
+                            subtitle: l10n.localized("general.battery_monitor_sub"),
+                            icon: "battery.75",
+                            isOn: Binding(
+                                get: { battery.isEnabled },
+                                set: { mm.toggleModule(id: battery.id, enabled: $0) }
+                            ),
+                            onOpen: { onSelectModule(.batteryMonitor) }
                         )
 
                         Divider()
