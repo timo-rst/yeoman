@@ -37,6 +37,7 @@ This file is binding guidance for coding agents and contributors working in this
 - Never overwrite an existing recovery backup automatically. Recovery must not replace a present target.
 - Bump semantic version and build number for a new release. Never move or rewrite an already published tag.
 - Release packaging must run tests, build, sign the app and helper, create ZIP/DMG, sign the update manifest, and verify hashes and signatures. CI must not receive the private release key.
+- Every release must update `README.md` (and any affected captures or graphics under `Resources/Mockups/`) before tagging and publishing so documentation and visuals match the shipped behavior.
 
 ## Filesystem and archive safety
 
@@ -102,6 +103,30 @@ This file is binding guidance for coding agents and contributors working in this
 
 - Release gate additionally requires a macOS 14 CI run, the intended release architecture, external-key packaging, independent manifest verification, and recorded ZIP/DMG SHA-256 hashes.
 - Do not weaken, skip, or delete a failing security test to obtain a green build. Correct an obsolete expectation only when the intended contract changed, and document that contract.
+
+## README and release documentation standard
+
+- Update `README.md` as an explicit step of every release before tagging or publishing. Synchronize module descriptions, new settings or workflows, required permissions, platform/architecture scope, build/test commands, and visual assets under `Resources/Mockups/` with the actual shipped code.
+- Write `README.md` and all GitHub-facing content in concise, technical English. Never use emojis in headings, badges, tables, prose, or rendered graphics.
+- Maintain the canonical `README.md` structure:
+  - Centered hero header: `Resources/AppIcon.png`, title, one-line technical summary, flat-square `shields.io` badges, anchor navigation links, and the full-width real settings screenshot (`Resources/Mockups/yeoman_settings_window.png`).
+  - `## Overview`: summary table (`Module`, `Purpose`, `Permissions`) kept in exact 1:1 sync with numbered subsections under `## Modules`.
+  - `## Installation` (pre-built Apple Silicon `arm64` binary download plus accurate Gatekeeper, ad-hoc signing, SHA-256, and Ed25519 verification guidance, alongside source build instructions), `## Architecture & Security` (linking `SECURITY.md` and `docs/security/SECURITY_IMPLEMENTATION_REPORT.md`), `## Building & Testing`, `## Motivation & Background`, and `## License`.
+- Preserve both the personal motivation paragraphs and the `> **AI Transparency:**` blockquote inside `## Motivation & Background` verbatim in substance unless the owner explicitly directs changes to them.
+- Visual asset and screenshot standard:
+  - Prefer real AppKit/SwiftUI captures of actual application views over fabricated mockups whenever native UI exists (`Scripts/capture_real_screenshots.swift`). All screenshot/render scripts must run inside a private `0700` temporary sandbox using English localization and synthetic data only—never read or expose production user data.
+  - Use clean, compact, authentic renders via `Scripts/generate_menubar_comparison.swift` and `Scripts/generate_tool_graphics.swift` only where a single live settings pane cannot show the behavior (e.g., macOS menu bar notch clearance, Finder Cut overlay workflow, Scroll Reverser routing, live Terminal Saver ASCII showcase, and custom media background cutout comparison). Avoid bloated marketing cards, fake telemetry dashboards, or emojis.
+  - Visually inspect every newly generated or updated PNG under `Resources/Mockups/` and `Resources/AppIcon.png` before committing to verify framing, contrast, legibility, and representative frames (for example, an immediately recognizable 3D Donut orientation).
+  - Keep `Resources/AppIcon.png` and `Resources/AppIcon.icns` synchronized via `Scripts/generate_app_icon.swift` whenever the app icon changes.
+- Keep all `README.md` claims strictly factual and bounded: state supported macOS 14+ `arm64` pre-built coverage, ad-hoc code signing + pinned Ed25519 manifest authentication, best-effort clipboard privacy filtering, same-UID secret-store limits, and zero external Swift dependencies accurately.
+
+## Git and GitHub version control
+
+- Coding agents are responsible for maintaining clean version control and keeping GitHub (`origin/main`) synchronized with completed, verified work rather than leaving finished changes uncommitted locally.
+- Group changes into small, focused, atomic commits with clear English commit messages (for example `feat:`, `fix:`, `docs:`, `test:`, `refactor:`, `chore:`). Only commit genuine, verified progress; never create empty or filler commits.
+- Stage only files belonging to the completed task. Inspect `git status` and `git diff --check` before committing, and never stage secrets, private keys, temporary files, or build outputs (`dist/`, `.build/`).
+- Run the applicable local verification gate before pushing. Push verified commits to `origin/main` proactively unless the owner explicitly asks to hold changes locally or work on a separate branch/PR.
+- Never force-push `main`, rewrite published history, or move published release tags.
 
 ## Review and documentation
 
