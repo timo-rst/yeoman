@@ -21,7 +21,6 @@ public final class StatusItemController: NSObject, ObservableObject, NSMenuDeleg
     public private(set) var clipboardWindow: NSWindow?
     public private(set) var settingsWindow: NSWindow?
     
-    private var previousAppForMenu: NSRunningApplication?
     private var previousAppForClipboardWindow: NSRunningApplication?
     private var temporarilyHiddenSettingsForClipboard: Bool = false
     
@@ -87,135 +86,44 @@ public final class StatusItemController: NSObject, ObservableObject, NSMenuDeleg
         }
     }
     
-    public func updateMenu() {
+    public func buildMainMenu() -> NSMenu {
         let menu = NSMenu()
         menu.delegate = self
-        
-        // Header
+
         let titleItem = NSMenuItem(title: "Yeoman", action: nil, keyEquivalent: "")
         titleItem.isEnabled = false
         menu.addItem(titleItem)
-        
+
         menu.addItem(NSMenuItem.separator())
-        
-        // --- Menu Bar Spacing Submenu ---
-        let spacingItem = NSMenuItem(title: "Menüleisten-Abstand", action: nil, keyEquivalent: "")
-        let spacingSubmenu = NSMenu()
-        
-        let currentSpacing = MenuBarSpacingManager.shared.currentSpacing
-        
-        let ultraItem = NSMenuItem(title: "Ultra-Kompakt (4 pt)", action: #selector(setSpacingUltra), keyEquivalent: "")
-        ultraItem.target = self
-        ultraItem.state = currentSpacing == 4 ? .on : .off
-        spacingSubmenu.addItem(ultraItem)
-        
-        let compactItem = NSMenuItem(title: "Kompakt (8 pt)", action: #selector(setSpacingCompact), keyEquivalent: "")
-        compactItem.target = self
-        compactItem.state = currentSpacing == 8 ? .on : .off
-        spacingSubmenu.addItem(compactItem)
-        
-        let standardItem = NSMenuItem(title: "Standard (16 pt)", action: #selector(setSpacingStandard), keyEquivalent: "")
-        standardItem.target = self
-        standardItem.state = currentSpacing == 16 ? .on : .off
-        spacingSubmenu.addItem(standardItem)
-        
-        spacingSubmenu.addItem(NSMenuItem.separator())
-        let restartItem = NSMenuItem(title: "Menüleiste aktualisieren", action: #selector(restartControlCenter), keyEquivalent: "")
-        restartItem.target = self
-        spacingSubmenu.addItem(restartItem)
-        
-        spacingItem.submenu = spacingSubmenu
-        menu.addItem(spacingItem)
-        
-        // --- Clipboard Submenu ---
-        let clipItem = NSMenuItem(title: l10n("menu.clipboard_recent"), action: nil, keyEquivalent: "")
-        let clipSubmenu = NSMenu()
-        
-        let recentItems = ClipboardHistoryStore.shared.items.prefix(8)
-        if recentItems.isEmpty {
-            let emptyItem = NSMenuItem(title: l10n("menu.empty"), action: nil, keyEquivalent: "")
-            emptyItem.isEnabled = false
-            clipSubmenu.addItem(emptyItem)
-        } else {
-            for item in recentItems {
-                let title = (item.isPinned ? "📌 " : "") + item.preview
-                let menuItem = NSMenuItem(title: title, action: #selector(copyClipboardItem(_:)), keyEquivalent: "")
-                menuItem.target = self
-                menuItem.representedObject = item.content
-                clipSubmenu.addItem(menuItem)
-            }
-        }
-        
-        clipSubmenu.addItem(NSMenuItem.separator())
-        let openClipItem = NSMenuItem(title: l10n("menu.clipboard_search"), action: #selector(openClipboardWindow), keyEquivalent: "v")
-        openClipItem.keyEquivalentModifierMask = [.command, .shift]
-        openClipItem.target = self
-        clipSubmenu.addItem(openClipItem)
-        
-        clipItem.submenu = clipSubmenu
-        menu.addItem(clipItem)
-        
-        menu.addItem(NSMenuItem.separator())
-        
-        // Settings & Quit
+
         let settingsItem = NSMenuItem(title: l10n("menu.settings"), action: #selector(openSettingsWindow), keyEquivalent: ",")
         settingsItem.target = self
         menu.addItem(settingsItem)
-        
+
         let updateItem = NSMenuItem(title: l10n("menu.check_updates"), action: #selector(checkForUpdatesMenuAction), keyEquivalent: "")
         updateItem.target = self
         menu.addItem(updateItem)
-        
+
         menu.addItem(NSMenuItem.separator())
-        
+
         let quitItem = NSMenuItem(title: l10n("menu.quit"), action: #selector(quitApp), keyEquivalent: "q")
         quitItem.target = self
         menu.addItem(quitItem)
-        
-        statusItem?.menu = menu
+
+        return menu
     }
-    
+
+    public func updateMenu() {
+        statusItem?.menu = buildMainMenu()
+    }
+
     @objc private func checkForUpdatesMenuAction() {
         openSettingsWindow()
         UpdateManager.shared.checkForUpdates(silent: false)
     }
-    
+
     @objc public func menuWillOpen(_ menu: NSMenu) {
-        if let front = NSWorkspace.shared.frontmostApplication,
-           front.bundleIdentifier != Bundle.main.bundleIdentifier {
-            self.previousAppForMenu = front
-        }
         updateMenu()
-    }
-    
-    @objc private func setSpacingUltra() {
-        MenuBarSpacingManager.shared.applyPreset(.ultraCompact)
-    }
-    
-    @objc private func setSpacingCompact() {
-        MenuBarSpacingManager.shared.applyPreset(.compact)
-    }
-    
-    @objc private func setSpacingStandard() {
-        MenuBarSpacingManager.shared.applyPreset(.standard)
-    }
-    
-    @objc private func restartControlCenter() {
-        MenuBarSpacingManager.shared.restartControlCenter()
-    }
-    
-    @objc private func copyClipboardItem(_ sender: NSMenuItem) {
-        if let text = sender.representedObject as? String {
-            ClipboardMonitor.shared.copyToClipboard(text)
-            if let prev = previousAppForMenu,
-               prev.bundleIdentifier != Bundle.main.bundleIdentifier,
-               !prev.isTerminated {
-                activateApp(prev)
-            } else {
-                NSApp.deactivate()
-            }
-            previousAppForMenu = nil
-        }
     }
     
     @objc public func openClipboardWindow() {
